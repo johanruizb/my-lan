@@ -7,6 +7,7 @@ members = [
     "crates/mylan-fingerprint",
     "crates/mylan-scanner",
     "apps/cli",
+    "tests/integration",
 ]
 
 [workspace.package]
@@ -20,14 +21,23 @@ authors = ["Johan Ruíz"]
 [workspace.dependencies]
 # Crates internos
 mylan-core = { path = "crates/mylan-core" }
+mylan-cli = { path = "apps/cli" }
 mylan-db = { path = "crates/mylan-db" }
 mylan-discovery = { path = "crates/mylan-discovery" }
 mylan-fingerprint = { path = "crates/mylan-fingerprint" }
 mylan-scanner = { path = "crates/mylan-scanner" }
-# Externos (Paso 1: mínimos; el resto se añade en su paso correspondiente).
-# Reproducibilidad vía Cargo.lock commiteado; toolchain pin en rust-toolchain.toml.
+# Externos (versiones pinneadas; reproducibilidad vía Cargo.lock commiteado).
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
+comfy-table = "7"
+csv = "1.4.0"
+rusqlite = { version = "0.40.1", features = ["bundled"] }
+serde_json = "1.0.150"
+time = { version = "0.3", features = ["formatting", "macros"] }
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "net", "time", "macros", "sync"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 strip = true
