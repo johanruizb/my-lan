@@ -30,7 +30,16 @@ router/firewall, no con técnicas que rompan la red.
 
 ## Seguridad interna
 
-- La API local es solo-localhost por defecto; los tokens tienen scopes.
-- Los secretos (credenciales de router) se cifran en disco.
-- Los escaneos tienen rate limiting; no se escanean redes públicas automáticamente.
-- La base de datos local (con MACs/IPs reales) **nunca** se publica: está en `.gitignore`.
+Estado actual del MVP (v0.1+v0.2):
+
+- Los escaneos tienen rate limiting (concurrencia acotada + timeouts); no se
+  escanean redes públicas automáticamente.
+- La base de datos local y las exportaciones (con MACs/IPs reales) **nunca** se
+  publican: están en `.gitignore`.
+- El descubrimiento es no intrusivo y degrada sin privilegios (no asume root).
+
+Planeado (aún NO implementado en este MVP; `mylan serve` es un stub):
+
+- API local solo-localhost con tokens con scopes.
+- Cifrado en disco de secretos (p.ej. credenciales de router) para las
+  integraciones de control de acceso.

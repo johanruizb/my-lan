@@ -8,7 +8,7 @@ use std::net::IpAddr;
 
 use rusqlite::{Connection, Row};
 
-use mylan_core::{Confidence, Device, DeviceAddress};
+use mylan_core::{Confidence, Device, DeviceAddress, DeviceType};
 
 use crate::codec::{enum_from_db, enum_to_db, ip_from_db, ip_to_db, mac_from_db, mac_to_db};
 use crate::error::{map_sqlite, DbResult};
@@ -94,34 +94,120 @@ const SELECT_COLS: &str =
      model, device_type, os_family, confidence, first_seen_at, last_seen_at, is_trusted, \
      is_hidden, notes";
 
-/// Busca el `id` de un dispositivo existente por identidad estable.
-///
-/// Intenta primero por MAC no-cero y, si no hay, por IP, ambas dentro del
-/// `network_id`. Devuelve `None` si no hay coincidencia.
-fn find_existing_id(conn: &Connection, device: &Device) -> DbResult<Option<String>> {
-    let mac_ok = device.primary_mac.is_some_and(|m| !m.is_zero());
-    let candidates: [&str; 2] = [
-        "SELECT id FROM devices WHERE network_id = ?1 AND primary_mac = ?2",
-        "SELECT id FROM devices WHERE network_id = ?1 AND primary_ip = ?2",
-    ];
-    let key: Option<String> = if mac_ok {
-        device.primary_mac.map(|m| m.to_string())
-    } else {
-        ip_to_db(device.primary_ip)
-    };
-    let Some(key) = key else { return Ok(None) };
-    let stmt_idx = if mac_ok { 0 } else { 1 };
-    let result = conn
-        .query_row(
-            candidates[stmt_idx],
-            rusqlite::params![device.network_id, key],
-            |row| row.get::<_, String>(0),
-        )
-        .map(Some);
-    match result {
-        Ok(id) => Ok(id),
+/// Ejecuta una consulta de un único `id` opcional.
+fn query_opt_id(
+    conn: &Connection,
+    sql: &str,
+    params: &[&dyn rusqlite::ToSql],
+) -> DbResult<Option<String>> {
+    match conn.query_row(sql, params, |row| row.get::<_, String>(0)) {
+        Ok(id) => Ok(Some(id)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
         Err(e) => Err(map_sqlite(e)),
+    }
+}
+
+/// Busca el `id` de un dispositivo existente por identidad estable.
+///
+/// Con MAC no-cero: coincide por MAC y, si no hay, **promueve** una fila previa
+/// solo-IP de la misma IP (un host visto antes sin MAC y ahora con ella es el
+/// mismo dispositivo — evita el seam de duplicación cross-scan, P5). Sin MAC:
+/// coincide por IP. Devuelve `None` si no hay coincidencia.
+fn find_existing_id(conn: &Connection, device: &Device) -> DbResult<Option<String>> {
+    let mac_ok = device.primary_mac.is_some_and(|m| !m.is_zero());
+    if mac_ok {
+        let mac = device.primary_mac.map(|m| m.to_string());
+        if let Some(mac) = mac {
+            if let Some(id) = query_opt_id(
+                conn,
+                "SELECT id FROM devices WHERE network_id = ?1 AND primary_mac = ?2",
+                rusqlite::params![device.network_id, mac],
+            )? {
+                return Ok(Some(id));
+            }
+        }
+        // Sin fila por MAC: promueve una fila solo-IP de la misma IP (si la hay).
+        if let Some(ip) = ip_to_db(device.primary_ip) {
+            return query_opt_id(
+                conn,
+                "SELECT id FROM devices WHERE network_id = ?1 AND primary_ip = ?2 \
+                 AND (primary_mac IS NULL OR primary_mac = '')",
+                rusqlite::params![device.network_id, ip],
+            );
+        }
+        Ok(None)
+    } else if let Some(ip) = ip_to_db(device.primary_ip) {
+        query_opt_id(
+            conn,
+            "SELECT id FROM devices WHERE network_id = ?1 AND primary_ip = ?2",
+            rusqlite::params![device.network_id, ip],
+        )
+    } else {
+        Ok(None)
+    }
+}
+
+/// Lee un dispositivo por su `id` interno.
+fn get_device_by_id(conn: &Connection, id: &str) -> DbResult<Option<Device>> {
+    let sql = format!("SELECT {SELECT_COLS} FROM devices WHERE id = ?1 LIMIT 1");
+    match conn.query_row(&sql, [id], DeviceRow::from_row) {
+        Ok(row) => Ok(Some(row.decode()?)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(map_sqlite(e)),
+    }
+}
+
+/// Funde la observación `incoming` de este escaneo sobre la fila `existing`
+/// preservando el conocimiento acumulado (P5): un re-escaneo más pobre **no**
+/// borra datos previos.
+///
+/// - MAC: ancla estable; solo se fija si faltaba (nunca se sustituye por `None`).
+/// - IP: se actualiza a la más reciente observada (DHCP) si `incoming` la trae.
+/// - hostname/vendor/manufacturer/model/os_family/display_name: se conservan si
+///   `incoming` no aporta valor (`COALESCE` hacia el existente).
+/// - device_type/confidence: precedencia por confianza (igual que
+///   `Device::apply_classification`): gana la mayor confianza; con `confidence`
+///   igual se permite un cambio lateral a un tipo no-`Unknown` (p.ej.
+///   camera@75 → nas@75), y un `Unknown` entrante nunca degrada un tipo ya
+///   clasificado. Nunca baja el `confidence` absoluto.
+/// - is_trusted/is_hidden/notes: campos del usuario; el pipeline no los fija, se
+///   conservan tal cual.
+/// - last_seen_at: siempre el del escaneo actual.
+fn merge_for_update(existing: &Device, incoming: &Device) -> Device {
+    let (device_type, confidence) = if incoming.confidence >= existing.confidence
+        && incoming.device_type != DeviceType::Unknown
+    {
+        (incoming.device_type, incoming.confidence)
+    } else {
+        (existing.device_type, existing.confidence)
+    };
+    Device {
+        id: existing.id.clone(),
+        network_id: existing.network_id.clone(),
+        primary_mac: existing.primary_mac.or(incoming.primary_mac),
+        primary_ip: incoming.primary_ip.or(existing.primary_ip),
+        hostname: incoming
+            .hostname
+            .clone()
+            .or_else(|| existing.hostname.clone()),
+        display_name: existing.display_name.clone(),
+        vendor: incoming.vendor.clone().or_else(|| existing.vendor.clone()),
+        manufacturer: incoming
+            .manufacturer
+            .clone()
+            .or_else(|| existing.manufacturer.clone()),
+        model: incoming.model.clone().or_else(|| existing.model.clone()),
+        device_type,
+        os_family: incoming
+            .os_family
+            .clone()
+            .or_else(|| existing.os_family.clone()),
+        confidence,
+        first_seen_at: existing.first_seen_at.clone(),
+        last_seen_at: incoming.last_seen_at.clone(),
+        is_trusted: existing.is_trusted,
+        is_hidden: existing.is_hidden,
+        notes: existing.notes.clone(),
     }
 }
 
@@ -132,6 +218,13 @@ fn find_existing_id(conn: &Connection, device: &Device) -> DbResult<Option<Strin
 /// contrario inserta una nueva fila. Devuelve si fue inserción o actualización.
 pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutcome> {
     if let Some(existing_id) = find_existing_id(conn, device)? {
+        // Funde sobre la fila existente para no borrar conocimiento acumulado
+        // en un re-escaneo más pobre (P5). Si la fila desapareció entre la
+        // búsqueda y ahora (no debería), cae a los valores entrantes.
+        let merged = match get_device_by_id(conn, &existing_id)? {
+            Some(existing) => merge_for_update(&existing, device),
+            None => device.clone(),
+        };
         conn.execute(
             "UPDATE devices SET
                primary_mac = ?1, primary_ip = ?2, hostname = ?3, display_name = ?4,
@@ -140,20 +233,20 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
                is_trusted = ?12, is_hidden = ?13, notes = ?14
              WHERE id = ?15",
             rusqlite::params![
-                mac_to_db(device.primary_mac),
-                ip_to_db(device.primary_ip),
-                device.hostname,
-                device.display_name,
-                device.vendor,
-                device.manufacturer,
-                device.model,
-                enum_to_db(&device.device_type)?,
-                device.os_family,
-                i64::from(device.confidence.score()),
-                device.last_seen_at,
-                device.is_trusted,
-                device.is_hidden,
-                device.notes,
+                mac_to_db(merged.primary_mac),
+                ip_to_db(merged.primary_ip),
+                merged.hostname,
+                merged.display_name,
+                merged.vendor,
+                merged.manufacturer,
+                merged.model,
+                enum_to_db(&merged.device_type)?,
+                merged.os_family,
+                i64::from(merged.confidence.score()),
+                merged.last_seen_at,
+                merged.is_trusted,
+                merged.is_hidden,
+                merged.notes,
                 existing_id,
             ],
         )
@@ -322,6 +415,86 @@ mod tests {
         assert_eq!(all[0].hostname.as_deref(), Some("nas.local"));
         assert_eq!(all[0].first_seen_at, "2026-06-27T00:00:00Z"); // preserved
         assert_eq!(all[0].last_seen_at, "2026-06-27T02:00:00Z");
+    }
+
+    #[test]
+    fn incomplete_rescan_preserves_accumulated_fields() {
+        // Escaneo 1: ARP (MAC+IP) + mDNS (hostname) + clasificación cámara.
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "preserve");
+        let m = mac("aa:bb:cc:dd:ee:ff");
+        let mut d1 = device("dev-1", Some(m), Some(ip("192.168.1.5")), "t0");
+        d1.hostname = Some("nas.local".to_string());
+        d1.vendor = Some("Synology".to_string());
+        d1.apply_classification(DeviceType::Nas, Confidence::new(80));
+        upsert_device(&conn, &d1).unwrap();
+        // El usuario marca el dispositivo como confiable y le pone una nota.
+        conn.execute(
+            "UPDATE devices SET is_trusted = 1, notes = 'mi NAS' WHERE id = 'dev-1'",
+            [],
+        )
+        .unwrap();
+
+        // Escaneo 2 pobre: solo ARP responde (mDNS callado, sin vendor/hostname,
+        // sin clasificación). NO debe borrar lo aprendido.
+        let mut d2 = device("dev-x", Some(m), Some(ip("192.168.1.5")), "t1");
+        d2.last_seen_at = "t1".to_string();
+        assert_eq!(upsert_device(&conn, &d2).unwrap(), UpsertOutcome::Updated);
+
+        let got = get_device_by_ip(&conn, "net-1", ip("192.168.1.5"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            got.hostname.as_deref(),
+            Some("nas.local"),
+            "hostname preservado"
+        );
+        assert_eq!(got.vendor.as_deref(), Some("Synology"), "vendor preservado");
+        assert_eq!(got.device_type, DeviceType::Nas, "clasificación preservada");
+        assert_eq!(got.confidence, Confidence::new(80));
+        assert_eq!(got.primary_mac, Some(m), "MAC ancla preservada");
+        assert!(got.is_trusted, "campo de usuario preservado");
+        assert_eq!(got.notes.as_deref(), Some("mi NAS"));
+        assert_eq!(got.last_seen_at, "t1", "last_seen actualizado");
+        assert_eq!(got.first_seen_at, "t0", "first_seen preservado");
+    }
+
+    #[test]
+    fn rescan_only_raises_classification_never_downgrades() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "cls2");
+        let m = mac("aa:bb:cc:dd:ee:01");
+        let mut d1 = device("dev-1", Some(m), Some(ip("192.168.1.6")), "t0");
+        d1.apply_classification(DeviceType::Camera, Confidence::new(75));
+        upsert_device(&conn, &d1).unwrap();
+        // Re-escaneo con clasificación de MENOR confianza: se ignora.
+        let mut d2 = device("dev-2", Some(m), Some(ip("192.168.1.6")), "t1");
+        d2.apply_classification(DeviceType::Iot, Confidence::new(40));
+        upsert_device(&conn, &d2).unwrap();
+        let got = get_device_by_ip(&conn, "net-1", ip("192.168.1.6"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(got.device_type, DeviceType::Camera);
+        assert_eq!(got.confidence, Confidence::new(75));
+    }
+
+    #[test]
+    fn ip_only_row_promoted_to_mac_no_duplicate() {
+        // Escaneo 1: host visto solo por IP (TCP-ping, ARP frío) -> fila sin MAC.
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "promote");
+        let d1 = device("dev-ip", None, Some(ip("192.168.1.8")), "t0");
+        assert_eq!(upsert_device(&conn, &d1).unwrap(), UpsertOutcome::Inserted);
+        // Escaneo 2: el mismo host ahora con MAC (ARP caliente). Debe PROMOVER la
+        // fila solo-IP, no crear una segunda (P5 cross-scan).
+        let m = mac("aa:bb:cc:dd:ee:02");
+        let d2 = device("dev-mac", Some(m), Some(ip("192.168.1.8")), "t1");
+        assert_eq!(upsert_device(&conn, &d2).unwrap(), UpsertOutcome::Updated);
+
+        let all = list_devices(&conn, "net-1").unwrap();
+        assert_eq!(all.len(), 1, "promovido, no duplicado");
+        assert_eq!(all[0].id, "dev-ip", "id original preservado");
+        assert_eq!(all[0].primary_mac, Some(m), "MAC promovida a la fila");
     }
 
     #[test]

@@ -122,12 +122,35 @@ impl Observation {
 /// Preserva el orden de primera aparición de cada identidad para resultados
 /// deterministas. Las observaciones sin identidad utilizable se descartan: no
 /// pueden mapearse a un dispositivo.
+///
+/// Reconciliación IP↔MAC: una observación solo-IP (p.ej. la semilla del gateway
+/// sin MAC, o un TCP-ping) se funde con el host cuya MAC fue vista junto a esa
+/// misma IP por otra técnica (relectura ARP). Sin esto, el mismo host aparecería
+/// dos veces —una por `Ip(x)` y otra por `Mac(..)`— violando el determinismo de
+/// inventario (P5). En una LAN, una IP en un instante mapea a un único host, así
+/// que la fusión es correcta.
 #[must_use]
 pub fn aggregate(observations: &[Observation]) -> Vec<Observation> {
+    // Mapa IP → identidad-MAC para las IPs que coocurren con una MAC utilizable.
+    let mut ip_to_mac: BTreeMap<IpAddr, DeviceIdentity> = BTreeMap::new();
+    for obs in observations {
+        if let (Some(ip), Some(id @ DeviceIdentity::Mac(_))) = (obs.ip, obs.identity()) {
+            ip_to_mac.entry(ip).or_insert(id);
+        }
+    }
+
     let mut order: Vec<DeviceIdentity> = Vec::new();
     let mut merged: BTreeMap<DeviceIdentity, Observation> = BTreeMap::new();
     for obs in observations {
-        let Some(id) = obs.identity() else { continue };
+        let Some(mut id) = obs.identity() else {
+            continue;
+        };
+        // Funde una identidad solo-IP en el host-MAC que posee esa IP.
+        if let DeviceIdentity::Ip(ip) = id {
+            if let Some(mac_id) = ip_to_mac.get(&ip) {
+                id = *mac_id;
+            }
+        }
         match merged.get_mut(&id) {
             Some(existing) => existing.merge_from(obs),
             None => {
@@ -212,6 +235,25 @@ mod tests {
             result[1].identity(),
             Some(DeviceIdentity::Ip(ip("192.168.1.9")))
         );
+    }
+
+    #[test]
+    fn aggregate_folds_ip_only_into_mac_host() {
+        // Escenario real del gateway: la semilla solo-IP (router sin MAC conocida)
+        // y la relectura ARP (misma IP, con MAC) son el MISMO host. Deben fundirse
+        // en un único device, no aparecer dos veces (P5).
+        let gw: IpAddr = ip("192.168.1.1");
+        let gw_mac = mac("02:00:5e:10:00:01"); // MAC sintética (no de red real)
+        let observations = vec![
+            Observation::new(Source::Mdns).with_ip(gw), // semilla gateway solo-IP
+            Observation::new(Source::ArpCache)
+                .with_mac(gw_mac)
+                .with_ip(gw),
+        ];
+        let result = aggregate(&observations);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].identity(), Some(DeviceIdentity::Mac(gw_mac)));
+        assert_eq!(result[0].ip, Some(gw));
     }
 
     #[test]

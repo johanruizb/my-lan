@@ -80,6 +80,47 @@ pub fn insert_service(conn: &Connection, service: &Service) -> DbResult<()> {
     Ok(())
 }
 
+/// Inserta o actualiza un servicio por identidad `(device_id, protocol, port)`.
+///
+/// Re-escanear puertos del mismo host **actualiza** la fila (estado/banner/
+/// timestamps) en vez de acumular duplicados, preservando `first_seen_at` (mismo
+/// espíritu P5 que el upsert de dispositivos).
+pub fn upsert_service(conn: &Connection, service: &Service) -> DbResult<()> {
+    let existing_id: Option<String> = match conn.query_row(
+        "SELECT id FROM services WHERE device_id = ?1 AND protocol = ?2 AND port = ?3",
+        rusqlite::params![
+            service.device_id,
+            enum_to_db(&service.protocol)?,
+            i64::from(service.port),
+        ],
+        |row| row.get(0),
+    ) {
+        Ok(id) => Some(id),
+        Err(rusqlite::Error::QueryReturnedNoRows) => None,
+        Err(e) => return Err(map_sqlite(e)),
+    };
+
+    if let Some(id) = existing_id {
+        conn.execute(
+            "UPDATE services SET service_name = ?1, product = ?2, version = ?3,
+               banner = ?4, state = ?5, last_seen_at = ?6 WHERE id = ?7",
+            rusqlite::params![
+                service.service_name,
+                service.product,
+                service.version,
+                service.banner,
+                enum_to_db(&service.state)?,
+                service.last_seen_at,
+                id,
+            ],
+        )
+        .map_err(map_sqlite)?;
+    } else {
+        insert_service(conn, service)?;
+    }
+    Ok(())
+}
+
 /// Lista los servicios de un dispositivo.
 pub fn list_services_by_device(conn: &Connection, device_id: &str) -> DbResult<Vec<Service>> {
     let mut stmt = conn
@@ -164,6 +205,26 @@ mod tests {
         assert_eq!(svc[1].port, 443);
         assert_eq!(svc[0].protocol, Protocol::Tcp);
         assert_eq!(svc[0].state, ServiceState::Open);
+    }
+
+    #[test]
+    fn upsert_service_no_duplicate_on_rescan() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture(dir.path());
+        let mut s = sample_service(80);
+        s.first_seen_at = "t0".to_string();
+        s.last_seen_at = "t0".to_string();
+        upsert_service(&conn, &s).unwrap();
+        // Re-escaneo del mismo puerto: banner/estado/last_seen cambian, sin dup.
+        s.banner = Some("HTTP/1.1 301".to_string());
+        s.last_seen_at = "t1".to_string();
+        s.first_seen_at = "t1".to_string(); // entrante distinto: NO debe pisar el original
+        upsert_service(&conn, &s).unwrap();
+        let svc = list_services_by_device(&conn, "dev-1").unwrap();
+        assert_eq!(svc.len(), 1, "un solo servicio, no duplicado");
+        assert_eq!(svc[0].banner.as_deref(), Some("HTTP/1.1 301"));
+        assert_eq!(svc[0].last_seen_at, "t1");
+        assert_eq!(svc[0].first_seen_at, "t0", "first_seen preservado");
     }
 
     #[test]

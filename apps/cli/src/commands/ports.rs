@@ -7,7 +7,7 @@ use std::net::IpAddr;
 
 use comfy_table::{presets::UTF8_FULL, Cell, Color, ContentArrangement, Table};
 use mylan_core::Service;
-use mylan_db::service_repo::insert_service;
+use mylan_db::service_repo::upsert_service;
 
 use crate::commands::{latest_network_id, open_db};
 use crate::ctx::AppContext;
@@ -37,7 +37,7 @@ pub async fn run(ctx: &AppContext, ip_str: &str, top: u16) -> anyhow::Result<()>
 
     let now = now_rfc3339()?;
     for svc in &services {
-        insert_service(&conn, &fill_service(svc, &device.id, &now))?;
+        upsert_service(&conn, &fill_service(svc, &device.id, &now))?;
     }
 
     let mut table = Table::new();

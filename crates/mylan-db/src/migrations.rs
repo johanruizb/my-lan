@@ -10,7 +10,7 @@ use rusqlite::Connection;
 use crate::error::{map_sqlite, DbResult};
 
 /// `(versión_objetivo, SQL)`. `user_version` parte de 0.
-const MIGRATIONS: &[(u32, &str)] = &[(1, MIGRATION_V1)];
+const MIGRATIONS: &[(u32, &str)] = &[(1, MIGRATION_V1), (2, MIGRATION_V2)];
 
 /// Esquema inicial completo del plan §8.
 const MIGRATION_V1: &str = "\
@@ -101,6 +101,24 @@ CREATE INDEX IF NOT EXISTS idx_scans_network
   ON scans(network_id);
 ";
 
+/// v2 — Backstop de unicidad a nivel de esquema (defensa en profundidad, P5).
+///
+/// El upsert por identidad ya evita duplicados a nivel de aplicación; estos
+/// índices `UNIQUE` convierten cualquier regresión futura de esa lógica en un
+/// error duro en vez de un duplicado silencioso. Se mantiene `primary_ip` SIN
+/// unicidad para tolerar solapamiento transitorio de IP por DHCP. El índice
+/// no-único previo de MAC se reemplaza por su variante `UNIQUE`.
+const MIGRATION_V2: &str = "\
+DROP INDEX IF EXISTS idx_devices_network_mac;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_devices_network_mac
+  ON devices(network_id, primary_mac)
+  WHERE primary_mac IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_services_device_proto_port
+  ON services(device_id, protocol, port);
+";
+
 /// Lee el `user_version` actual de la base de datos.
 fn current_version(conn: &Connection) -> DbResult<u32> {
     let v: i64 = conn
@@ -186,5 +204,31 @@ mod tests {
                 "missing table {expected}"
             );
         }
+    }
+
+    #[test]
+    fn unique_mac_backstop_rejects_raw_duplicate() {
+        // Inserción cruda (saltándose el upsert) de dos devices con la misma
+        // (network_id, primary_mac): el índice UNIQUE de v2 debe rechazar el 2º.
+        let conn = connect_in_memory();
+        run_migrations(&conn).expect("migrate");
+        conn.execute(
+            "INSERT INTO networks (id, name, cidr, created_at, updated_at)
+             VALUES ('net-1','home','192.168.1.0/24','t0','t0')",
+            [],
+        )
+        .unwrap();
+        let insert = |id: &str| {
+            conn.execute(
+                "INSERT INTO devices (id, network_id, primary_mac, first_seen_at, last_seen_at)
+                 VALUES (?1,'net-1','aa:bb:cc:dd:ee:ff','t0','t0')",
+                [id],
+            )
+        };
+        insert("dev-1").expect("first insert ok");
+        assert!(
+            insert("dev-2").is_err(),
+            "UNIQUE(network_id,mac) debe rechazar duplicado"
+        );
     }
 }

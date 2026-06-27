@@ -64,11 +64,16 @@ pub fn run_scan_pipeline_at(
 ) -> anyhow::Result<ScanOutcome> {
     let start = Instant::now();
 
-    network_repo::upsert_network(conn, network)?;
+    // Todo el escaneo es atómico: si algún upsert falla, la transacción revierte
+    // y NO queda ni un `Scan` colgado en `running` ni escrituras de dispositivo
+    // a medias. El error se propaga al llamante (anyhow → stderr).
+    let tx = conn.unchecked_transaction()?;
+
+    network_repo::upsert_network(&tx, network)?;
 
     let scan_id = new_id();
     scan_repo::insert_scan(
-        conn,
+        &tx,
         &Scan {
             id: scan_id.clone(),
             network_id: network.id.clone(),
@@ -92,7 +97,7 @@ pub fn run_scan_pipeline_at(
         // hints mDNS/SSDP fusionados) para que el motor de reglas los evalúe.
         enricher(&mut device, std::slice::from_ref(obs));
         if matches!(
-            device_repo::upsert_device(conn, &device)?,
+            device_repo::upsert_device(&tx, &device)?,
             UpsertOutcome::Inserted
         ) {
             hosts_new += 1;
@@ -105,7 +110,9 @@ pub fn run_scan_pipeline_at(
         hosts_new,
         duration_ms,
     };
-    scan_repo::finish_scan(conn, &scan_id, ScanStatus::Completed, now, Some(&summary))?;
+    scan_repo::finish_scan(&tx, &scan_id, ScanStatus::Completed, now, Some(&summary))?;
+
+    tx.commit()?;
 
     Ok(ScanOutcome {
         scan_id,

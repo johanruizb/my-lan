@@ -18,7 +18,16 @@ use crate::iface::LanInterface;
 /// Tope de tipos de servicio a investigar (evita exploración abierta).
 const MAX_SERVICE_TYPES: usize = 24;
 /// Tiempo dedicado a enumerar tipos antes de resolver instancias.
-const META_FRACTION: u8 = 2;
+const META_FRACTION: u32 = 2;
+
+/// Divide el presupuesto total en (enumeración de tipos, resolución de instancias).
+///
+/// La meta-fase toma `1/META_FRACTION` del total y la resolución el resto; ambas
+/// suman exactamente `timeout`. Pura y determinista para poder testearla.
+fn split_budget(timeout: Duration) -> (Duration, Duration) {
+    let meta = timeout / META_FRACTION;
+    (meta, timeout.saturating_sub(meta))
+}
 
 /// Ejecuta el descubrimiento mDNS durante `timeout` y devuelve [`Observation`]s
 /// crudas (sin interpretar; el fingerprint las decodifica en Paso 6).
@@ -38,8 +47,7 @@ pub async fn mdns_discover(iface: &LanInterface, timeout: Duration) -> Vec<Obser
         }
     };
 
-    let meta_budget = timeout / META_FRACTION as u32;
-    let resolve_budget = timeout.saturating_sub(meta_budget);
+    let (meta_budget, resolve_budget) = split_budget(timeout);
     let mut out = Vec::new();
 
     // Fase 1: enumerar tipos de servicio (algunas implementaciones resuelven aquí).
@@ -109,11 +117,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn meta_fraction_splits_budget() {
-        // Comprobación en bloque const (clippy::assertions_on_constants).
-        const _: () = {
-            assert!(META_FRACTION == 2);
-            assert!(MAX_SERVICE_TYPES > 0);
-        };
+    fn split_budget_halves_and_sums_to_total() {
+        let (meta, resolve) = split_budget(Duration::from_secs(3));
+        assert_eq!(meta, Duration::from_millis(1500));
+        assert_eq!(resolve, Duration::from_millis(1500));
+        assert_eq!(
+            meta + resolve,
+            Duration::from_secs(3),
+            "sin pérdida de presupuesto"
+        );
+    }
+
+    #[test]
+    fn split_budget_handles_zero_and_odd() {
+        assert_eq!(
+            split_budget(Duration::ZERO),
+            (Duration::ZERO, Duration::ZERO)
+        );
+        // Impar: meta redondea hacia abajo, resolve absorbe el resto; suma exacta.
+        let (meta, resolve) = split_budget(Duration::from_nanos(3));
+        assert_eq!(meta + resolve, Duration::from_nanos(3));
+        assert!(resolve >= meta);
     }
 }

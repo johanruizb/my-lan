@@ -183,7 +183,9 @@ mod tests {
 
     #[test]
     fn aggregate_dedups_across_techniques() {
-        // Simula dos técnicas que ven el mismo host (MAC + IP) y verifica dedup.
+        // Tres técnicas ven el mismo host: ARP (MAC+IP), mDNS (MAC+hostname) y un
+        // TCP-ping solo-IP. La observación solo-IP debe fundirse en el host-MAC
+        // (misma IP) en vez de crear un duplicado (P5): el resultado es 1 device.
         let mac = mylan_core::MacAddr::parse("aa:bb:cc:dd:ee:ff").unwrap();
         let ip: IpAddr = "192.168.1.5".parse().unwrap();
         let obs = vec![
@@ -196,11 +198,10 @@ mod tests {
             mylan_core::Observation::new(mylan_core::Source::TcpPing).with_ip(ip),
         ];
         let agg = aggregate(&obs);
-        assert_eq!(agg.len(), 2); // host por MAC (fusionado con mDNS) + host por IP-only
-        let mac_obs = agg
-            .iter()
-            .find(|o| o.mac == Some(mac))
-            .expect("host con MAC presente");
-        assert_eq!(mac_obs.hostname.as_deref(), Some("nas.local"));
+        assert_eq!(agg.len(), 1); // un único host: MAC + IP + hostname fusionados
+        let host = &agg[0];
+        assert_eq!(host.mac, Some(mac));
+        assert_eq!(host.ip, Some(ip));
+        assert_eq!(host.hostname.as_deref(), Some("nas.local"));
     }
 }

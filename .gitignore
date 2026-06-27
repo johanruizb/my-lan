@@ -3,9 +3,12 @@
 **/*.rs.bk
 
 # Bases de datos locales (NUNCA publicar: contienen MACs/IPs de la red real)
+# Incluye sidecars de SQLite (WAL/SHM/journal) que NO casan con *.db.
 *.db
-*.sqlite
-*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite*
 
 # Artefactos de orquestación/planeación (specs, plans, state, logs locales)
 .omc/
@@ -15,4 +18,6 @@
 .env
 *.local.toml
 
+# Exportaciones del inventario (contienen MACs/IPs reales: NUNCA publicar)
 mylan-devices.json
+mylan-devices.csv

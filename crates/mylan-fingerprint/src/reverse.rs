@@ -2,9 +2,12 @@
 //!
 //! AC-10 NO depende de que el PTR exista: en redes RFC1918 el router suele
 //! devolver NXDOMAIN, por lo que esta función devuelve `None` ante cualquier
-//! fallo. Es una señal *opcional* de enriquecimiento de hostname; el pipeline
-//! la invoca antes de la fase de enrichment y, si obtiene un nombre, lo añade
-//! al `hostname` de la `Observation`.
+//! fallo. Es una señal *opcional* de enriquecimiento de hostname expuesta para
+//! que un llamador async la combine con una `Observation` sin hostname. La fase
+//! de enrichment por defecto (`Fingerprint::enricher`) es síncrona y NO la
+//! invoca; un consumidor que quiera PTR debe llamarla por separado antes de
+//! construir el `Device` (se mantiene fuera del `scan` por defecto para no
+//! cargar latencia DNS en el presupuesto AC-12).
 
 use std::net::IpAddr;
 
