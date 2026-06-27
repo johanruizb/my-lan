@@ -1,0 +1,12 @@
+# Regla de ejemplo de fingerprinting (formato del plan §7.4).
+# El motor de reglas se implementa en el Paso 6 (mylan-fingerprint).
+id: camera_rtsp_generic
+match:
+  any:
+    - port: 554
+      service: rtsp
+    - mdns_contains: "_rtsp"
+    - upnp_device_type_contains: "MediaServer"
+score:
+  device_type: camera
+  confidence: 75

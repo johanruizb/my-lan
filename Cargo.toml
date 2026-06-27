@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/mylan-core",
+    "crates/mylan-db",
+    "crates/mylan-discovery",
+    "crates/mylan-fingerprint",
+    "crates/mylan-scanner",
+    "apps/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.96"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/johanruizb/mylan"
+authors = ["Johan Ruíz"]
+
+[workspace.dependencies]
+# Crates internos
+mylan-core = { path = "crates/mylan-core" }
+mylan-db = { path = "crates/mylan-db" }
+mylan-discovery = { path = "crates/mylan-discovery" }
+mylan-fingerprint = { path = "crates/mylan-fingerprint" }
+mylan-scanner = { path = "crates/mylan-scanner" }
+# Externos (Paso 1: mínimos; el resto se añade en su paso correspondiente).
+# Reproducibilidad vía Cargo.lock commiteado; toolchain pin en rust-toolchain.toml.
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+strip = true
+lto = "thin"

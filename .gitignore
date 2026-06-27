@@ -1,0 +1,15 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Bases de datos locales (NUNCA publicar: contienen MACs/IPs de la red real)
+*.db
+*.sqlite
+*.sqlite3
+
+# Artefactos de orquestación/planeación (specs, plans, state, logs locales)
+.omc/
+
+# Configuración local / secretos
+.env
+*.local.toml
