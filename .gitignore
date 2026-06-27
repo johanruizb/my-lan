@@ -14,3 +14,5 @@
 # Configuración local / secretos
 .env
 *.local.toml
+
+mylan-devices.json
