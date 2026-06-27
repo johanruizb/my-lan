@@ -8,9 +8,9 @@ repository.workspace = true
 
 [dependencies]
 csv = "1.4.0"
-hickory-resolver = "0.26.1"
+hickory-resolver.workspace = true
 mylan-core = { workspace = true }
-serde = { version = "1.0.228", features = ["derive"] }
+serde.workspace = true
 serde_yaml_ng = "0.10.0"
-thiserror = "2.0.18"
+thiserror.workspace = true
 tokio = { version = "1.52.3", features = ["rt", "net"] }

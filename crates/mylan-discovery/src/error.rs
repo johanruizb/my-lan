@@ -23,6 +23,11 @@ pub enum DiscoveryError {
     /// Error de E/S subyacente (lectura de `/proc/net/arp`, sockets, etc.).
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    /// Error de resolución DNS (hickory-resolver) o de configuración del
+    /// resolver del sistema. String legible; no expone el tipo de hickory para
+    /// mantener el error estable entre versiones del crate.
+    #[error("dns: {0}")]
+    Dns(String),
 }
 
 impl From<String> for DiscoveryError {

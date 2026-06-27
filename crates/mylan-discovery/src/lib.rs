@@ -18,19 +18,25 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod arp;
+pub mod dns;
 pub mod error;
 pub mod icmp;
 pub mod iface;
 pub mod mdns;
 pub mod netutil;
+pub mod ping;
 pub mod ssdp;
 pub mod sudo;
 pub mod tcp_ping;
+pub mod traceroute;
 
 pub use arp::{arp_entries_to_observations, parse_arp_table, read_arp_cache, ArpEntry};
+pub use dns::{dns_lookup_host, resolve_host, reverse_lookup, system_resolver};
 pub use error::DiscoveryError;
 pub use iface::{detect_interface, gateway_observations, resolve_gateway_mac, LanInterface};
 pub use netutil::enumerate_hosts;
+pub use ping::ping_host;
+pub use traceroute::traceroute_host;
 
 use std::time::Duration;
 
@@ -78,7 +84,10 @@ impl DiscoverOptions {
                 arp_sweep_timeout: Duration::from_secs(2),
                 concurrency: 256,
             },
-            ScanProfile::Normal => Self {
+            // iot/router gobiernan la selección de puertos en `mylan ports`, no
+            // el timing del descubrimiento de hosts: para `mylan scan` degradan
+            // a timing Normal (P1).
+            ScanProfile::Normal | ScanProfile::Iot | ScanProfile::Router => Self {
                 profile,
                 interface: None,
                 tcp_timeout: Duration::from_millis(800),
@@ -172,6 +181,35 @@ mod tests {
         let quick = DiscoverOptions::for_profile(ScanProfile::Quick);
         let deep = DiscoverOptions::for_profile(ScanProfile::Deep);
         assert!(deep.tcp_timeout > quick.tcp_timeout);
+    }
+
+    #[test]
+    fn for_profile_covers_all_five_profiles() {
+        // iot/router degradan a timing Normal en discovery (gobiernan puertos en
+        // `mylan ports`, no el host-discovery).
+        let normal = DiscoverOptions::for_profile(ScanProfile::Normal);
+        for profile in [
+            ScanProfile::Quick,
+            ScanProfile::Normal,
+            ScanProfile::Deep,
+            ScanProfile::Iot,
+            ScanProfile::Router,
+        ] {
+            let opts = DiscoverOptions::for_profile(profile);
+            assert_eq!(
+                opts.profile, profile,
+                "for_profile retiene el perfil pedido"
+            );
+        }
+        let iot = DiscoverOptions::for_profile(ScanProfile::Iot);
+        let router = DiscoverOptions::for_profile(ScanProfile::Router);
+        assert_eq!(iot.tcp_timeout, normal.tcp_timeout, "iot degrada a Normal");
+        assert_eq!(
+            router.tcp_timeout, normal.tcp_timeout,
+            "router degrada a Normal"
+        );
+        assert_eq!(iot.concurrency, normal.concurrency);
+        assert_eq!(router.concurrency, normal.concurrency);
     }
 
     #[test]

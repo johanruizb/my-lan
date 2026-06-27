@@ -48,6 +48,10 @@ pub enum ScanProfile {
     Quick,
     Normal,
     Deep,
+    /// Perfil IoT: catálogo fijo (RTSP/ONVIF, MQTT, CoAP, UPnP, TR-069).
+    Iot,
+    /// Perfil router: catálogo fijo (admin/SSH/Telnet/DNS/DHCP/UPnP/TR-069).
+    Router,
 }
 
 /// Naturaleza de un escaneo: descubrimiento de hosts vs. escaneo de puertos.
@@ -106,6 +110,33 @@ mod tests {
         ] {
             let json = serde_json::to_string(&variant).expect("ser");
             let back: DeviceType = serde_json::from_str(&json).expect("de");
+            assert_eq!(variant, back);
+        }
+    }
+
+    #[test]
+    fn scan_profile_serializes_iot_router() {
+        assert_eq!(
+            serde_json::to_string(&ScanProfile::Iot).expect("ser"),
+            "\"iot\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ScanProfile::Router).expect("ser"),
+            "\"router\""
+        );
+    }
+
+    #[test]
+    fn round_trips_scan_profile() {
+        for variant in [
+            ScanProfile::Quick,
+            ScanProfile::Normal,
+            ScanProfile::Deep,
+            ScanProfile::Iot,
+            ScanProfile::Router,
+        ] {
+            let json = serde_json::to_string(&variant).expect("ser");
+            let back: ScanProfile = serde_json::from_str(&json).expect("de");
             assert_eq!(variant, back);
         }
     }

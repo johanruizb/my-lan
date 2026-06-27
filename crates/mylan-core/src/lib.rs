@@ -26,5 +26,8 @@ pub use enrich::{noop_enricher, Enricher};
 pub use enums::{DeviceType, Protocol, ScanKind, ScanProfile, ScanStatus, ServiceState};
 pub use identity::DeviceIdentity;
 pub use mac::MacAddr;
-pub use models::{Device, DeviceAddress, Interface, Network, Scan, ScanSummary, Service};
+pub use models::{
+    Device, DeviceAddress, DnsRecord, Interface, Network, PingMethod, PingResult, Scan,
+    ScanSummary, Service, TraceHop,
+};
 pub use observation::{aggregate, Observation, Source};

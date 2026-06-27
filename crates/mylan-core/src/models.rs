@@ -185,6 +185,74 @@ pub struct Scan {
     pub summary: Option<ScanSummary>,
 }
 
+// ---------------------------------------------------------------------------
+// Modelos de diagnóstico (Fase 3, Paso 5 — AC-6/7/8).
+//
+// Tipos puros producidos por `mylan ping|traceroute|dns` (fn en `mylan-discovery`).
+// No se persisten: son salida de herramientas de diagnóstico. `serde` para
+// futura export/JSON. Viven en `mylan-core` para que CLI y UI los compartan.
+// ---------------------------------------------------------------------------
+
+/// Método usado por `ping_host` para medir reachability.
+///
+/// Distinguir ICMP de TCP connect es parte del contrato (P4/AC-6): nunca se
+/// presenta un fallback TCP como si fuera ICMP.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PingMethod {
+    /// Eco ICMP vía socket datagrama no-root (`SOCK_DGRAM` + `IPPROTO_ICMP`).
+    Icmp,
+    /// TCP connect a puertos comunes (fallback cuando ICMP no está disponible).
+    TcpConnect,
+}
+
+/// Resultado de un `ping` a un host (AC-6).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PingResult {
+    /// Host sondeado.
+    pub target: IpAddr,
+    /// `true` si al menos un paquete obtuvo respuesta.
+    pub reachable: bool,
+    /// Latencia media (ms) de los paquetes respondidos.
+    pub latency_ms: Option<u64>,
+    /// Fracción de paquetes perdidos en `0.0..=1.0`.
+    pub packet_loss: Option<f32>,
+    /// Paquetes enviados.
+    pub packets_sent: u32,
+    /// Paquetes con respuesta.
+    pub packets_received: u32,
+    /// Método efectivamente usado ([`PingMethod`]).
+    pub method: PingMethod,
+}
+
+/// Un salto de un `traceroute` (AC-7).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TraceHop {
+    /// Número de salto (TTL, base 1).
+    pub hop_number: u8,
+    /// IP del salto (ICMP time-exceeded sender) o `None` si no respondió.
+    pub ip: Option<IpAddr>,
+    /// Hostname vía reverse DNS (best-effort).
+    pub hostname: Option<String>,
+    /// Latencia (ms) del salto o `None` si no respondió.
+    pub latency_ms: Option<u64>,
+    /// Estado legible: `reached`, `time-exceeded`, `*`, `error`, ...
+    pub state: String,
+}
+
+/// Un registro DNS resuelto (AC-8).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DnsRecord {
+    /// Nombre consultado.
+    pub name: String,
+    /// Tipo de registro (`A`, `AAAA`, `PTR`, `MX`, `TXT`).
+    pub record_type: String,
+    /// Valor del registro (IP, hostname, texto, ...).
+    pub value: String,
+    /// TTL en segundos.
+    pub ttl: u32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,5 +353,60 @@ mod tests {
         let json = serde_json::to_string(&scan).expect("serialize");
         let back: Scan = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(scan, back);
+    }
+
+    #[test]
+    fn ping_method_serializes_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&PingMethod::Icmp).expect("ser"),
+            "\"icmp\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PingMethod::TcpConnect).expect("ser"),
+            "\"tcp_connect\""
+        );
+    }
+
+    #[test]
+    fn ping_result_serde_round_trip() {
+        let result = PingResult {
+            target: ip("127.0.0.1"),
+            reachable: true,
+            latency_ms: Some(3),
+            packet_loss: Some(0.0),
+            packets_sent: 4,
+            packets_received: 4,
+            method: PingMethod::Icmp,
+        };
+        let json = serde_json::to_string(&result).expect("serialize");
+        let back: PingResult = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(result, back);
+    }
+
+    #[test]
+    fn trace_hop_serde_round_trip() {
+        let hop = TraceHop {
+            hop_number: 1,
+            ip: Some(ip("127.0.0.1")),
+            hostname: Some("localhost".to_string()),
+            latency_ms: Some(0),
+            state: "reached".to_string(),
+        };
+        let json = serde_json::to_string(&hop).expect("serialize");
+        let back: TraceHop = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(hop, back);
+    }
+
+    #[test]
+    fn dns_record_serde_round_trip() {
+        let rec = DnsRecord {
+            name: "localhost".to_string(),
+            record_type: "A".to_string(),
+            value: "127.0.0.1".to_string(),
+            ttl: 300,
+        };
+        let json = serde_json::to_string(&rec).expect("serialize");
+        let back: DnsRecord = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(rec, back);
     }
 }

@@ -5,10 +5,12 @@
 
 pub mod device;
 pub mod devices;
+pub mod diagnose;
 pub mod export;
 pub mod ports;
 pub mod scan;
 pub mod serve;
+pub mod services;
 pub mod status;
 
 use rusqlite::Connection;

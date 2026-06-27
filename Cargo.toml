@@ -34,10 +34,23 @@ csv = "1.4.0"
 rusqlite = { version = "0.40.1", features = ["bundled"] }
 serde_json = "1.0.150"
 time = { version = "0.3", features = ["formatting", "macros"] }
-tokio = { version = "1.52.3", features = ["rt-multi-thread", "net", "time", "macros", "sync"] }
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "net", "time", "macros", "sync", "signal"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }
+# Externos añadidos en Fase 3 (Paso 0): pinneados (>= floor existente por crate),
+# reproducibilidad vía Cargo.lock commiteado.
+hickory-resolver = "0.26"
+# `net`+`socket` exponen sockopt/recvmsg/ControlMessageOwned base; `uio` activa
+# `recvmsg`/`cmsg_space`/`ControlMessageOwned` (cola de errores ICMP del traceroute).
+nix = { version = "0.29", features = ["net", "socket", "uio"] }
+serde = { version = "1", features = ["derive"] }
+socket2 = "0.6"
+thiserror = "2"
+# `tokio_util::sync::CancellationToken` vive en `pub mod sync;` (no feature-gated
+# en tokio-util 0.7); sin features aquí. El `sync` feature de `tokio` ya está en el
+# pin de workspace de tokio.
+tokio-util = "0.7"
 
 [profile.release]
 strip = true
