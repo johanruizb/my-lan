@@ -7,3 +7,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+mdns-sd = "0.20.0"
+mylan-core.workspace = true
+netdev = { version = "0.45.0", features = ["gateway"] }
+pnet = "0.35.0"
+socket2 = "0.6.4"
+thiserror = "2.0.18"
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "net", "time", "macros", "sync"] }

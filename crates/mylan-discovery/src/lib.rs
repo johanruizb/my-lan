@@ -1,9 +1,206 @@
 //! `mylan-discovery` — descubrimiento de hosts en la LAN.
 //!
 //! Funciones async concretas por técnica (sin trait de estrategia, principio P3) que
-//! producen `Observation`s: detección de interfaz/gateway/CIDR (`netdev`), lectura de
-//! `/proc/net/arp`, barrido TCP-connect, mDNS, SSDP, ICMP no-root (best-effort) y, con
-//! privilegios, ARP sweep (`pnet_datalink`) + ICMP raw. Pipeline de dos fases:
-//! liveness → enrichment.
+//! producen [`Observation`]s de `mylan-core`: detección de interfaz/gateway/CIDR
+//! (`netdev`), lectura de `/proc/net/arp`, barrido TCP-connect, mDNS, SSDP, ICMP
+//! no-root (best-effort) y, con privilegios, ARP sweep (`pnet_datalink`) + ICMP raw.
 //!
-//! Estado: esqueleto (Paso 1). Implementación en Paso 4.
+//! Pipeline de **dos fases**: la fase liveness (este crate) descubre hosts y emite
+//! `Observation`s crudas; la fase enrichment (Paso 6) las interpreta. La fn de alto
+//! nivel [`discover`] combina todas las técnicas, deduplica por identidad estable y
+//! devuelve el inventario crudo listo para enriquecer y persistir.
+//!
+//! Privilegios: el flujo base **nunca** requiere root; el camino sudo amplía cobertura
+//! con degradación elegante (P1). El descubrimiento es **no intrusivo** (P2): solo
+//! sondas pasivas (ARP cache, TCP-connect, eco ICMP, multicast mDNS/SSDP); cero
+//! deauth/ARP-spoof/MITM.
+
+#![allow(clippy::module_name_repetitions)]
+
+pub mod arp;
+pub mod error;
+pub mod icmp;
+pub mod iface;
+pub mod mdns;
+pub mod netutil;
+pub mod ssdp;
+pub mod sudo;
+pub mod tcp_ping;
+
+pub use arp::{arp_entries_to_observations, parse_arp_table, read_arp_cache, ArpEntry};
+pub use error::DiscoveryError;
+pub use iface::{detect_interface, gateway_observations, resolve_gateway_mac, LanInterface};
+pub use netutil::enumerate_hosts;
+
+use std::time::Duration;
+
+use mylan_core::{aggregate, Observation, ScanProfile};
+
+/// Opciones de un descubrimiento. Todas las duraciones son por-técnica.
+#[derive(Debug, Clone)]
+pub struct DiscoverOptions {
+    /// Perfil de profundidad (afecta los timeouts por defecto).
+    pub profile: ScanProfile,
+    /// Override de interfaz; `None` = auto-detectar default route.
+    pub interface: Option<String>,
+    /// Timeout por intento de conexión TCP (por puerto).
+    pub tcp_timeout: Duration,
+    /// Tiempo total de escucha ICMP.
+    pub icmp_timeout: Duration,
+    /// Tiempo total de escucha mDNS.
+    pub mdns_timeout: Duration,
+    /// Tiempo total de escucha SSDP.
+    pub ssdp_timeout: Duration,
+    /// Tiempo total de ARP sweep (solo con CAP_NET_RAW).
+    pub arp_sweep_timeout: Duration,
+    /// Concurrencia máxima del barrido TCP.
+    pub concurrency: usize,
+}
+
+impl Default for DiscoverOptions {
+    fn default() -> Self {
+        Self::for_profile(ScanProfile::Quick)
+    }
+}
+
+impl DiscoverOptions {
+    /// Construye las opciones para un perfil dado.
+    #[must_use]
+    pub fn for_profile(profile: ScanProfile) -> Self {
+        match profile {
+            ScanProfile::Quick => Self {
+                profile,
+                interface: None,
+                tcp_timeout: Duration::from_millis(400),
+                icmp_timeout: Duration::from_secs(2),
+                mdns_timeout: Duration::from_secs(3),
+                ssdp_timeout: Duration::from_secs(3),
+                arp_sweep_timeout: Duration::from_secs(2),
+                concurrency: 256,
+            },
+            ScanProfile::Normal => Self {
+                profile,
+                interface: None,
+                tcp_timeout: Duration::from_millis(800),
+                icmp_timeout: Duration::from_secs(4),
+                mdns_timeout: Duration::from_secs(5),
+                ssdp_timeout: Duration::from_secs(5),
+                arp_sweep_timeout: Duration::from_secs(4),
+                concurrency: 256,
+            },
+            ScanProfile::Deep => Self {
+                profile,
+                interface: None,
+                tcp_timeout: Duration::from_secs(1),
+                icmp_timeout: Duration::from_secs(6),
+                mdns_timeout: Duration::from_secs(8),
+                ssdp_timeout: Duration::from_secs(8),
+                arp_sweep_timeout: Duration::from_secs(6),
+                concurrency: 512,
+            },
+        }
+    }
+}
+
+/// Ejecuta la **fase liveness** del descubrimiento sobre `iface` y devuelve las
+/// [`Observation`]s agregadas (deduplicadas por identidad estable MAC > IP).
+///
+/// Orden deliberado: las técnicas activas (TCP/ICMP/ARP sweep/mDNS/SSDP) corren en
+/// paralelo y, al terminar, **se relee `/proc/net/arp`** para capturar las MACs que el
+/// kernel aprendió durante las conexiones — fuente principal de identidad sin root.
+/// El gateway conocido de la interfaz se incluye como observación si está presente.
+pub async fn discover(iface: &LanInterface, opts: &DiscoverOptions) -> Vec<Observation> {
+    // Técnicas concurrentes.
+    let (tcp, icmp_obs, mdns_obs, ssdp_obs, arp_sweep) = tokio::join!(
+        tcp_ping::tcp_sweep(iface, opts.tcp_timeout, opts.concurrency),
+        icmp::icmp_sweep(iface, opts.icmp_timeout),
+        mdns::mdns_discover(iface, opts.mdns_timeout),
+        ssdp::ssdp_discover(iface, opts.ssdp_timeout),
+        sudo::arp_sweep(iface, opts.arp_sweep_timeout),
+    );
+
+    let mut all = Vec::new();
+    // Gateway conocido: aporta identidad estable para el router.
+    all.extend(gateway_observations(iface.gateway_ip, iface.gateway_mac));
+    all.extend(tcp);
+    all.extend(icmp_obs);
+    all.extend(mdns_obs);
+    all.extend(ssdp_obs);
+    all.extend(arp_sweep);
+
+    // Relectura post-sweep de /proc/net/arp: captura MACs aprendidas por el kernel
+    // durante las conexiones TCP y los ecos ICMP. Es la clave de cobertura sin root.
+    // Las entradas incompletas (sin MAC) son hosts que NO respondieron al ARP durante
+    // el barrido (hosts muertos): se descartan en `arp_entries_to_observations` para
+    // evitar un falso positivo por cada IP sondeada.
+    if let Ok(entries) = read_arp_cache() {
+        all.extend(arp_entries_to_observations(&entries, Some(&iface.name)));
+    }
+
+    aggregate(&all)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::IpAddr;
+
+    fn iface() -> LanInterface {
+        LanInterface {
+            name: "enp37s0".into(),
+            ip: "192.168.1.3".parse().unwrap(),
+            prefix_len: 24,
+            mac: None,
+            gateway_ip: Some("192.168.1.1".parse::<IpAddr>().unwrap()),
+            gateway_mac: Some(mylan_core::MacAddr::parse("aa:bb:cc:dd:ee:ff").unwrap()),
+            dns_servers: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn quick_defaults_within_scan_budget() {
+        let opts = DiscoverOptions::default();
+        assert_eq!(opts.profile, ScanProfile::Quick);
+        assert_eq!(opts.concurrency, 256);
+        // El cuello de botella (mDNS/SSDP) debe ser < 30 s para AC-12.
+        assert!(opts.mdns_timeout.as_secs() < 30);
+        assert!(opts.ssdp_timeout.as_secs() < 30);
+    }
+
+    #[test]
+    fn for_profile_deep_is_slower() {
+        let quick = DiscoverOptions::for_profile(ScanProfile::Quick);
+        let deep = DiscoverOptions::for_profile(ScanProfile::Deep);
+        assert!(deep.tcp_timeout > quick.tcp_timeout);
+    }
+
+    #[test]
+    fn gateway_seed_produces_one_observation() {
+        let iface = iface();
+        let seed = gateway_observations(iface.gateway_ip, iface.gateway_mac);
+        assert_eq!(seed.len(), 1);
+    }
+
+    #[test]
+    fn aggregate_dedups_across_techniques() {
+        // Simula dos técnicas que ven el mismo host (MAC + IP) y verifica dedup.
+        let mac = mylan_core::MacAddr::parse("aa:bb:cc:dd:ee:ff").unwrap();
+        let ip: IpAddr = "192.168.1.5".parse().unwrap();
+        let obs = vec![
+            mylan_core::Observation::new(mylan_core::Source::ArpCache)
+                .with_mac(mac)
+                .with_ip(ip),
+            mylan_core::Observation::new(mylan_core::Source::Mdns)
+                .with_mac(mac)
+                .with_hostname("nas.local"),
+            mylan_core::Observation::new(mylan_core::Source::TcpPing).with_ip(ip),
+        ];
+        let agg = aggregate(&obs);
+        assert_eq!(agg.len(), 2); // host por MAC (fusionado con mDNS) + host por IP-only
+        let mac_obs = agg
+            .iter()
+            .find(|o| o.mac == Some(mac))
+            .expect("host con MAC presente");
+        assert_eq!(mac_obs.hostname.as_deref(), Some("nas.local"));
+    }
+}
