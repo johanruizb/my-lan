@@ -7,3 +7,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+mylan-core = { workspace = true }
+tokio = { version = "1.52.3", features = ["net", "time", "sync", "rt", "macros", "io-util"] }
