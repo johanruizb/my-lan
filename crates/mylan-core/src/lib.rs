@@ -1,8 +1,30 @@
 //! `mylan-core` — modelos de dominio y tipos compartidos de MyLAN.
 //!
-//! Dominio puro, sin I/O de plataforma (principio P3). Aquí vivirán los modelos
-//! (`Network`, `Interface`, `Device`, `DeviceAddress`, `Scan`, `Service`), el tipo
-//! `Observation` (resultado normalizado de cualquier técnica de descubrimiento) y la
-//! lógica de identidad/merge de dispositivos.
-//!
-//! Estado: esqueleto (Paso 1). Implementación en Paso 2.
+//! Dominio puro, sin I/O de plataforma (principio P3). Contiene:
+//! - Los modelos del inventario espejo del esquema DB (plan §8): [`Network`],
+//!   [`Interface`], [`Device`], [`DeviceAddress`], [`Scan`], [`Service`].
+//! - Las enumeraciones de dominio: [`Protocol`], [`DeviceType`], [`ScanProfile`],
+//!   [`ScanKind`], [`ScanStatus`], [`ServiceState`] y la [`Confidence`].
+//! - [`Observation`]: resultado normalizado de cualquier técnica de descubrimiento.
+//! - La identidad estable de dispositivo ([`DeviceIdentity`], MAC > IP) y la
+//!   lógica de merge/precedencia de confianza (dominio puro, P5/P3).
+//! - La interfaz de enrichment como firma de función concreta ([`Enricher`]),
+//!   NO un trait (P3).
+
+#![forbid(unsafe_code)]
+
+mod confidence;
+mod enrich;
+mod enums;
+mod identity;
+mod mac;
+mod models;
+mod observation;
+
+pub use confidence::Confidence;
+pub use enrich::{noop_enricher, Enricher};
+pub use enums::{DeviceType, Protocol, ScanKind, ScanProfile, ScanStatus, ServiceState};
+pub use identity::DeviceIdentity;
+pub use mac::MacAddr;
+pub use models::{Device, DeviceAddress, Interface, Network, Scan, ScanSummary, Service};
+pub use observation::{aggregate, Observation, Source};
