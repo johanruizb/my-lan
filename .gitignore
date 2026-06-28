@@ -21,3 +21,9 @@
 # Exportaciones del inventario (contienen MACs/IPs reales: NUNCA publicar)
 mylan-devices.json
 mylan-devices.csv
+
+# Desktop (Tauri 2) — node modules, build output y target del sub-paquete.
+apps/desktop-tauri/node_modules/
+apps/desktop-tauri/dist/
+apps/desktop-tauri/src-tauri/target/
+apps/desktop-tauri/src-tauri/gen/

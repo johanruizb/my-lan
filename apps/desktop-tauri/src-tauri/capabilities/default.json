@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capacidades por defecto de MyLAN Desktop: permite al frontend escuchar eventos Tauri (scan:progress, scan:heartbeat, scan:cancelled, scan:finished, scan:started, db:imported). Los #[tauri::command] propios del binario no están sujetos al ACL.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

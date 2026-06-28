@@ -1,0 +1,118 @@
+name: Desktop
+
+# CI dedicado para `apps/desktop-tauri` (sub-paquete Tauri 2, NO miembro del
+# workspace Rust — ver Eje 2-A del plan). Corre en PRs y pushes para que el
+# cfg-gate Windows (Paso 0) + la herencia workspace de los path deps (Paso 2)
+# se validen en MSVC y en Linux. La creación del release/tag es best-effort:
+# sólo ocurre en `push` (tagName no vacío); en PRs tagName queda vacío y la
+# acción sólo construye, sin permisos de release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/desktop-tauri/**"
+      - "crates/**"
+      - "signatures/**"
+      - "rust-toolchain.toml"
+      - ".github/workflows/desktop.yml"
+  pull_request:
+    paths:
+      - "apps/desktop-tauri/**"
+      - "crates/**"
+      - "signatures/**"
+      - "rust-toolchain.toml"
+      - ".github/workflows/desktop.yml"
+
+permissions:
+  contents: write # para crear el release "Desktop Alpha" en pushes a main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Bundle (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact-glob: apps/desktop-tauri/src-tauri/target/release/bundle/**/*
+          - os: windows-latest
+            artifact-glob: apps/desktop-tauri/src-tauri/target/release/bundle/**/*
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Toolchain pinneada por rust-toolchain.toml (channel 1.96.0 + rustfmt/clippy).
+      # `rustup show` instala la toolchain exacta del repo.
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            apps/desktop-tauri/src-tauri
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/desktop-tauri/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: apps/desktop-tauri
+
+      # Deps del sistema sólo en Linux (webkit2gtk-4.1 para Tauri 2).
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            pkg-config \
+            build-essential
+
+      # `cargo fmt`/`clippy` del sub-paquete Tauri (no corre en el workspace CI).
+      - name: Format check (Tauri crate)
+        run: cargo fmt --check --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml
+
+      - name: Clippy (Tauri crate)
+        run: cargo clippy --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml -- -D warnings
+
+      # Lint del frontend (eslint + tsc).
+      - name: Frontend lint
+        run: npm run lint
+        working-directory: apps/desktop-tauri
+
+      # Construye el bundle. En push a main crea/actualiza el release
+      # "Desktop Alpha" con tag `desktop-<sha>`; en PRs sólo construye.
+      # `tauri build` filtra `bundle.targets` por plataforma: en Linux produce
+      # AppImage+deb, en Windows NSIS+MSI. El job de Windows valida el cfg-gate
+      # del Paso 0 + la herencia workspace de los path deps en MSVC.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop-tauri
+          tagName: ${{ github.event_name == 'push' && format('desktop-{0}', github.sha) || '' }}
+          releaseName: "Desktop Alpha"
+          releaseDraft: true
+          prerelease: true
+
+      # Adjunta los artefactos del bundle al run del workflow (AC-15:
+      # artefactos de ambos OS disponibles para descarga independientemente
+      # del release).
+      - name: Upload bundle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mylan-desktop-${{ matrix.os }}
+          path: ${{ matrix.artifact-glob }}
+          if-no-files-found: warn

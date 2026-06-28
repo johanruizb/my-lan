@@ -75,7 +75,7 @@ impl Default for ScanOptions {
 }
 
 /// Progreso de un escaneo emitido vía el callback `on_progress` de [`scan_target`].
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, serde::Serialize)]
 pub struct ScanProgress {
     /// Porcentaje completado `0..=100`.
     pub percent_done: u8,
