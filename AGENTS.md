@@ -46,6 +46,9 @@ cargo clippy --all-targets -- -D warnings
 # Check code formatting style
 cargo fmt --all -- --check
 
+# Run local pre-push safety check for real MAC addresses and secrets
+./scripts/pre-push-safety.sh
+
 # Run/Build desktop-tauri application (from apps/desktop-tauri)
 npm run tauri dev
 npm run tauri build
@@ -89,3 +92,4 @@ npm run tauri build
 - Do not execute active network attacks (ARP spoofing, traffic manipulation, Wi-Fi deauth).
 - Do not create or modify `CLAUDE.md`.
 - Do not add external crates to the workspace unless required and pinned to a specific version in `Cargo.toml`.
+- Do not commit real hardware MAC addresses or secrets to files outside tests/fixtures or `#[cfg(test)]` modules (which bypass `./scripts/pre-push-safety.sh`).

@@ -31,6 +31,9 @@ npm run tauri dev
 # Lint the TypeScript frontend
 npm run lint
 
+# Run accessibility audits on the frontend UI
+npm run lint:a11y
+
 # Build the frontend assets only
 npm run build
 
@@ -48,7 +51,7 @@ npm run tauri build
 - **Tauri Detached Workspace**: `src-tauri` has its own `Cargo.lock` and is detached from the root workspace. Do not expect `cargo build --workspace` from the repository root to compile it.
 - **IPC Boundaries**: All communication between React and Rust must use defined Tauri command wrappers in `src-tauri/src/commands.rs` and matching client hooks/invocations.
 - **DTOs**: Domain models from `mylan-core` must be mapped to serializable DTOs in `src-tauri/src/dto.rs` before being returned to the frontend.
-- **Accessibilities & Auditing**: Maintain a11y standards by running the audit script `node scripts/a11y-audit.mjs` as required.
+- **Accessibilities & Auditing**: Maintain a11y standards by running the audit command `npm run lint:a11y` as required.
 
 ## Testing & Quality
 
