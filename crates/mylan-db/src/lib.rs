@@ -20,11 +20,14 @@ pub mod device_repo;
 pub mod error;
 pub mod migrations;
 pub mod network_repo;
+pub mod pipeline;
 pub mod scan_repo;
 pub mod service_repo;
+pub mod util;
 
 // Re-exports ergonómicos de la API pública.
 pub use error::{DbError, DbResult};
+pub use pipeline::{run_scan_pipeline, run_scan_pipeline_at, ScanOutcome};
 
 #[cfg(test)]
 mod concurrency_tests {

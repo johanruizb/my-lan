@@ -55,8 +55,17 @@ pub fn connect(path: impl AsRef<Path>) -> DbResult<Connection> {
     Ok(conn)
 }
 
-/// Configura una conexión ya abierta: WAL opcional, FKs on, migraciones.
+/// Configura una conexión ya abierta: WAL + `busy_timeout`, FKs on, migraciones.
+///
+/// `journal_mode=WAL` permite lecturas (`list_devices`, eventos `scan:progress`)
+/// concurrentes con una escritura (la transacción de `run_scan_pipeline`) sin
+/// bloquearse mutuamente; `busy_timeout=5000` hace que un escritor en contención
+/// reintente hasta 5 s en vez de fallar de inmediato con `SQLITE_BUSY` (AC-12).
+/// Nota: `try_clone` **no** hereda estos pragmas → setearlos también en el clon.
 pub fn setup(conn: &Connection) -> DbResult<()> {
+    // WAL + busy_timeout antes de las FKs: concurrencia read+write sin SQLITE_BUSY.
+    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;")
+        .map_err(map_sqlite)?;
     // Fuerza la integridad referencial (FKs del esquema §8).
     conn.execute_batch("PRAGMA foreign_keys = ON;")
         .map_err(map_sqlite)?;

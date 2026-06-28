@@ -6,8 +6,8 @@
 
 use std::net::IpAddr;
 
-use mylan_cli::run_scan_pipeline;
 use mylan_core::{DeviceType, Observation, ScanProfile, Source};
+use mylan_db::pipeline::run_scan_pipeline;
 
 use mylan_integration_tests::{fixture_db, obs, sample_network};
 

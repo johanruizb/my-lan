@@ -1054,12 +1054,15 @@ dependencies = [
 name = "mylan-db"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "mylan-core",
  "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "time",
+ "uuid",
 ]
 
 [[package]]

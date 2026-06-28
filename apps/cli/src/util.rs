@@ -1,17 +1,10 @@
 //! Utilidades de la CLI: timestamps RFC3339, IDs UUID y la nota de redacción.
+//!
+//! `new_id`/`now_rfc3339` se movieron a [`mylan_db::util`] (Fase 4-A) para
+//! compartirlos con el pipeline reusable; se reexportan aquí para que los
+//! comandos de la CLI sigan usando `crate::util::{new_id, now_rfc3339}`.
 
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
-
-/// Timestamp actual en UTC con formato RFC3339 (columna `TEXT` de la DB).
-pub fn now_rfc3339() -> anyhow::Result<String> {
-    Ok(OffsetDateTime::now_utc().format(&Rfc3339)?)
-}
-
-/// ID UUID v4 para nuevas filas (dispositivos, escaneos, servicios).
-pub fn new_id() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
+pub use mylan_db::util::{new_id, now_rfc3339};
 
 /// Aviso de redacción: la salida del CLI contiene MACs/IPs reales de la red.
 ///
