@@ -4,38 +4,109 @@
 
 MyLAN es una app open-source, gratuita y *local-first* para descubrir, monitorear y proteger tu red local, sin paywalls y sin nube obligatoria. Es una alternativa libre y extensible a herramientas comerciales de monitoreo de red.
 
-> **Estado:** desarrollo temprano. Este repositorio está en el **Paso 1** del [plan de implementación](MyLAN_plan_open_source.md): scaffolding del workspace Rust. Los comandos de la CLI existen como esqueleto y aún no realizan trabajo real.
+> **Estado:** desarrollo activo. El repositorio ya completó el scaffolding del workspace Rust, el CLI funcional (`mylan`), la base de datos local SQLite, el descubrimiento de red y la **Desktop UI alpha** con Tauri 2. El plan completo está en [`MyLAN_plan_open_source.md`](MyLAN_plan_open_source.md) y el orden de entrega en [`ROADMAP.md`](ROADMAP.md).
 
-## Características objetivo (MVP v0.1 + v0.2)
+## Características actuales
 
-- Descubrir los dispositivos conectados a tu LAN (IP, MAC, hostname, vendor, tipo).
+- Descubrir dispositivos conectados a tu LAN (IP, MAC, hostname, vendor, tipo).
+- Escanear puertos por perfil (`quick`, `normal`, `deep`, `iot`, `router`).
+- Detectar servicios de red y filtrarlos por dispositivo, puerto o protocolo.
+- Diagnóstico de red: `ping`, `traceroute` y resolución `dns`.
+- Inventario persistente en SQLite local.
+- Exportar dispositivos y servicios a **JSON** y **CSV**.
 - Funcionar **sin privilegios** por defecto (sudo opcional amplía la cobertura).
-- Persistir el inventario en SQLite local y exportarlo a JSON/CSV.
-- Identificar dispositivos por OUI y reglas de fingerprinting comunitarias.
-- Escanear puertos y detectar servicios (perfil rápido).
+- Desktop UI alpha con React + TypeScript + Tauri 2.
 
 ## Requisitos
 
 - Rust (toolchain pinneada en [`rust-toolchain.toml`](rust-toolchain.toml), instalada por `rustup`).
 - Un compilador de C (`cc`/`gcc`) para `rusqlite` (feature `bundled`).
-- Linux (objetivo verificado). Windows: planeado, **no probado** todavía.
+- Linux (objetivo principal, verificado).
+- Windows: soporte de compilación cruzada en CI (`x86_64-pc-windows-gnu`), funcionalidad en validación.
+- Para la Desktop UI: Node.js 20+, `npm` y dependencias de sistema Tauri 2 (ver [tauri.app/start/prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
 ## Build
 
+### CLI y workspace Rust
+
 ```bash
+# Build de todo el workspace (binarios mylan + tests de integración)
 cargo build --workspace
+
+# Build optimizado del CLI
+cargo build --release -p mylan-cli
+```
+
+### Desktop UI
+
+```bash
+cd apps/desktop-tauri
+npm install
+
+# Modo desarrollo
+npm run dev
+
+# Build de producción (frontend + binario Tauri)
+npm run build
+
+# Lint del frontend
+npm run lint
+
+# Auditoría de accesibilidad (requiere servidor dev o preview)
+npm run lint:a11y
+```
+
+### Compatibilidad cruzada
+
+```bash
+# Windows (requiere target mingw y gcc-mingw-w64-x86-64)
+rustup target add x86_64-pc-windows-gnu
+cargo check --workspace --target x86_64-pc-windows-gnu
 ```
 
 ## Uso (CLI)
 
 ```bash
-mylan status                       # estado general
-mylan scan [--profile quick] [--interface enp37s0]
-mylan devices                      # listar inventario
-mylan device 192.168.1.20          # detalle por IP
-mylan ports 192.168.1.1 --top 100  # puertos de un host
-mylan export devices --format json # exportar (json | csv)
+# Estado general y de la interfaz activa
+mylan status
+
+# Escanear la red actual (perfil quick por defecto)
+mylan scan
+mylan scan --profile normal --interface enp37s0
+
+# Listar inventario de dispositivos
+mylan devices
+
+# Detalle de un dispositivo por IP
+mylan device 192.168.1.20
+
+# Escanear puertos de un host
+mylan ports 192.168.1.1 --top 100
+mylan ports 192.168.1.1 --profile iot
+
+# Listar servicios detectados
+mylan services
+mylan services --device 192.168.1.1 --port 80
+
+# Exportar datos
+mylan export devices --format json --output devices.json
+mylan export services --format csv --output services.csv
+
+# Diagnóstico de red
+mylan ping 1.1.1.1 --count 4
+mylan traceroute 1.1.1.1 --max-hops 30
+mylan dns example.com --rtype A
 ```
+
+### Perfiles de escaneo
+
+| Perfil | Uso |
+|--------|-----|
+| `quick` | Barrido rápido, top 100 puertos |
+| `normal` | Cobertura media |
+| `deep` | Cobertura extendida |
+| `iot` | Selección de puertos comunes en dispositivos IoT |
+| `router` | Selección de puertos comunes en routers/cámaras |
 
 ## Ética y uso responsable
 
@@ -45,23 +116,25 @@ MyLAN está diseñado **únicamente** para redes propias o con autorización exp
 
 | Función | Linux (sin root) | Linux (sudo) | Windows |
 |---|---|---|---|
-| Detección de interfaz/gateway/CIDR | Verificado* | Verificado* | Planeado / no probado |
-| ARP cache (`/proc/net/arp`) | Verificado* | Verificado* | N/A (otro backend) |
-| Barrido TCP-connect | Verificado* | Verificado* | Planeado / no probado |
-| ARP sweep / ICMP raw | — | Verificado* | Planeado / no probado |
-| mDNS / SSDP | Verificado* | Verificado* | Planeado / no probado |
-| Port scan TCP | Verificado* | Verificado* | Planeado / no probado |
-
-\* "Verificado" = objetivo de aceptación de este push; se confirma al completar los pasos correspondientes.
+| Detección de interfaz/gateway/CIDR | Verificado | Verificado | En validación |
+| ARP cache (`/proc/net/arp`) | Verificado | Verificado | N/A (otro backend) |
+| Barrido TCP-connect | Verificado | Verificado | En validación |
+| ARP sweep / ICMP raw | — | Verificado | En validación |
+| mDNS / SSDP | Verificado | Verificado | En validación |
+| Port scan TCP | Verificado | Verificado | En validación |
+| Ping / Traceroute / DNS | Verificado | Verificado | En validación |
+| Desktop UI (Tauri) | Verificado | Verificado | En CI |
 
 ## Estructura del repositorio
 
 ```
-crates/      mylan-core, mylan-db, mylan-discovery, mylan-fingerprint, mylan-scanner
-apps/cli     binario `mylan`
-signatures/  OUI + reglas de dispositivos
-docs/        arquitectura, ética, diseño del scanner
-tests/       integración
+crates/           core, db, discovery, fingerprint, scanner
+apps/cli          binario `mylan`
+apps/desktop-tauri  Desktop UI con Tauri 2 + React + TypeScript
+signatures/       OUI + reglas de dispositivos
+docs/             arquitectura, ética, diseño del scanner
+tests/            integración
+.github/workflows/  CI/CD para workspace y desktop
 ```
 
 ## Licencia

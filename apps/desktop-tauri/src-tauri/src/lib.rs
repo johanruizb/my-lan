@@ -105,6 +105,7 @@ pub fn run() {
             commands::scan_ports_cmd,
             commands::cancel_scan_cmd,
             commands::list_services_cmd,
+            commands::list_scans_cmd,
             commands::export_devices_cmd,
             commands::export_services_cmd,
             commands::db_path_cmd,

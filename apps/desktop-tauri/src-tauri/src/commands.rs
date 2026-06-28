@@ -18,7 +18,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::dto::{
     parse_ip, parse_profile, DeviceDetailDto, LanInterfaceDto, ScanCancelled, ScanFinished,
-    ScanHeartbeat, ScanOutcomeDto, ScanStarted, ServiceFiltersDto, Settings,
+    ScanHeartbeat, ScanOutcomeDto, ScanStarted, ScanSummaryDto, ServiceFiltersDto, Settings,
 };
 use crate::state::DesktopState;
 
@@ -138,6 +138,29 @@ pub fn list_services_cmd(
         service: filters.service,
     };
     mylan_db::service_repo::list_services(&conn, &f).map_err(|e| e.to_string())
+}
+
+/// Lista el historial de escaneos (AC-17, excepción backend read-only).
+///
+/// Lee la tabla `scans` ordenada por `started_at` desc vía
+/// `mylan_db::scan_repo::list_scans` (read-only: sólo `SELECT`). Devuelve
+/// `Vec<ScanSummaryDto>` para alimentar la pantalla de historial de Scans.
+#[tauri::command]
+pub fn list_scans_cmd(state: State<'_, DesktopState>) -> Result<Vec<ScanSummaryDto>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let rows = mylan_db::scan_repo::list_scans(&conn).map_err(|e| e.to_string())?;
+    Ok(rows
+        .into_iter()
+        .map(|r| ScanSummaryDto {
+            id: r.id,
+            profile: r.profile,
+            status: r.status,
+            started_at: r.started_at,
+            finished_at: r.finished_at,
+            hosts_alive: r.hosts_alive,
+            hosts_new: r.hosts_new,
+        })
+        .collect())
 }
 
 // --- Comando: run_discovery (pipeline en spawn_blocking) -------------------

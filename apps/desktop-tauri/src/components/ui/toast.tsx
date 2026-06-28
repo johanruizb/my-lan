@@ -1,63 +1,122 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import * as React from "react";
+import * as ToastPrimitives from "@radix-ui/react-toast";
+import { cva, type VariantProps } from "class-variance-authority";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Radix Toast: ARIA live region por defecto (role="status" / aria-live),
+// swipe-to-dismiss, keyboard escape, focus management (AC-4, AC-15).
+
+const ToastProvider = ToastPrimitives.Provider;
+
+const toastViewportVariants = cva(
+  "fixed z-[100] flex max-h-screen w-full flex-col-reverse gap-2 p-4 outline-none sm:flex-col sm:bottom-0 sm:right-0 sm:top-auto sm:max-w-[420px]",
+);
+
+export const ToastViewport = React.forwardRef<
+  React.ElementRef<typeof ToastPrimitives.Viewport>,
+  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
+>(({ className, ...props }, ref) => (
+  <ToastPrimitives.Viewport
+    ref={ref}
+    className={cn(toastViewportVariants(), className)}
+    {...props}
+  />
+));
+ToastViewport.displayName = "ToastViewport";
 
 type ToastVariant = "default" | "success" | "error";
 
-interface Toast {
-  id: number;
+const toastVariants = cva(
+  "group pointer-events-auto relative flex w-full items-start justify-between gap-3 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full",
+  {
+    variants: {
+      variant: {
+        default: "border-border bg-card text-card-foreground",
+        success:
+          "border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100",
+        error:
+          "border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  },
+);
+
+export interface ToastProps
+  extends React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>,
+    VariantProps<typeof toastVariants> {}
+
+export const Toast = React.forwardRef<
+  React.ElementRef<typeof ToastPrimitives.Root>,
+  ToastProps
+>(({ className, variant = "default", children, ...props }, ref) => (
+  <ToastPrimitives.Root
+    ref={ref}
+    className={cn(toastVariants({ variant }), className)}
+    {...props}
+  >
+    <div className="grid gap-0.5 text-sm">{children}</div>
+    <ToastPrimitives.Close className="absolute right-1 top-1 rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <X className="h-4 w-4" aria-hidden />
+      <span className="sr-only">Cerrar</span>
+    </ToastPrimitives.Close>
+  </ToastPrimitives.Root>
+));
+Toast.displayName = "Toast";
+
+// --- API basada en contexto (compatible con el hook useToast existente) -------
+
+type ToastVariantName = ToastVariant;
+
+interface ToastItem {
+  id: string;
   message: string;
-  variant: ToastVariant;
+  variant: ToastVariantName;
 }
 
 interface ToastContextValue {
-  toast: (message: string, variant?: ToastVariant) => void;
+  toast: (message: string, variant?: ToastVariantName) => void;
 }
 
-const ToastContext = createContext<ToastContextValue | null>(null);
+const ToastContext = React.createContext<ToastContextValue | null>(null);
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+export function ToastProviderApp({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = React.useState<ToastItem[]>([]);
 
-  const toast = useCallback((message: string, variant: ToastVariant = "default") => {
-    const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, message, variant }]);
-    window.setTimeout(() => {
-      setToasts((t) => t.filter((x) => x.id !== id));
-    }, 4000);
-  }, []);
+  const toast = React.useCallback(
+    (message: string, variant: ToastVariantName = "default") => {
+      const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setItems((prev) => [...prev, { id, message, variant }]);
+    },
+    [],
+  );
 
   return (
     <ToastContext.Provider value={{ toast }}>
-      {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-        {toasts.map((t) => (
-          <div
+      <ToastProvider swipeDirection="right" duration={4000}>
+        {children}
+        {items.map((t) => (
+          <Toast
             key={t.id}
-            className={cnToast(t.variant)}
-            role="status"
+            variant={t.variant}
+            onOpenChange={(open) => {
+              if (!open) setItems((prev) => prev.filter((x) => x.id !== t.id));
+            }}
           >
             {t.message}
-          </div>
+          </Toast>
         ))}
-      </div>
+        <ToastViewport />
+      </ToastProvider>
     </ToastContext.Provider>
   );
 }
 
-function cnToast(variant: ToastVariant): string {
-  const base =
-    "pointer-events-auto rounded-md border px-4 py-2 text-sm shadow-md max-w-sm";
-  const styles: Record<ToastVariant, string> = {
-    default: "bg-card text-card-foreground border-border",
-    success: "bg-green-50 text-green-900 border-green-300",
-    error: "bg-red-50 text-red-900 border-red-300",
-  };
-  return `${base} ${styles[variant]}`;
-}
-
 export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext);
+  const ctx = React.useContext(ToastContext);
   if (!ctx) {
-    throw new Error("useToast debe usarse dentro de ToastProvider");
+    throw new Error("useToast debe usarse dentro de ToastProviderApp");
   }
   return ctx;
 }

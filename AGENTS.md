@@ -7,6 +7,7 @@ MyLAN is a local-first, open-source network discovery, diagnostics, and security
 ## Repository Structure
 
 - `apps/cli/` — CLI application (`mylan` binary) containing CLI subcommands and orchestrating the discovery pipeline.
+- `apps/desktop-tauri/` — Desktop application (Tauri 2 + React + TS) for cross-platform network management and visualization.
 - `crates/mylan-core/` — Domain models (Device, Observation, etc.) and pure domain logic (identities, merges, confidences).
 - `crates/mylan-db/` — Local SQLite persistence utilizing `rusqlite` (bundled), versioned migrations, and repository queries.
 - `crates/mylan-discovery/` — Discovery network techniques (ARP cache, ICMP, mDNS, SSDP, TCP connect sweeps, and sudo ARP sweeps).
@@ -21,6 +22,8 @@ MyLAN is a local-first, open-source network discovery, diagnostics, and security
 |---|---|---|
 | CLI subcommands | [apps/cli/src/commands/](file:///home/jr0237/Documentos/my-lan/apps/cli/src/commands/) | Dispatch logic for scan, status, ports, etc. |
 | CLI arguments | [apps/cli/src/cli.rs](file:///home/jr0237/Documentos/my-lan/apps/cli/src/cli.rs) | Subcommands and arguments definition using `clap` |
+| Desktop views | [apps/desktop-tauri/src/screens/](file:///home/jr0237/Documentos/my-lan/apps/desktop-tauri/src/screens/) | Dashboard, Devices, Settings layouts (React) |
+| Desktop commands | [apps/desktop-tauri/src-tauri/src/commands.rs](file:///home/jr0237/Documentos/my-lan/apps/desktop-tauri/src-tauri/src/commands.rs) | Tauri IPC command handlers |
 | Domain models | [crates/mylan-core/src/models.rs](file:///home/jr0237/Documentos/my-lan/crates/mylan-core/src/models.rs) | Device, Network, Scan, and Service schema mappings |
 | DB Migrations | [crates/mylan-db/src/migrations.rs](file:///home/jr0237/Documentos/my-lan/crates/mylan-db/src/migrations.rs) | Embedded SQL scripts versioned by PRAGMA user_version |
 | DB Connection | [crates/mylan-db/src/connection.rs](file:///home/jr0237/Documentos/my-lan/crates/mylan-db/src/connection.rs) | Connection initialization & foreign key constraint flags |
@@ -42,6 +45,10 @@ cargo clippy --all-targets -- -D warnings
 
 # Check code formatting style
 cargo fmt --all -- --check
+
+# Run/Build desktop-tauri application (from apps/desktop-tauri)
+npm run tauri dev
+npm run tauri build
 ```
 
 ## Architecture Notes

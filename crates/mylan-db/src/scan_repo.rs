@@ -58,6 +58,61 @@ pub fn finish_scan(
     Ok(())
 }
 
+/// Resumen ligero de un escaneo para listados de historial (AC-17 IPC `list_scans`).
+///
+/// No mapea `summary_json` a `ScanSummary` (el frontend sólo necesita
+/// `hosts_alive`/`hosts_new`, ya deserializados aquí); evita re-parsear el
+/// JSON completo por fila. Read-only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScanRow {
+    pub id: String,
+    pub profile: String,
+    pub status: String,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+    pub hosts_alive: u32,
+    pub hosts_new: u32,
+}
+
+/// Lista los escaneos ordenados por `started_at` descendente (más reciente
+/// primero). Read-only: sólo `SELECT`. Los campos `hosts_alive`/`hosts_new` se
+/// extraen del `summary_json` cuando existe; si no, valen 0.
+pub fn list_scans(conn: &Connection) -> DbResult<Vec<ScanRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, profile, status, started_at, finished_at, summary_json
+         FROM scans ORDER BY started_at DESC",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        let id: String = row.get(0)?;
+        let profile: String = row.get(1)?;
+        let status: String = row.get(2)?;
+        let started_at: String = row.get(3)?;
+        let finished_at: Option<String> = row.get(4)?;
+        let summary_raw: Option<String> = row.get(5)?;
+        let (hosts_alive, hosts_new) = match summary_raw.as_deref() {
+            Some(s) if !s.is_empty() => {
+                let summary: ScanSummary = serde_json::from_str(s).unwrap_or_default();
+                (summary.hosts_alive, summary.hosts_new)
+            }
+            _ => (0, 0),
+        };
+        Ok(ScanRow {
+            id,
+            profile,
+            status,
+            started_at,
+            finished_at,
+            hosts_alive,
+            hosts_new,
+        })
+    })?;
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r?);
+    }
+    Ok(out)
+}
+
 /// Lee un escaneo por su `id`.
 pub fn get_scan(conn: &Connection, id: &str) -> DbResult<Option<Scan>> {
     let result = conn.query_row(

@@ -95,6 +95,17 @@ export interface ScanOutcomeDto {
   duration_ms: number;
 }
 
+// Resumen de un escaneo para el historial (AC-17 IPC `list_scans`).
+export interface ScanSummaryDto {
+  id: string;
+  profile: string;
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  hosts_alive: number;
+  hosts_new: number;
+}
+
 export interface ServiceFiltersDto {
   device_id?: string | null;
   port?: number | null;
@@ -125,6 +136,8 @@ export interface ScanStarted {
 export interface Settings {
   db_path: string;
   default_profile: string;
+  /** Tema de la UI: `"light"` | `"dark"` (AC-3). */
+  theme: string;
 }
 
 // --- Wrappers tipados de invoke ---------------------------------------------
@@ -153,6 +166,8 @@ export const cancelScan = (scanId: string) =>
 
 export const listServices = (filters: ServiceFiltersDto = {}) =>
   invoke<ServiceExportRow[]>("list_services_cmd", { filters });
+
+export const listScans = () => invoke<ScanSummaryDto[]>("list_scans_cmd");
 
 export const exportDevices = (format: string, outputPath?: string) =>
   invoke<string>("export_devices_cmd", {

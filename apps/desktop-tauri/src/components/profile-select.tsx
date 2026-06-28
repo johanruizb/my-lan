@@ -1,4 +1,10 @@
-import { Select } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const PROFILES: { value: string; label: string }[] = [
   { value: "quick", label: "Quick" },
@@ -12,22 +18,27 @@ export function ProfileSelect({
   value,
   onChange,
   className,
+  disabled,
+  id,
 }: {
   value: string;
   onChange: (v: string) => void;
   className?: string;
+  disabled?: boolean;
+  id?: string;
 }) {
   return (
-    <Select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={className}
-    >
-      {PROFILES.map((p) => (
-        <option key={p.value} value={p.value}>
-          {p.label}
-        </option>
-      ))}
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className={className} aria-label="Perfil de escaneo" id={id}>
+        <SelectValue placeholder="Perfil" />
+      </SelectTrigger>
+      <SelectContent>
+        {PROFILES.map((p) => (
+          <SelectItem key={p.value} value={p.value}>
+            {p.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
     </Select>
   );
 }

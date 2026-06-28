@@ -120,6 +120,20 @@ pub struct ScanStarted {
     pub profile: String,
 }
 
+/// Resumen de un escaneo para el historial de la pantalla Scans (AC-17 IPC
+/// `list_scans`). Read-only: espejo de `mylan_db::scan_repo::ScanRow` con
+/// nombres snake_case (convención IPC).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ScanSummaryDto {
+    pub id: String,
+    pub profile: String,
+    pub status: String,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+    pub hosts_alive: u32,
+    pub hosts_new: u32,
+}
+
 /// Configuración persistida de la app (AC-9). Vive en
 /// `app_data_dir/mylan-desktop.json`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -128,6 +142,10 @@ pub struct Settings {
     pub db_path: String,
     /// Perfil de scan por defecto usado por Dashboard ("Escanear ahora").
     pub default_profile: String,
+    /// Tema de la UI: `"light"` | `"dark"` (AC-3). Persistido y aplicado al
+    /// arranque. `#[serde(default)]` para no romper settings antiguos sin el campo.
+    #[serde(default)]
+    pub theme: String,
 }
 
 impl Default for Settings {
@@ -135,6 +153,7 @@ impl Default for Settings {
         Self {
             db_path: String::new(),
             default_profile: "normal".to_string(),
+            theme: "light".to_string(),
         }
     }
 }
