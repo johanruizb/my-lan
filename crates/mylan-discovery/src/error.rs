@@ -28,6 +28,10 @@ pub enum DiscoveryError {
     /// mantener el error estable entre versiones del crate.
     #[error("dns: {0}")]
     Dns(String),
+    /// La técnica solicitada no está soportada en esta plataforma (p.ej.
+    /// `traceroute` fuera de Linux: requiere `IP_RECVERR` + `nix`).
+    #[error("plataforma no soportada")]
+    UnsupportedPlatform,
 }
 
 impl From<String> for DiscoveryError {

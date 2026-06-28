@@ -11,9 +11,14 @@ hickory-resolver.workspace = true
 mdns-sd = "0.20.0"
 mylan-core.workspace = true
 netdev = { version = "0.45.0", features = ["gateway"] }
-nix.workspace = true
-pnet = "0.35.0"
 socket2.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.52.3", features = ["rt-multi-thread", "net", "time", "macros", "sync"] }
 tokio-util.workspace = true
+
+# Deps unix-only: `nix` (0.29) no compila en Windows y `pnet` (0.35) requiere
+# libpcap. El código que las usa (traceroute, ARP sweep) está cfg-gated a Linux;
+# moverlas a target-specific evita que el dep-compile rompa `--target *-windows-*`.
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+pnet = "0.35.0"

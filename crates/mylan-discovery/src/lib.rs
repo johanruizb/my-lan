@@ -28,6 +28,9 @@ pub mod ping;
 pub mod ssdp;
 pub mod sudo;
 pub mod tcp_ping;
+// `traceroute` usa `std::os::unix::io` + `nix` (cola de errores `IP_RECVERR`):
+// Linux-only. En otras plataformas se expone el stub `traceroute_host` de abajo.
+#[cfg(target_os = "linux")]
 pub mod traceroute;
 
 pub use arp::{arp_entries_to_observations, parse_arp_table, read_arp_cache, ArpEntry};
@@ -36,9 +39,24 @@ pub use error::DiscoveryError;
 pub use iface::{detect_interface, gateway_observations, resolve_gateway_mac, LanInterface};
 pub use netutil::enumerate_hosts;
 pub use ping::ping_host;
+#[cfg(target_os = "linux")]
 pub use traceroute::traceroute_host;
 
 use std::time::Duration;
+
+/// Stub de `traceroute_host` para plataformas no-Linux.
+///
+/// El traceroute real depende de la cola de errores ICMP (`IP_RECVERR` + `nix`),
+/// exclusiva de Linux. Fuera de Linux devuelve [`DiscoveryError::UnsupportedPlatform`]
+/// en lugar de no compilar (degradación documentada, Paso 0).
+#[cfg(not(target_os = "linux"))]
+pub async fn traceroute_host(
+    _target: std::net::IpAddr,
+    _max_hops: u8,
+    _timeout: Duration,
+) -> Result<Vec<mylan_core::TraceHop>, DiscoveryError> {
+    Err(DiscoveryError::UnsupportedPlatform)
+}
 
 use mylan_core::{aggregate, Observation, ScanProfile};
 
@@ -118,6 +136,12 @@ impl DiscoverOptions {
 /// paralelo y, al terminar, **se relee `/proc/net/arp`** para capturar las MACs que el
 /// kernel aprendió durante las conexiones — fuente principal de identidad sin root.
 /// El gateway conocido de la interfaz se incluye como observación si está presente.
+///
+/// **Degradación no-Linux (p.ej. Windows):** las técnicas que dependen de
+/// `/proc/net/arp` ([`read_arp_cache`]), el ARP sweep (`pnet`) y el barrido ICMP
+/// no-root ([`icmp::icmp_sweep`]) devuelven vacío vía sus stubs cfg-gated. El
+/// descubrimiento degrada a TCP-connect + mDNS + SSDP + semilla del gateway, todas
+/// cross-platform. La cobertura nativa Windows (Win32 IP Helper) es un follow-up.
 pub async fn discover(iface: &LanInterface, opts: &DiscoverOptions) -> Vec<Observation> {
     // Técnicas concurrentes.
     let (tcp, icmp_obs, mdns_obs, ssdp_obs, arp_sweep) = tokio::join!(

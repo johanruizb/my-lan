@@ -7,7 +7,7 @@ use std::net::IpAddr;
 use std::time::Duration;
 
 use comfy_table::{presets::UTF8_FULL, Cell, Color, ContentArrangement, Table};
-use mylan_discovery::{dns, ping, traceroute};
+use mylan_discovery::{dns, ping, traceroute_host};
 
 use crate::ctx::AppContext;
 
@@ -94,7 +94,7 @@ pub async fn run_traceroute(
     let target = resolve_target(ip, false, false).await?;
 
     tracing::info!(target = %target, max_hops, ?timeout, "iniciando traceroute");
-    let hops = traceroute::traceroute_host(target, max_hops, timeout)
+    let hops = traceroute_host(target, max_hops, timeout)
         .await
         .map_err(|e| anyhow::anyhow!("traceroute: {e}"))?;
 
