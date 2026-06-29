@@ -1,7 +1,7 @@
 {
   "name": "mylan-workspace",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.4",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
