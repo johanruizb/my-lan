@@ -1,9 +1,11 @@
 {
   "name": "mylan-desktop",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
+    "version:sync": "node ../../scripts/sync-version.mjs",
+    "version:check": "node ../../scripts/sync-version.mjs --check",
     "dev": "vite",
     "build": "npx prettier --write ./src/ --tab-width 4 --log-level silent && tsc && vite build",
     "preview": "vite preview",
@@ -21,6 +23,7 @@
     "@radix-ui/react-toast": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.1.6",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.21",

@@ -51,6 +51,8 @@ import {
     type UnlistenFn,
 } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
+import { MaskedValue } from "@/components/masked-value";
+import { isSensitive } from "@/lib/censor";
 
 // Iconos de estado de servicio (open/closed/filtered — AC-5).
 function serviceStateIcon(state: string) {
@@ -231,7 +233,10 @@ export function DeviceDetail() {
                                 />
                                 <span className="flex items-center gap-2">
                                     <Icon className="h-4 w-4" aria-hidden />
-                                    {d.primary_ip ?? d.id}
+                                    <MaskedValue
+                                        field="primary_ip"
+                                        value={d.primary_ip ?? d.id}
+                                    />
                                 </span>
                                 <Badge variant="secondary" className="ml-1">
                                     {deviceLabel(d.device_type)}
@@ -252,10 +257,12 @@ export function DeviceDetail() {
                                 label="MAC"
                                 value={d.primary_mac ?? "—"}
                                 mono
+                                field="primary_mac"
                             />
                             <Field
                                 label="Hostname"
                                 value={d.hostname ?? d.display_name ?? "—"}
+                                field="hostname"
                             />
                             <Field label="Vendor" value={d.vendor ?? "—"} />
                             <Field
@@ -513,17 +520,25 @@ function Field({
     label,
     value,
     mono,
+    field,
 }: {
     label: string;
     value: string;
     mono?: boolean;
+    field?: string;
 }) {
     return (
         <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">{label}</span>
-            <span className={cn("font-medium", mono && "font-mono text-xs")}>
-                {value}
-            </span>
+            {field && isSensitive(field) ? (
+                <MaskedValue field={field} value={value} mono={mono} />
+            ) : (
+                <span
+                    className={cn("font-medium", mono && "font-mono text-xs")}
+                >
+                    {value}
+                </span>
+            )}
         </div>
     );
 }

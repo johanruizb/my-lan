@@ -53,9 +53,15 @@
     * {
         @apply border-border;
     }
+    html,
+    body,
+    #root {
+        height: 100%;
+    }
     body {
         @apply bg-background text-foreground;
         -webkit-font-smoothing: antialiased;
+        overflow: hidden;
     }
     /* focus-visible visible en todo elemento focusable (AC-14). */
     :focus-visible {

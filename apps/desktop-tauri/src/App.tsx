@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
 import {
     LayoutDashboard,
@@ -8,19 +16,39 @@ import {
     Sun,
     Moon,
     Activity,
+    Info,
+    Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProviderApp } from "@/components/ui/toast";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
+import { CensorshipProvider } from "@/components/censorship-provider";
+import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { ScanOutcomeDto } from "@/lib/tauri";
+import { Input } from "@/components/ui/input";
+import type { Device, ScanOutcomeDto, UnlistenFn } from "@/lib/tauri";
+import {
+    cancelScan,
+    getAppVersion,
+    getSettings,
+    onDiscoveryProgress,
+    onScanCancelled,
+    onScanDevice,
+    onScanFinished,
+    onScanStarted,
+    runDiscovery,
+} from "@/lib/tauri";
+import { NetworkNameProvider, useNetworkName } from "@/lib/use-network-name";
+import { newScanId } from "@/components/profile-select";
+import { useToast } from "@/components/ui/toast";
 import { Dashboard } from "@/screens/Dashboard";
 import { Devices } from "@/screens/Devices";
 import { DeviceDetail } from "@/screens/DeviceDetail";
 import { Scans } from "@/screens/Scans";
 import { Settings } from "@/screens/Settings";
+import { About } from "@/screens/About";
 
 // Contexto ligero para compartir el resumen del último scan entre el Dashboard
 // (que lanza run_discovery) y el header (que lo muestra, AC-1).
@@ -35,6 +63,48 @@ export function useLastScan(): LastScanContextValue {
     if (!ctx)
         throw new Error("useLastScan debe usarse dentro de LastScanProvider");
     return ctx;
+}
+
+// Estado GLOBAL de un escaneo en curso (un único scan a la vez) compartido por
+// Dashboard y /devices: ambos ven el mismo progreso/hallazgos y pueden cancelar,
+// y la navegación preserva la vista en progreso (decisión bloqueada / AC-11).
+export interface ScanProgressState {
+    swept: number;
+    total: number;
+    /** % = swept/total; `null` cuando el total es desconocido (indeterminado). */
+    percent: number | null;
+}
+
+interface ScanContextValue {
+    scanning: boolean;
+    scanId: string | null;
+    progress: ScanProgressState | null;
+    devicesFound: Device[];
+    startScan: (profile?: string) => Promise<void>;
+    cancel: () => void;
+}
+const ScanContext = createContext<ScanContextValue | null>(null);
+
+export function useScan(): ScanContextValue {
+    const ctx = useContext(ScanContext);
+    if (!ctx) throw new Error("useScan debe usarse dentro de ScanProvider");
+    return ctx;
+}
+
+/** Identidad de merge: primary_ip y, como fallback, primary_mac (AC-6). */
+export function deviceKey(d: Device): string {
+    return d.primary_ip ?? d.primary_mac ?? d.id;
+}
+
+// Merge en sitio por identidad: reemplaza la entrada existente o la añade, sin
+// duplicados (AC-6). Inmutable: devuelve una nueva lista.
+function mergeDevice(list: Device[], device: Device): Device[] {
+    const k = deviceKey(device);
+    const idx = list.findIndex((d) => deviceKey(d) === k);
+    if (idx === -1) return [...list, device];
+    const next = list.slice();
+    next[idx] = device;
+    return next;
 }
 
 const navItems = [
@@ -65,6 +135,13 @@ const navItems = [
         icon: SettingsIcon,
         end: false,
         desc: "Configuración",
+    },
+    {
+        to: "/about",
+        label: "Acerca de",
+        icon: Info,
+        end: false,
+        desc: "Información de la app",
     },
 ];
 
@@ -138,11 +215,111 @@ function Sidebar() {
     );
 }
 
+// Pie de la sidebar (AC-8): nombre de la red activa (SSID / etiqueta / CIDR,
+// renderizado en claro — NUNCA enmascarado, AC-11) con un control "Editar"
+// inline que persiste una etiqueta de usuario, más la versión corta de la app.
+// El tag "auto"/"editado" indica el origen del nombre para que el usuario
+// entienda que un re-escaneo no pisa su etiqueta (AC-3).
+function SidebarFooter() {
+    const { name, source, cidr, editName } = useNetworkName();
+    const [version, setVersion] = useState("");
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState("");
+
+    useEffect(() => {
+        getAppVersion()
+            .then(setVersion)
+            .catch(() => {});
+    }, []);
+
+    const displayName = name || cidr || "Sin red";
+
+    async function save() {
+        const label = draft.trim();
+        if (label) await editName(label);
+        setEditing(false);
+    }
+
+    return (
+        <div className="mt-auto flex flex-col gap-2 px-2 text-xs text-muted-foreground">
+            <div className="flex flex-col gap-1">
+                <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                    <Network className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Red activa
+                </span>
+                {editing ? (
+                    <div className="flex flex-col gap-1.5">
+                        <Input
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") void save();
+                                if (e.key === "Escape") setEditing(false);
+                            }}
+                            placeholder="Nombre de la red"
+                            aria-label="Nombre de la red"
+                            autoFocus
+                            className="h-7 text-xs"
+                        />
+                        <div className="flex gap-1.5">
+                            <Button
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => void save()}
+                            >
+                                Guardar
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => setEditing(false)}
+                            >
+                                Cancelar
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between gap-2">
+                            <span
+                                className="truncate font-medium text-foreground"
+                                title={displayName}
+                            >
+                                {displayName}
+                            </span>
+                            <Badge
+                                variant="secondary"
+                                className="shrink-0 px-1 py-0 text-[10px]"
+                            >
+                                {source === "user" ? "editado" : "auto"}
+                            </Badge>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDraft(name);
+                                setEditing(true);
+                            }}
+                            disabled={!cidr}
+                            className="inline-flex w-fit items-center gap-1 rounded text-[11px] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
+                            <Pencil className="h-3 w-3" aria-hidden />
+                            Editar
+                        </button>
+                    </>
+                )}
+            </div>
+            <p className="text-[10px] opacity-70">MyLAN v{version || "…"}</p>
+        </div>
+    );
+}
+
 function AppShell() {
     return (
-        <div className="flex min-h-screen bg-background text-foreground">
+        <div className="flex h-screen overflow-hidden bg-background text-foreground">
             {/* Sidebar fija en desktop; en móvil se colapsa arriba (AC-1). */}
-            <aside className="flex w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 md:flex">
+            <aside className="hidden h-full w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 md:flex">
                 <div className="flex items-center gap-2 px-2 pt-2">
                     <Network className="h-6 w-6 text-primary" aria-hidden />
                     <span className="text-lg font-bold tracking-tight">
@@ -150,13 +327,11 @@ function AppShell() {
                     </span>
                 </div>
                 <Sidebar />
-                <div className="mt-auto px-2 text-xs text-muted-foreground">
-                    <p>Desktop Alpha</p>
-                </div>
+                <SidebarFooter />
             </aside>
 
-            <div className="flex flex-1 flex-col">
-                <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                <header className="z-30 flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
                     <div className="flex items-center gap-3">
                         <h1 className="text-lg font-semibold tracking-tight">
                             MyLAN
@@ -168,7 +343,7 @@ function AppShell() {
                 {/* Navegación móvil (sidebar arriba en pantallas pequeñas, AC-1). */}
                 <nav
                     aria-label="Navegación móvil"
-                    className="flex gap-1 px-4 py-2 md:hidden"
+                    className="flex shrink-0 gap-1 overflow-x-auto px-4 py-2 md:hidden"
                 >
                     {navItems.map((n) => {
                         const Icon = n.icon;
@@ -192,7 +367,7 @@ function AppShell() {
                         );
                     })}
                 </nav>
-                <main className="flex-1 px-4 py-6 md:px-6 md:py-8">
+                <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
                     <div className="mx-auto flex max-w-5xl flex-col gap-6">
                         <Routes>
                             <Route path="/" element={<Dashboard />} />
@@ -203,6 +378,7 @@ function AppShell() {
                             />
                             <Route path="/scans" element={<Scans />} />
                             <Route path="/settings" element={<Settings />} />
+                            <Route path="/about" element={<About />} />
                         </Routes>
                     </div>
                 </main>
@@ -212,18 +388,132 @@ function AppShell() {
 }
 
 function AppInner() {
+    const { toast } = useToast();
     const [lastScan, setLastScan] = useState<ScanOutcomeDto | null>(null);
     const setLastScanCb = useCallback(
         (o: ScanOutcomeDto | null) => setLastScan(o),
         [],
     );
+
+    const [scanning, setScanning] = useState(false);
+    const [scanId, setScanId] = useState<string | null>(null);
+    const [progress, setProgress] = useState<ScanProgressState | null>(null);
+    const [devicesFound, setDevicesFound] = useState<Device[]>([]);
+    const scanningRef = useRef(false);
+    const scanIdRef = useRef<string | null>(null);
+    const cancelledRef = useRef(false);
+
+    // Suscripción ÚNICA al ciclo de vida del scan (AC-11): ambas pantallas
+    // reflejan el mismo progreso/hallazgos y la navegación no lo interrumpe.
+    useEffect(() => {
+        const unlistens: UnlistenFn[] = [];
+        let active = true;
+        Promise.all([
+            onScanStarted((s) => setScanId(s.scan_id)),
+            onDiscoveryProgress((p) =>
+                setProgress({
+                    swept: Math.min(p.swept, p.total),
+                    total: p.total,
+                    percent:
+                        p.total > 0
+                            ? Math.min(
+                                  100,
+                                  Math.round((p.swept / p.total) * 100),
+                              )
+                            : null,
+                }),
+            ),
+            onScanDevice((d) =>
+                setDevicesFound((prev) => mergeDevice(prev, d.device)),
+            ),
+            // Éxito o salida limpia: barra a estado final (100% si total conocido).
+            onScanFinished(() => {
+                setScanning(false);
+                setProgress((prev) =>
+                    prev && prev.total > 0
+                        ? { ...prev, swept: prev.total, percent: 100 }
+                        : prev,
+                );
+            }),
+            // Cancelación: conserva parciales, congela la barra y avisa (AC-8/AC-9).
+            onScanCancelled(() => {
+                cancelledRef.current = true;
+                setScanning(false);
+                toast("Escaneo cancelado. Se conservan los hosts ya hallados.");
+            }),
+        ]).then((fns) => {
+            if (!active) {
+                fns.forEach((f) => f());
+                return;
+            }
+            unlistens.push(...fns);
+        });
+        return () => {
+            active = false;
+            unlistens.forEach((f) => f());
+        };
+    }, [toast]);
+
+    const startScan = useCallback(
+        async (profile?: string) => {
+            if (scanningRef.current) return; // un único scan a la vez
+            scanningRef.current = true;
+            cancelledRef.current = false;
+            const id = newScanId();
+            scanIdRef.current = id;
+            setScanId(id);
+            setScanning(true);
+            setProgress(null);
+            setDevicesFound([]);
+            try {
+                const resolved =
+                    profile ?? (await getSettings()).default_profile;
+                const outcome = await runDiscovery(resolved, id);
+                setLastScan(outcome);
+                // Resumen tipo Dashboard salvo que el usuario haya cancelado.
+                if (!cancelledRef.current) {
+                    toast(
+                        `Escaneo completado: ${outcome.hosts_alive} hosts vivos, ${outcome.hosts_new} nuevos.`,
+                        "success",
+                    );
+                }
+            } catch (e) {
+                toast(`Error: ${e}`, "error");
+            } finally {
+                scanningRef.current = false;
+                setScanning(false);
+            }
+        },
+        [toast],
+    );
+
+    const cancel = useCallback(() => {
+        const id = scanIdRef.current;
+        if (id) cancelScan(id).catch(() => {});
+    }, []);
+
+    const scanValue = useMemo<ScanContextValue>(
+        () => ({ scanning, scanId, progress, devicesFound, startScan, cancel }),
+        [scanning, scanId, progress, devicesFound, startScan, cancel],
+    );
+
     return (
         <LastScanContext.Provider
             value={{ lastScan, setLastScan: setLastScanCb }}
         >
-            <HashRouter>
-                <AppShell />
-            </HashRouter>
+            <ScanContext.Provider value={scanValue}>
+                {/* NetworkNameProvider va dentro de ScanContext para refrescar
+                    el nombre tras cada scan (useNetworkName consume useScan). */}
+                <NetworkNameProvider>
+                    <HashRouter>
+                        <AppShell />
+                    </HashRouter>
+                </NetworkNameProvider>
+                {/* Dialog one-shot de upgrade censura (AC-4). Va dentro de
+                    AppInner para que useCensorship resuelva (CensorshipProvider
+                    envuelve AppInner). */}
+                <CensuraUpgradeDialog />
+            </ScanContext.Provider>
         </LastScanContext.Provider>
     );
 }
@@ -231,11 +521,13 @@ function AppInner() {
 function App() {
     return (
         <ThemeProvider>
-            <TooltipProvider delayDuration={200}>
-                <ToastProviderApp>
-                    <AppInner />
-                </ToastProviderApp>
-            </TooltipProvider>
+            <CensorshipProvider>
+                <TooltipProvider delayDuration={200}>
+                    <ToastProviderApp>
+                        <AppInner />
+                    </ToastProviderApp>
+                </TooltipProvider>
+            </CensorshipProvider>
         </ThemeProvider>
     );
 }

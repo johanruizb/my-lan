@@ -10,7 +10,7 @@ use rusqlite::Connection;
 use crate::error::{map_sqlite, DbResult};
 
 /// `(versión_objetivo, SQL)`. `user_version` parte de 0.
-const MIGRATIONS: &[(u32, &str)] = &[(1, MIGRATION_V1), (2, MIGRATION_V2)];
+const MIGRATIONS: &[(u32, &str)] = &[(1, MIGRATION_V1), (2, MIGRATION_V2), (3, MIGRATION_V3)];
 
 /// Esquema inicial completo del plan §8.
 const MIGRATION_V1: &str = "\
@@ -118,6 +118,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_devices_network_mac
 CREATE UNIQUE INDEX IF NOT EXISTS uq_services_device_proto_port
   ON services(device_id, protocol, port);
 ";
+
+/// v3 — Origen del nombre de red (override de usuario vs auto-detección).
+///
+/// `name_source` distingue un nombre auto-derivado (SSID o CIDR-fallback,
+/// `'auto'`) de una etiqueta editada por el usuario (`'user'`), para que una
+/// re-detección de SSID no pise la etiqueta del usuario (precedencia de
+/// override). Aditiva: `DEFAULT 'auto'` rellena las filas existentes.
+const MIGRATION_V3: &str =
+    "ALTER TABLE networks ADD COLUMN name_source TEXT NOT NULL DEFAULT 'auto';";
 
 /// Lee el `user_version` actual de la base de datos.
 fn current_version(conn: &Connection) -> DbResult<u32> {

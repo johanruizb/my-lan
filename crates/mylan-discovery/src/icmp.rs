@@ -10,12 +10,14 @@
 
 use std::time::Duration;
 
-use mylan_core::Observation;
+use tokio::sync::mpsc::UnboundedSender;
+use tokio_util::sync::CancellationToken;
 
 use crate::iface::LanInterface;
+use crate::DiscoveryEvent;
 
 #[cfg(target_os = "linux")]
-use mylan_core::Source;
+use mylan_core::{Observation, Source};
 #[cfg(target_os = "linux")]
 use socket2::{Domain, Protocol, Socket, Type};
 #[cfg(target_os = "linux")]
@@ -30,23 +32,37 @@ use crate::netutil::enumerate_hosts;
 /// (`net.ipv4.ping_group_range`). Fuera de Linux no hay barrido ICMP → `vec![]`
 /// (degradación documentada, Paso 0; no es un error porque la fn devuelve `Vec`).
 #[cfg(not(target_os = "linux"))]
-pub async fn icmp_sweep(_iface: &LanInterface, _timeout: Duration) -> Vec<Observation> {
-    Vec::new()
+pub async fn icmp_sweep(
+    _iface: &LanInterface,
+    _timeout: Duration,
+    _tx: UnboundedSender<DiscoveryEvent>,
+    _cancel: CancellationToken,
+) {
 }
 
 /// Intenta un barrido ICMP sobre la subred. Best-effort: si el socket no se puede
-/// abrir (sin `ping_group_range`), devuelve `vec![]`.
+/// abrir (sin `ping_group_range`), retorna sin emitir nada. Transmite una
+/// [`DiscoveryEvent::Host`] por responder único; respeta `cancel` tanto en el envío
+/// como en la recepción.
 #[cfg(target_os = "linux")]
-pub async fn icmp_sweep(iface: &LanInterface, timeout: Duration) -> Vec<Observation> {
+pub async fn icmp_sweep(
+    iface: &LanInterface,
+    timeout: Duration,
+    tx: UnboundedSender<DiscoveryEvent>,
+    cancel: CancellationToken,
+) {
     let sock = match open_icmp_socket() {
         Ok(s) => s,
-        Err(_) => return Vec::new(),
+        Err(_) => return,
     };
     let id = (std::process::id() as u16).wrapping_add(1);
     let hosts = enumerate_hosts(iface.ip, iface.prefix_len);
     // Envía eco a cada host (no bloquea: send_to es async).
     let mut seq = 1u16;
     for host in &hosts {
+        if cancel.is_cancelled() {
+            return;
+        }
         let pkt = build_echo_request(id, seq);
         let target = SocketAddr::new(IpAddr::V4(*host), 0);
         let _ = sock.send_to(&pkt, target).await;
@@ -56,29 +72,34 @@ pub async fn icmp_sweep(iface: &LanInterface, timeout: Duration) -> Vec<Observat
     let deadline = tokio::time::Instant::now() + timeout;
     let mut buf = [0u8; 1500];
     let mut seen = std::collections::HashSet::new();
-    let mut out = Vec::new();
     loop {
         let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
         if remaining.is_zero() {
             break;
         }
-        match tokio::time::timeout(remaining, sock.recv_from(&mut buf)).await {
-            Ok(Ok((n, from))) => {
-                if n >= 8
-                    && buf[0] == 0
-                    && matches!(id_for(&buf[..n]), Some(echo_id) if echo_id == id)
-                {
-                    if let IpAddr::V4(responder) = from.ip() {
-                        if seen.insert(responder) {
-                            out.push(Observation::new(Source::Icmp).with_ip(IpAddr::V4(responder)));
+        tokio::select! {
+            () = cancel.cancelled() => break,
+            res = tokio::time::timeout(remaining, sock.recv_from(&mut buf)) => {
+                match res {
+                    Ok(Ok((n, from))) => {
+                        if n >= 8
+                            && buf[0] == 0
+                            && matches!(id_for(&buf[..n]), Some(echo_id) if echo_id == id)
+                        {
+                            if let IpAddr::V4(responder) = from.ip() {
+                                if seen.insert(responder) {
+                                    let _ = tx.send(DiscoveryEvent::Host(
+                                        Observation::new(Source::Icmp).with_ip(IpAddr::V4(responder)),
+                                    ));
+                                }
+                            }
                         }
                     }
+                    _ => break,
                 }
             }
-            _ => break,
         }
     }
-    out
 }
 
 /// Abre un socket datagrama ICMP no-root y lo convierte a un socket tokio.

@@ -1,9 +1,11 @@
 {
   "name": "mylan-workspace",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
+    "version:sync": "node scripts/sync-version.mjs",
+    "version:check": "node scripts/sync-version.mjs --check",
     "build:cli": "cargo build --release -p mylan-cli",
     "build:desktop": "npm run --prefix apps/desktop-tauri build",
     "build:desktop:bundle": "npm run --prefix apps/desktop-tauri tauri -- build",
@@ -15,6 +17,6 @@
     "fmt:check": "cargo fmt --all --check",
     "fmt": "cargo fmt --all",
     "clippy": "cargo clippy --workspace -- -D warnings && cargo clippy --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml -- -D warnings",
-    "check": "npm run fmt:check && npm run clippy && npm run test && npm run lint && npm run build:desktop"
+    "check": "npm run version:check && npm run fmt:check && npm run clippy && npm run test && npm run lint && npm run build:desktop"
   }
 }

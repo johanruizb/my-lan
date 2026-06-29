@@ -1,15 +1,18 @@
 name: Desktop
 
 # CI dedicado para `apps/desktop-tauri` (sub-paquete Tauri 2, NO miembro del
-# workspace Rust — ver Eje 2-A del plan). Corre en PRs y pushes para que el
-# cfg-gate Windows (Paso 0) + la herencia workspace de los path deps (Paso 2)
-# se validen en MSVC y en Linux. La creación del release/tag es best-effort:
-# sólo ocurre en `push` (tagName no vacío); en PRs tagName queda vacío y la
-# acción sólo construye, sin permisos de release.
+# workspace Rust — ver Eje 2-A del plan). Corre en PRs y pushes para validar
+# el cfg-gate Windows (Paso 0) + la herencia workspace de los path deps
+# (Paso 2) en MSVC y en Linux. Los releases oficiales se crean manualmente
+# desde `.github/workflows/release.yml`.
 on:
   push:
     branches: [main]
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "package.json"
+      - "scripts/sync-version.mjs"
       - "apps/desktop-tauri/**"
       - "crates/**"
       - "signatures/**"
@@ -17,6 +20,10 @@ on:
       - ".github/workflows/desktop.yml"
   pull_request:
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "package.json"
+      - "scripts/sync-version.mjs"
       - "apps/desktop-tauri/**"
       - "crates/**"
       - "signatures/**"
@@ -24,7 +31,7 @@ on:
       - ".github/workflows/desktop.yml"
 
 permissions:
-  contents: write # para crear el release "Desktop Alpha" en pushes a main
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -62,6 +69,9 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop-tauri/package-lock.json
 
+      - name: Check app version sync
+        run: node scripts/sync-version.mjs --check
+
       - name: Install frontend deps
         run: npm ci
         working-directory: apps/desktop-tauri
@@ -91,20 +101,13 @@ jobs:
         run: npm run lint
         working-directory: apps/desktop-tauri
 
-      # Construye el bundle. En push a main crea/actualiza el release
-      # "Desktop Alpha" con tag `desktop-<sha>`; en PRs sólo construye.
-      # `tauri build` filtra `bundle.targets` por plataforma: en Linux produce
-      # AppImage+deb, en Windows NSIS+MSI. El job de Windows valida el cfg-gate
-      # del Paso 0 + la herencia workspace de los path deps en MSVC.
+      # Construye el bundle. `tauri build` filtra `bundle.targets` por
+      # plataforma: en Linux produce AppImage+deb, en Windows NSIS+MSI. El job
+      # de Windows valida el cfg-gate del Paso 0 + la herencia workspace de los
+      # path deps en MSVC.
       - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop-tauri
-          tagName: ${{ github.event_name == 'push' && format('desktop-{0}', github.sha) || '' }}
-          releaseName: "Desktop Alpha"
-          releaseDraft: true
-          prerelease: true
 
       # Adjunta los artefactos del bundle al run del workflow (AC-15:
       # artefactos de ambos OS disponibles para descarga independientemente

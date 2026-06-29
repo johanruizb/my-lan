@@ -1,8 +1,10 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { useEffect, useMemo, useState } from "react";
+import "dayjs/locale/es";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,8 @@ import {
     Network as NetworkIcon,
     ArrowRight,
     ShieldAlert,
+    Play,
+    X,
 } from "lucide-react";
 import {
     Table,
@@ -28,14 +32,21 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { exportDevices, listDevices, type Device } from "@/lib/tauri";
+import { deviceKey, useScan } from "@/App";
+import { MaskedValue } from "@/components/masked-value";
+import { useCensorship } from "@/components/censorship-provider";
+import { maskValue } from "@/lib/censor";
 
 type View = "cards" | "table";
 
 dayjs.extend(relativeTime);
+dayjs.locale("es");
 
 export function Devices() {
     const { toast } = useToast();
     const navigate = useNavigate();
+    const { scanning, progress, devicesFound, startScan, cancel } = useScan();
+    const { censorshipEnabled } = useCensorship();
     const [devices, setDevices] = useState<Device[]>([]);
     const [query, setQuery] = useState("");
     const [error, setError] = useState<string | null>(null);
@@ -60,15 +71,32 @@ export function Devices() {
         refresh();
     }, []);
 
+    // Al terminar el scan refresca con la verdad canónica de la BD (AC-10).
+    const prevScanning = useRef(scanning);
+    useEffect(() => {
+        if (prevScanning.current && !scanning) refresh();
+        prevScanning.current = scanning;
+    }, [scanning]);
+
+    // Merge en sitio de los hosts hallados en vivo sobre el listado base, por
+    // identidad primary_ip → primary_mac, sin duplicados (AC-5/AC-6).
+    const merged = useMemo(() => {
+        if (devicesFound.length === 0) return devices;
+        const map = new Map<string, Device>();
+        for (const d of devices) map.set(deviceKey(d), d);
+        for (const d of devicesFound) map.set(deviceKey(d), d);
+        return [...map.values()];
+    }, [devices, devicesFound]);
+
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return devices;
-        return devices.filter((d) =>
+        if (!q) return merged;
+        return merged.filter((d) =>
             [d.primary_ip, d.primary_mac, d.hostname, d.display_name, d.vendor]
                 .filter(Boolean)
                 .some((v) => (v as string).toLowerCase().includes(q)),
         );
-    }, [devices, query]);
+    }, [merged, query]);
 
     async function handleExport(format: string) {
         try {
@@ -133,6 +161,28 @@ export function Devices() {
                                 Tabla
                             </Button>
                         </div>
+                        {/* Botón único "Escanear" (perfil por defecto de Ajustes,
+                            sin selector) y "Cancelar" mientras corre (AC-1/AC-2/AC-8). */}
+                        {scanning ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={cancel}
+                                className="gap-1.5"
+                            >
+                                <X className="h-3.5 w-3.5" aria-hidden />
+                                Cancelar
+                            </Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                onClick={() => startScan()}
+                                className="gap-1.5"
+                            >
+                                <Play className="h-3.5 w-3.5" aria-hidden />
+                                Escanear
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             size="sm"
@@ -167,6 +217,30 @@ export function Devices() {
                             className="pl-9"
                         />
                     </div>
+
+                    {/* Barra de progreso del barrido (AC-3/AC-4): % cuando se
+                        conoce el total, indeterminada si no. */}
+                    {scanning && (
+                        <div
+                            className="mb-4 flex flex-col gap-1.5"
+                            aria-live="polite"
+                        >
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Escaneando red…</span>
+                                <span>
+                                    {progress && progress.total > 0
+                                        ? `${progress.swept}/${progress.total} (${progress.percent}%)`
+                                        : "Sondeando…"}
+                                </span>
+                            </div>
+                            <Progress
+                                value={progress?.percent ?? undefined}
+                                indeterminate={
+                                    !progress || progress.total === 0
+                                }
+                            />
+                        </div>
+                    )}
 
                     {error && (
                         <div role="alert" className="mb-4">
@@ -224,29 +298,36 @@ export function Devices() {
                                                 }
                                             }}
                                             tabIndex={0}
-                                            aria-label={`Dispositivo ${d.primary_ip ?? d.id}: ${deviceLabel(d.device_type)}`}
+                                            aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
                                         >
                                             <CardContent className="flex flex-col gap-3 p-4">
                                                 <div className="flex items-start justify-between gap-2">
-                                                    <div className="flex items-center gap-2.5">
+                                                    <div className="flex min-w-0 items-center gap-2.5">
                                                         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
                                                             <Icon
                                                                 className="h-5 w-5"
                                                                 aria-hidden
                                                             />
                                                         </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium">
-                                                                {d.primary_ip ??
-                                                                    d.id}
+                                                        <div className="flex min-w-0 flex-col">
+                                                            <span className="truncate font-medium">
+                                                                <MaskedValue
+                                                                    field="primary_ip"
+                                                                    value={
+                                                                        d.primary_ip ??
+                                                                        d.id
+                                                                    }
+                                                                />
                                                             </span>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {`${
+                                                            <DeviceIdentity
+                                                                hostname={
                                                                     d.hostname ??
-                                                                    d.display_name ??
-                                                                    "—"
-                                                                } · ${d.primary_mac}`}
-                                                            </span>
+                                                                    d.display_name
+                                                                }
+                                                                primaryMac={
+                                                                    d.primary_mac
+                                                                }
+                                                            />
                                                         </div>
                                                     </div>
                                                     <ArrowRight
@@ -267,14 +348,12 @@ export function Devices() {
                                                             d.device_type,
                                                         )}
                                                     </Badge>
-                                                    {d.confidence &&
-                                                        d.confidence !==
-                                                            "0" && (
-                                                            <Badge variant="outline">
-                                                                conf.{" "}
-                                                                {d.confidence}
-                                                            </Badge>
-                                                        )}
+                                                    {Number(d.confidence) >
+                                                        0 && (
+                                                        <Badge variant="outline">
+                                                            conf. {d.confidence}
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                                                     <Meta
@@ -330,15 +409,31 @@ export function Devices() {
                                                 tabIndex={0}
                                             >
                                                 <TableCell>
-                                                    {d.primary_ip ?? "—"}
+                                                    <MaskedValue
+                                                        field="primary_ip"
+                                                        value={
+                                                            d.primary_ip ?? "—"
+                                                        }
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="font-mono text-xs">
-                                                    {d.primary_mac ?? "—"}
+                                                    <MaskedValue
+                                                        field="primary_mac"
+                                                        value={
+                                                            d.primary_mac ?? "—"
+                                                        }
+                                                        mono
+                                                    />
                                                 </TableCell>
                                                 <TableCell>
-                                                    {d.hostname ??
-                                                        d.display_name ??
-                                                        "—"}
+                                                    <MaskedValue
+                                                        field="hostname"
+                                                        value={
+                                                            d.hostname ??
+                                                            d.display_name ??
+                                                            "—"
+                                                        }
+                                                    />
                                                 </TableCell>
                                                 <TableCell>
                                                     {d.vendor ?? "—"}
@@ -383,6 +478,62 @@ function Meta({
             <dd className={`font-medium ${mono ? "font-mono" : ""}`}>
                 {value}
             </dd>
+        </div>
+    );
+}
+
+function DeviceIdentity({
+    hostname,
+    primaryMac,
+}: {
+    hostname: string | null;
+    primaryMac: string | null;
+}) {
+    const { censorshipEnabled } = useCensorship();
+    const displayHostname = hostname?.trim();
+    const displayMac = primaryMac?.trim();
+    const hasHostname = Boolean(displayHostname);
+
+    // Cuando censura está ON, el árbol de accesibilidad (title/aria-label) no
+    // debe filtrar el valor real — se enmascara con maskValue.
+    const hostnameTitle = censorshipEnabled
+        ? displayHostname
+            ? maskValue("hostname", displayHostname)
+            : "Sin hostname"
+        : displayHostname || "Sin hostname";
+    const macTitle = censorshipEnabled
+        ? displayMac
+            ? maskValue("primary_mac", displayMac)
+            : "Sin MAC"
+        : displayMac || "Sin MAC";
+
+    return (
+        <div className="mt-0.5 flex min-w-0 flex-col gap-0.5 text-xs">
+            <span
+                className={`truncate ${
+                    hasHostname
+                        ? "text-muted-foreground"
+                        : "text-muted-foreground/70"
+                }`}
+                title={hostnameTitle}
+            >
+                {displayHostname ? (
+                    <MaskedValue field="hostname" value={displayHostname} />
+                ) : (
+                    "Sin hostname"
+                )}
+            </span>
+            <span
+                className="truncate font-mono text-[11px] uppercase tracking-normal text-muted-foreground/80"
+                title={macTitle}
+                aria-label={`MAC ${macTitle}`}
+            >
+                {displayMac ? (
+                    <MaskedValue field="primary_mac" value={displayMac} mono />
+                ) : (
+                    "Sin MAC"
+                )}
+            </span>
         </div>
     );
 }

@@ -26,6 +26,7 @@ pub mod mdns;
 pub mod netutil;
 pub mod ping;
 pub mod ssdp;
+pub mod ssid;
 pub mod sudo;
 pub mod tcp_ping;
 // `traceroute` usa `std::os::unix::io` + `nix` (cola de errores `IP_RECVERR`):
@@ -39,6 +40,7 @@ pub use error::DiscoveryError;
 pub use iface::{detect_interface, gateway_observations, resolve_gateway_mac, LanInterface};
 pub use netutil::enumerate_hosts;
 pub use ping::ping_host;
+pub use ssid::{detect_ssid, SsidDetector};
 #[cfg(target_os = "linux")]
 pub use traceroute::traceroute_host;
 
@@ -59,6 +61,19 @@ pub async fn traceroute_host(
 }
 
 use mylan_core::{aggregate, Observation, ScanProfile};
+use tokio::sync::mpsc::UnboundedSender;
+use tokio_util::sync::CancellationToken;
+
+/// Evento del descubrimiento en streaming: un host descubierto o un avance del
+/// barrido (IPs sondeadas / total del CIDR). Comparten un único canal para que el
+/// consumidor los drene en un solo bucle.
+#[derive(Debug, Clone)]
+pub enum DiscoveryEvent {
+    /// Una [`Observation`] cruda de un host (cualquier técnica).
+    Host(Observation),
+    /// Avance del barrido TCP: `swept` IPs sondeadas de `total` en el CIDR.
+    Progress { swept: u32, total: u32 },
+}
 
 /// Opciones de un descubrimiento. Todas las duraciones son por-técnica.
 #[derive(Debug, Clone)]
@@ -143,34 +158,122 @@ impl DiscoverOptions {
 /// descubrimiento degrada a TCP-connect + mDNS + SSDP + semilla del gateway, todas
 /// cross-platform. La cobertura nativa Windows (Win32 IP Helper) es un follow-up.
 pub async fn discover(iface: &LanInterface, opts: &DiscoverOptions) -> Vec<Observation> {
-    // Técnicas concurrentes.
-    let (tcp, icmp_obs, mdns_obs, ssdp_obs, arp_sweep) = tokio::join!(
-        tcp_ping::tcp_sweep(iface, opts.tcp_timeout, opts.concurrency),
-        icmp::icmp_sweep(iface, opts.icmp_timeout),
-        mdns::mdns_discover(iface, opts.mdns_timeout),
-        ssdp::ssdp_discover(iface, opts.ssdp_timeout),
-        sudo::arp_sweep(iface, opts.arp_sweep_timeout),
-    );
-
+    // Adaptador batch sobre `discover_stream`: drena el canal a un Vec y agrega.
+    // Mantiene la firma pública para la CLI; el token nunca se cancela.
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<DiscoveryEvent>();
+    let cancel = CancellationToken::new();
     let mut all = Vec::new();
-    // Gateway conocido: aporta identidad estable para el router.
-    all.extend(gateway_observations(iface.gateway_ip, iface.gateway_mac));
-    all.extend(tcp);
-    all.extend(icmp_obs);
-    all.extend(mdns_obs);
-    all.extend(ssdp_obs);
-    all.extend(arp_sweep);
+    let drain = async {
+        while let Some(ev) = rx.recv().await {
+            if let DiscoveryEvent::Host(obs) = ev {
+                all.push(obs);
+            }
+        }
+    };
+    tokio::join!(discover_stream(iface, opts, tx, cancel), drain);
+    aggregate(&all)
+}
 
-    // Relectura post-sweep de /proc/net/arp: captura MACs aprendidas por el kernel
-    // durante las conexiones TCP y los ecos ICMP. Es la clave de cobertura sin root.
-    // Las entradas incompletas (sin MAC) son hosts que NO respondieron al ARP durante
-    // el barrido (hosts muertos): se descartan en `arp_entries_to_observations` para
-    // evitar un falso positivo por cada IP sondeada.
-    if let Ok(entries) = read_arp_cache() {
-        all.extend(arp_entries_to_observations(&entries, Some(&iface.name)));
+/// Variante en streaming de [`discover`]: emite cada host y cada avance del barrido
+/// por `tx` a medida que se descubren, en vez de devolver un `Vec` agregado al final.
+///
+/// Emite primero `Progress{0, total}` (total = hosts del CIDR vía
+/// [`enumerate_hosts`]) y la semilla del gateway. Lanza las 5 técnicas en paralelo:
+/// TCP e ICMP transmiten de forma nativa (con cancelación cooperativa); mDNS, SSDP y
+/// el ARP sweep se esperan dentro de un `tokio::select!` contra `cancel` y se
+/// reenvían en bloque sin tocar sus módulos. Un poller periódico de `/proc/net/arp`
+/// (cada 750 ms) hace que las MAC/vendor lleguen en vivo; una relectura final
+/// preserva la semántica del barrido batch. Al retornar se suelta `tx`, cerrando el
+/// canal. Sólo TCP emite `Progress` (única fuente de avance, evita overshoot).
+pub async fn discover_stream(
+    iface: &LanInterface,
+    opts: &DiscoverOptions,
+    tx: UnboundedSender<DiscoveryEvent>,
+    cancel: CancellationToken,
+) {
+    let total =
+        u32::try_from(enumerate_hosts(iface.ip, iface.prefix_len).len()).unwrap_or(u32::MAX);
+    let _ = tx.send(DiscoveryEvent::Progress { swept: 0, total });
+
+    // Gateway conocido: aporta identidad estable para el router.
+    for obs in gateway_observations(iface.gateway_ip, iface.gateway_mac) {
+        let _ = tx.send(DiscoveryEvent::Host(obs));
     }
 
-    aggregate(&all)
+    // Poller periódico de la caché ARP: emite las MAC que el kernel aprende durante
+    // los barridos TCP/ICMP en vivo. Se detiene con `poller_cancel` al terminar.
+    let poller_cancel = cancel.child_token();
+    let poller_stop = poller_cancel.clone();
+    let poller_tx = tx.clone();
+    let iface_name = iface.name.clone();
+    let poller = tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_millis(750));
+        loop {
+            tokio::select! {
+                _ = ticker.tick() => {
+                    if let Ok(entries) = read_arp_cache() {
+                        for obs in arp_entries_to_observations(&entries, Some(&iface_name)) {
+                            let _ = poller_tx.send(DiscoveryEvent::Host(obs));
+                        }
+                    }
+                }
+                () = poller_cancel.cancelled() => break,
+            }
+        }
+    });
+
+    // Técnicas concurrentes. TCP/ICMP transmiten nativamente; mDNS/SSDP/ARP sweep se
+    // esperan bajo `select!` contra `cancel` y se reenvían en bloque (sin editarlas).
+    tokio::join!(
+        tcp_ping::tcp_sweep(
+            iface,
+            opts.tcp_timeout,
+            opts.concurrency,
+            tx.clone(),
+            cancel.clone(),
+        ),
+        icmp::icmp_sweep(iface, opts.icmp_timeout, tx.clone(), cancel.clone()),
+        forward_burst(mdns::mdns_discover(iface, opts.mdns_timeout), &tx, &cancel),
+        forward_burst(ssdp::ssdp_discover(iface, opts.ssdp_timeout), &tx, &cancel),
+        forward_burst(sudo::arp_sweep(iface, opts.arp_sweep_timeout), &tx, &cancel),
+    );
+
+    // Detiene el poller y relee /proc/net/arp una última vez: captura las MAC
+    // aprendidas por el kernel durante las conexiones (preserva la semántica batch).
+    poller_stop.cancel();
+    let _ = poller.await;
+    if let Ok(entries) = read_arp_cache() {
+        for obs in arp_entries_to_observations(&entries, Some(&iface.name)) {
+            let _ = tx.send(DiscoveryEvent::Host(obs));
+        }
+    }
+
+    // Avance terminal -> lleva la barra al 100% en éxito. En cancelación se congela
+    // en su último valor (no se fuerza al 100%).
+    if !cancel.is_cancelled() {
+        let _ = tx.send(DiscoveryEvent::Progress {
+            swept: total,
+            total,
+        });
+    }
+}
+
+/// Espera una técnica de tipo `Vec<Observation>` bajo `cancel` y reenvía cada
+/// observación como [`DiscoveryEvent::Host`]. Si `cancel` se dispara antes, la
+/// técnica se cae (drop) sin reenviar nada.
+async fn forward_burst(
+    fut: impl std::future::Future<Output = Vec<Observation>>,
+    tx: &UnboundedSender<DiscoveryEvent>,
+    cancel: &CancellationToken,
+) {
+    tokio::select! {
+        obs = fut => {
+            for o in obs {
+                let _ = tx.send(DiscoveryEvent::Host(o));
+            }
+        }
+        () = cancel.cancelled() => {}
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +290,7 @@ mod tests {
             gateway_ip: Some("192.168.1.1".parse::<IpAddr>().unwrap()),
             gateway_mac: Some(mylan_core::MacAddr::parse("aa:bb:cc:dd:ee:ff").unwrap()),
             dns_servers: Vec::new(),
+            ssid: None,
         }
     }
 

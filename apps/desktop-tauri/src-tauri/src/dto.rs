@@ -25,6 +25,10 @@ pub struct LanInterfaceDto {
     pub gateway_mac: Option<String>,
     pub dns_servers: Vec<String>,
     pub cidr: String,
+    /// SSID de la red Wi-Fi conectada (`None` en cableado / no detectable). El
+    /// DTO solo deriva `Serialize`, así que `#[serde(default)]` sería un no-op:
+    /// se omite a propósito (a diferencia de `Settings`, que sí deserializa).
+    pub ssid: Option<String>,
 }
 
 impl LanInterfaceDto {
@@ -43,8 +47,17 @@ impl LanInterfaceDto {
                 .map(std::string::ToString::to_string)
                 .collect(),
             cidr,
+            ssid: iface.ssid,
         }
     }
+}
+
+/// Nombre de red + su origen (`auto`/`user`) para el comando `get_network_name`.
+/// Alimenta el pie de la sidebar (nombre de red persistido por CIDR).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct NetworkNameDto {
+    pub name: String,
+    pub source: String,
 }
 
 /// Detalle de un dispositivo + sus servicios (comando `get_device`).
@@ -120,6 +133,24 @@ pub struct ScanStarted {
     pub profile: String,
 }
 
+/// Payload del evento `scan:discovery_progress` (AC-3/AC-4: % = IPs sondeadas /
+/// total del CIDR). `total == 0` => barra indeterminada en el frontend.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct DiscoveryProgress {
+    pub scan_id: String,
+    pub swept: u32,
+    pub total: u32,
+}
+
+/// Payload del evento `scan:device` (AC-5/AC-6: cada host descubierto llega en vivo
+/// como `Device` ya enriquecido y persistido). `device` es `mylan_core::Device`, que
+/// ya serializa snake_case.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ScanDevice {
+    pub scan_id: String,
+    pub device: Device,
+}
+
 /// Resumen de un escaneo para el historial de la pantalla Scans (AC-17 IPC
 /// `list_scans`). Read-only: espejo de `mylan_db::scan_repo::ScanRow` con
 /// nombres snake_case (convención IPC).
@@ -134,6 +165,12 @@ pub struct ScanSummaryDto {
     pub hosts_new: u32,
 }
 
+/// Valor por defecto para `Settings::censorship_enabled` en deserialización:
+/// `true` (AC-6 — settings antiguos sin el campo migran a censura activada).
+fn default_true() -> bool {
+    true
+}
+
 /// Configuración persistida de la app (AC-9). Vive en
 /// `app_data_dir/mylan-desktop.json`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -146,6 +183,11 @@ pub struct Settings {
     /// arranque. `#[serde(default)]` para no romper settings antiguos sin el campo.
     #[serde(default)]
     pub theme: String,
+    /// Modo censura (AC-1..AC-7): enmascara identificadores estrictos en UI y
+    /// exports. `#[serde(default = "default_true")]` para que settings antiguos
+    /// sin el campo deserialicen a `true` (AC-6).
+    #[serde(default = "default_true")]
+    pub censorship_enabled: bool,
 }
 
 impl Default for Settings {
@@ -154,6 +196,7 @@ impl Default for Settings {
             db_path: String::new(),
             default_profile: "normal".to_string(),
             theme: "light".to_string(),
+            censorship_enabled: true,
         }
     }
 }

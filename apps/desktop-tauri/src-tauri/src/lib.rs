@@ -6,6 +6,7 @@
 //! arranque) e importa opcionalmente la DB del CLI para usuarios brownfield
 //! (AC-11). Sin servidor HTTP (`mylan-api` se difiere a Fase 7).
 
+mod censor;
 mod commands;
 mod dto;
 mod state;
@@ -65,6 +66,7 @@ fn import_brownfield(app_data_db: &Path) -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;
             let _ = std::fs::create_dir_all(&app_data_dir);
@@ -82,12 +84,21 @@ pub fn run() {
             let conn = mylan_db::connection::connect(&db_path)?;
 
             // Settings: persiste el db_path resuelto si aún no existía.
+            // AC-4: detecta fresh install comprobando si el fichero de settings
+            // existía ANTES de cargarlo. Si no existía → fresh → emite
+            // `censorship:fresh` para que el frontend suprima el diálogo de
+            // upgrade y mantenga censura ON (default). Si existía → upgrade →
+            // no emite (el frontend mostrará el diálogo una sola vez).
+            let settings_existed = settings_path(app.handle()).exists();
             let mut settings = load_settings(app.handle());
             if settings.db_path.is_empty() {
                 settings.db_path = db_path.to_string_lossy().to_string();
                 if let Ok(json) = serde_json::to_string_pretty(&settings) {
                     let _ = std::fs::write(settings_path(app.handle()), json);
                 }
+            }
+            if !settings_existed {
+                let _ = app.emit("censorship:fresh", &());
             }
 
             app.manage(DesktopState::new(
@@ -99,6 +110,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::detect_interface_cmd,
+            commands::get_network_name_cmd,
+            commands::set_network_name_cmd,
             commands::list_devices_cmd,
             commands::get_device_cmd,
             commands::run_discovery_cmd,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Card,
     CardContent,
@@ -7,14 +7,15 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { ProfileSelect } from "@/components/profile-select";
 import { EmptyState } from "@/components/empty-state";
-import { useToast } from "@/components/ui/toast";
 import {
     Wifi,
     Radio,
     Loader2,
     Play,
+    X,
     Network as NetworkIcon,
     Cpu,
     Router as RouterIcon,
@@ -22,20 +23,21 @@ import {
 } from "lucide-react";
 import {
     detectInterface,
+    getSettings,
     listDevices,
-    runDiscovery,
     type Device,
     type LanInterfaceDto,
 } from "@/lib/tauri";
-import { useLastScan } from "@/App";
+import { useLastScan, useScan } from "@/App";
+import { MaskedValue } from "@/components/masked-value";
+import { isSensitive } from "@/lib/censor";
 
 export function Dashboard() {
-    const { toast } = useToast();
-    const { lastScan, setLastScan } = useLastScan();
+    const { lastScan } = useLastScan();
+    const { scanning, progress, startScan, cancel } = useScan();
     const [iface, setIface] = useState<LanInterfaceDto | null>(null);
     const [devices, setDevices] = useState<Device[]>([]);
     const [profile, setProfile] = useState("normal");
-    const [scanning, setScanning] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     async function refresh() {
@@ -54,28 +56,18 @@ export function Dashboard() {
 
     useEffect(() => {
         refresh();
+        // Perfil inicial desde Ajustes (en vez del "normal" hardcodeado).
+        getSettings()
+            .then((s) => setProfile(s.default_profile))
+            .catch(() => {});
     }, []);
 
-    async function handleScan() {
-        setScanning(true);
-        setError(null);
-        try {
-            const outcome = await runDiscovery(profile);
-            setLastScan(outcome);
-            const devicesRes = await listDevices().catch(() => [] as Device[]);
-            setDevices(devicesRes);
-            toast(
-                `Escaneo completado: ${outcome.hosts_alive} hosts vivos, ${outcome.hosts_new} nuevos.`,
-                "success",
-            );
-        } catch (e) {
-            const msg = String(e);
-            setError(msg);
-            toast(`Error: ${msg}`, "error");
-        } finally {
-            setScanning(false);
-        }
-    }
+    // Refresca el inventario cuando el scan compartido termina.
+    const prevScanning = useRef(scanning);
+    useEffect(() => {
+        if (prevScanning.current && !scanning) refresh();
+        prevScanning.current = scanning;
+    }, [scanning]);
 
     return (
         <div className="flex flex-col gap-2" aria-busy={scanning}>
@@ -102,20 +94,22 @@ export function Dashboard() {
                         />
                         <Info
                             label="IP / CIDR"
-                            value={
-                                iface ? `${iface.ip}/${iface.prefix_len}` : "—"
-                            }
+                            value={iface?.ip ?? "—"}
                             icon={Cpu}
+                            field={iface ? "ip" : undefined}
+                            suffix={iface ? `/${iface.prefix_len}` : undefined}
                         />
                         <Info
                             label="Gateway"
                             value={iface?.gateway_ip ?? "—"}
                             icon={RouterIcon}
+                            field={iface ? "gateway_ip" : undefined}
                         />
                         <Info
                             label="MAC"
                             value={iface?.mac ?? "—"}
                             icon={NetworkIcon}
+                            field={iface ? "mac" : undefined}
                         />
                         <Info
                             label="DNS"
@@ -125,6 +119,11 @@ export function Dashboard() {
                                     : "—"
                             }
                             icon={Wifi}
+                            field={
+                                iface && iface.dns_servers.length > 0
+                                    ? "dns_servers"
+                                    : undefined
+                            }
                         />
                     </CardContent>
                 </Card>
@@ -181,7 +180,7 @@ export function Dashboard() {
                             />
                         </div>
                         <Button
-                            onClick={handleScan}
+                            onClick={() => startScan(profile)}
                             disabled={scanning}
                             className="mt-5"
                         >
@@ -200,6 +199,40 @@ export function Dashboard() {
                                 </>
                             )}
                         </Button>
+                        {/* Cancelar compartido con /devices (AC-8): detiene el
+                            scan y conserva los hosts ya hallados y persistidos. */}
+                        {scanning && (
+                            <Button
+                                variant="outline"
+                                onClick={cancel}
+                                className="mt-5 gap-1.5"
+                            >
+                                <X className="h-4 w-4" aria-hidden />
+                                Cancelar
+                            </Button>
+                        )}
+                        {/* Mismo progreso compartido que /devices (AC-3/AC-11). */}
+                        {scanning && (
+                            <div
+                                className="flex w-full flex-col gap-1.5"
+                                aria-live="polite"
+                            >
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Escaneando red…</span>
+                                    <span>
+                                        {progress && progress.total > 0
+                                            ? `${progress.swept}/${progress.total} (${progress.percent}%)`
+                                            : "Sondeando…"}
+                                    </span>
+                                </div>
+                                <Progress
+                                    value={progress?.percent ?? undefined}
+                                    indeterminate={
+                                        !progress || progress.total === 0
+                                    }
+                                />
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </section>
@@ -222,10 +255,14 @@ function Info({
     label,
     value,
     icon: Icon,
+    field,
+    suffix,
 }: {
     label: string;
     value: string;
     icon: typeof Wifi;
+    field?: string;
+    suffix?: string;
 }) {
     return (
         <div className="flex flex-col gap-1">
@@ -233,7 +270,17 @@ function Info({
                 <Icon className="h-3.5 w-3.5" aria-hidden />
                 {label}
             </span>
-            <span className="font-medium">{value}</span>
+            {field && isSensitive(field) ? (
+                <span className="flex items-baseline gap-0.5 font-medium">
+                    <MaskedValue field={field} value={value} />
+                    {suffix && <span>{suffix}</span>}
+                </span>
+            ) : (
+                <span className="font-medium">
+                    {value}
+                    {suffix}
+                </span>
+            )}
         </div>
     );
 }

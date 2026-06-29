@@ -165,6 +165,7 @@ mod tests {
             gateway_ip: None,
             gateway_mac: None,
             dns_servers: Vec::new(),
+            ssid: None,
         }
     }
 

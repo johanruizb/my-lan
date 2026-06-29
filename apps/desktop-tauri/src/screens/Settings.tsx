@@ -12,7 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { ProfileSelect } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/theme-provider";
-import { Sun, Moon, Database, Gauge, Palette, Loader2 } from "lucide-react";
+import { useCensorship } from "@/components/censorship-provider";
+import {
+    Sun,
+    Moon,
+    Database,
+    Gauge,
+    Palette,
+    Eye,
+    EyeOff,
+    Loader2,
+} from "lucide-react";
 import {
     dbPath,
     getSettings,
@@ -23,6 +33,7 @@ import {
 export function Settings() {
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
+    const { censorshipEnabled, setCensorshipEnabled } = useCensorship();
     const [settings, setSettingsState] = useState<SettingsDto | null>(null);
     const [dbPathValue, setDbPathValue] = useState("");
     const [saving, setSaving] = useState(false);
@@ -44,6 +55,7 @@ export function Settings() {
                 db_path: dbPathValue,
                 default_profile: settings.default_profile,
                 theme,
+                censorship_enabled: censorshipEnabled,
             };
             await setSettings(next);
             setSettingsState(next);
@@ -168,6 +180,66 @@ export function Settings() {
                         </div>
                         <p className="text-xs text-muted-foreground">
                             El tema se aplica inmediatamente y se persiste en
+                            los ajustes.
+                        </p>
+                    </div>
+
+                    {/* Toggle de censura (AC-3): enmascara identificadores en la
+                        UI y los exports. ON por defecto para installs nuevos. */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            {censorshipEnabled ? (
+                                <EyeOff className="h-3.5 w-3.5" aria-hidden />
+                            ) : (
+                                <Eye className="h-3.5 w-3.5" aria-hidden />
+                            )}
+                            Censura
+                        </span>
+                        <div
+                            className="flex gap-2"
+                            role="group"
+                            aria-label="Selector de censura"
+                        >
+                            <Button
+                                variant={
+                                    censorshipEnabled ? "secondary" : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setCensorshipEnabled(true)}
+                                aria-pressed={censorshipEnabled}
+                                className="gap-1.5"
+                            >
+                                <EyeOff className="h-4 w-4" aria-hidden />
+                                Activada
+                                {censorshipEnabled && (
+                                    <Badge variant="success" className="ml-1">
+                                        Activo
+                                    </Badge>
+                                )}
+                            </Button>
+                            <Button
+                                variant={
+                                    !censorshipEnabled ? "secondary" : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setCensorshipEnabled(false)}
+                                aria-pressed={!censorshipEnabled}
+                                className="gap-1.5"
+                            >
+                                <Eye className="h-4 w-4" aria-hidden />
+                                Visible
+                                {!censorshipEnabled && (
+                                    <Badge variant="success" className="ml-1">
+                                        Activo
+                                    </Badge>
+                                )}
+                            </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            El modo censura enmascara identificadores (IP, MAC,
+                            hostname, gateway, DNS) en la UI y los exports para
+                            evitar compartirlos por error en capturas o
+                            archivos. Se aplica inmediatamente y se persiste en
                             los ajustes.
                         </p>
                     </div>

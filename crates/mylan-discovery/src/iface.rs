@@ -29,6 +29,9 @@ pub struct LanInterface {
     pub gateway_mac: Option<MacAddr>,
     /// Servidores DNS anunciados para la interfaz.
     pub dns_servers: Vec<IpAddr>,
+    /// SSID de la red Wi-Fi conectada (si la interfaz es inalámbrica y se pudo
+    /// leer). `None` en interfaces cableadas o cuando la detección no aplica.
+    pub ssid: Option<String>,
 }
 
 impl LanInterface {
@@ -97,6 +100,9 @@ fn from_netdev(iface: NetdevInterface) -> Result<LanInterface, DiscoveryError> {
         gateway_ip,
         gateway_mac,
         dns_servers,
+        // El SSID se puebla en `detect_interface` para la interfaz resuelta;
+        // `from_netdev` solo mapea los campos de `netdev`.
+        ssid: None,
     })
 }
 
@@ -105,23 +111,31 @@ fn from_netdev(iface: NetdevInterface) -> Result<LanInterface, DiscoveryError> {
 /// Con `override_name = None` usa `netdev::get_default_interface` (default-route). Con
 /// `Some(name)` busca por nombre exacto entre todas las interfaces.
 pub fn detect_interface(override_name: Option<&str>) -> Result<LanInterface, DiscoveryError> {
-    match override_name {
+    let iface = match override_name {
         Some(name) => {
             let iface = get_interfaces()
                 .into_iter()
                 .find(|i| i.name == name)
                 .ok_or_else(|| DiscoveryError::InterfaceNotFound(name.to_string()))?;
-            from_netdev(iface)
+            from_netdev(iface)?
         }
         None => {
             let iface = get_default_interface().map_err(DiscoveryError::from)?;
             match from_netdev(iface) {
                 // Si la default está filtrada, busca una alternativa con IPv4 no filtrada.
-                Err(DiscoveryError::NoDefaultInterface) => pick_alternative(),
-                other => other,
+                Err(DiscoveryError::NoDefaultInterface) => pick_alternative()?,
+                other => other?,
             }
         }
-    }
+    };
+    // Pobla el SSID de la interfaz resuelta (best-effort, pura-Rust por OS).
+    Ok(with_ssid(iface))
+}
+
+/// Puebla `LanInterface.ssid` con el SSID detectado para esa interfaz (o `None`).
+fn with_ssid(mut iface: LanInterface) -> LanInterface {
+    iface.ssid = crate::ssid::detect_ssid(&iface);
+    iface
 }
 
 /// Fallback: de las interfaces no filtradas con IPv4, elige la que tenga gateway.
@@ -188,6 +202,7 @@ mod tests {
             gateway_ip: None,
             gateway_mac: None,
             dns_servers: Vec::new(),
+            ssid: None,
         };
         assert_eq!(iface.cidr(), "192.168.1.3/24");
     }

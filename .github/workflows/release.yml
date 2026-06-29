@@ -1,0 +1,232 @@
+name: Release
+
+run-name: Release v${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver version without a leading v, for example 0.4.1"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark the draft release as a prerelease"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    name: Validate release input
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate version and GitHub release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "version must be semver without a leading v, for example 0.4.1"
+            exit 1
+          fi
+
+          tag="v${VERSION}"
+
+          workspace_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          if [[ "$workspace_version" != "$VERSION" ]]; then
+            echo "workspace version is ${workspace_version}; expected ${VERSION}"
+            exit 1
+          fi
+
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "tag ${tag} already exists"
+            exit 1
+          fi
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release ${tag} already exists"
+            exit 1
+          fi
+
+  build-cli:
+    name: CLI (${{ matrix.target }})
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            archive: mylan-cli-x86_64-unknown-linux-gnu.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: mylan-cli-x86_64-pc-windows-msvc.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build CLI
+        run: cargo build --release -p mylan-cli --target ${{ matrix.target }}
+
+      - name: Package CLI (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          package_dir="dist/mylan-cli-${{ matrix.target }}"
+          mkdir -p "$package_dir"
+          cp "target/${{ matrix.target }}/release/mylan" "$package_dir/mylan"
+          tar -czf "dist/${{ matrix.archive }}" -C dist "mylan-cli-${{ matrix.target }}"
+
+      - name: Package CLI (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $packageDir = "dist\mylan-cli-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force $packageDir | Out-Null
+          Copy-Item "target\${{ matrix.target }}\release\mylan.exe" "$packageDir\mylan.exe"
+          Compress-Archive -Path $packageDir -DestinationPath "dist\${{ matrix.archive }}"
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mylan-cli-${{ matrix.target }}
+          path: dist/${{ matrix.archive }}
+          if-no-files-found: error
+
+  build-desktop:
+    name: Desktop (${{ matrix.os }})
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            apps/desktop-tauri/src-tauri
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/desktop-tauri/package-lock.json
+
+      - name: Check app version sync
+        run: node scripts/sync-version.mjs --check
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: apps/desktop-tauri
+
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            pkg-config \
+            build-essential
+
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: apps/desktop-tauri
+
+      - name: Collect desktop artifacts (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          find apps/desktop-tauri/src-tauri/target/release/bundle \
+            -type f \( -name '*.AppImage' -o -name '*.deb' \) \
+            -exec cp {} release-assets/ \;
+          test "$(find release-assets -type f | wc -l)" -gt 0
+
+      - name: Collect desktop artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          Get-ChildItem -Path apps\desktop-tauri\src-tauri\target\release\bundle -Recurse -File -Include *.msi,*.exe |
+            Copy-Item -Destination release-assets
+          if (-not (Get-ChildItem release-assets -File)) {
+            throw "No Windows desktop artifacts were generated"
+          }
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mylan-desktop-${{ matrix.os }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  release:
+    name: Create draft release
+    needs: [validate, build-cli, build-desktop]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\0' |
+            sort -z |
+            xargs -0 sha256sum > SHA256SUMS
+
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mapfile -t assets < <(find release-assets -maxdepth 1 -type f -printf '%p\n' | sort)
+          if (( ${#assets[@]} == 0 )); then
+            echo "No release assets found"
+            exit 1
+          fi
+
+          release_flags=(
+            --repo "$GITHUB_REPOSITORY"
+            --draft
+            --generate-notes
+            --target "$GITHUB_SHA"
+            --title "MyLAN ${TAG}"
+          )
+
+          if [[ "${{ inputs.prerelease }}" == "true" ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          gh release create "$TAG" "${assets[@]}" "${release_flags[@]}"

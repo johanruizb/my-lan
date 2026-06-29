@@ -25,6 +25,22 @@ MyLAN es una app open-source, gratuita y *local-first* para descubrir, monitorea
 - Windows: soporte de compilación cruzada en CI (`x86_64-pc-windows-gnu`), funcionalidad en validación.
 - Para la Desktop UI: Node.js 20+, `npm` y dependencias de sistema Tauri 2 (ver [tauri.app/start/prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
+## Versionado
+
+La versión pública de MyLAN tiene una única fuente de verdad:
+`[workspace.package].version` en [`Cargo.toml`](Cargo.toml). Después de cambiarla,
+sincroniza los manifests obligatorios de npm/Tauri con:
+
+```bash
+npm run version:sync
+```
+
+Para validar que no haya drift entre Rust, npm y Tauri:
+
+```bash
+npm run version:check
+```
+
 ## Build
 
 ### CLI y workspace Rust

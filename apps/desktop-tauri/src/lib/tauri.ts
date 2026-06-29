@@ -7,6 +7,7 @@
 // frontend). Los tipos aquí espejan exactamente los nombres que emite serde.
 
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type { UnlistenFn };
@@ -80,6 +81,16 @@ export interface LanInterfaceDto {
     gateway_mac: string | null;
     dns_servers: string[];
     cidr: string;
+    /** SSID Wi-Fi de la interfaz activa, `null` si es cableada o no detectable. */
+    ssid: string | null;
+}
+
+// Nombre humano de una red persistido por CIDR. `source` distingue el origen
+// (`"auto"` = SSID/CIDR detectado, `"user"` = etiqueta editada por el usuario)
+// para que un re-escaneo no sobrescriba un nombre del usuario (override gana).
+export interface NetworkNameDto {
+    name: string;
+    source: string;
 }
 
 export interface DeviceDetailDto {
@@ -133,11 +144,26 @@ export interface ScanStarted {
     profile: string;
 }
 
+// Progreso de descubrimiento: IPs barridas / total del CIDR (AC-3).
+export interface DiscoveryProgress {
+    scan_id: string;
+    swept: number;
+    total: number;
+}
+
+// Host descubierto en vivo: el `Device` ya enriquecido tal cual quedó en la BD.
+export interface ScanDevice {
+    scan_id: string;
+    device: Device;
+}
+
 export interface Settings {
     db_path: string;
     default_profile: string;
     /** Tema de la UI: `"light"` | `"dark"` (AC-3). */
     theme: string;
+    /** Modo censura: enmascara identificadores en UI y exports (AC-1/AC-2). */
+    censorship_enabled: boolean;
 }
 
 // --- Wrappers tipados de invoke ---------------------------------------------
@@ -152,10 +178,15 @@ export const listDevices = () => invoke<Device[]>("list_devices_cmd");
 export const getDevice = (ip: string) =>
     invoke<DeviceDetailDto>("get_device_cmd", { ip });
 
-export const runDiscovery = (profile: string, interfaceOverride?: string) =>
+export const runDiscovery = (
+    profile: string,
+    scanId: string,
+    interfaceOverride?: string,
+) =>
     invoke<ScanOutcomeDto>("run_discovery_cmd", {
         profile,
         interface: interfaceOverride ?? null,
+        scanId,
     });
 
 export const scanPorts = (ip: string, profile: string, scanId: string) =>
@@ -188,6 +219,19 @@ export const getSettings = () => invoke<Settings>("get_settings_cmd");
 export const setSettings = (settings: Settings) =>
     invoke<void>("set_settings_cmd", { settings });
 
+// Nombre de la red por CIDR (`networkId` == `Network.id` == CIDR). El backend
+// aplica la precedencia de override en `set`: una etiqueta de usuario no se
+// pisa por la auto-detección posterior del SSID.
+export const getNetworkName = (networkId: string) =>
+    invoke<NetworkNameDto>("get_network_name_cmd", { networkId });
+
+export const setNetworkName = (networkId: string, label: string) =>
+    invoke<void>("set_network_name_cmd", { networkId, label });
+
+// Versión unificada de la app, leída en runtime desde `tauri.conf.json`
+// (misma fuente para el pie de la sidebar y la pantalla /about).
+export const getAppVersion = () => getVersion();
+
 // --- Wrappers tipados de listen ---------------------------------------------
 
 export function onScanProgress(
@@ -218,6 +262,18 @@ export function onScanStarted(
     cb: (s: ScanStarted) => void,
 ): Promise<UnlistenFn> {
     return listen<ScanStarted>("scan:started", (e) => cb(e.payload));
+}
+
+export function onDiscoveryProgress(
+    cb: (p: DiscoveryProgress) => void,
+): Promise<UnlistenFn> {
+    return listen<DiscoveryProgress>("scan:discovery_progress", (e) =>
+        cb(e.payload),
+    );
+}
+
+export function onScanDevice(cb: (d: ScanDevice) => void): Promise<UnlistenFn> {
+    return listen<ScanDevice>("scan:device", (e) => cb(e.payload));
 }
 
 export function onDbImported(cb: () => void): Promise<UnlistenFn> {
