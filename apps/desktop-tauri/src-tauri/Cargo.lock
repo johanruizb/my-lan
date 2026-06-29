@@ -2334,7 +2334,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-desktop"
-version = "0.4.1"
+version = "0.4.4"
 dependencies = [
  "csv",
  "mylan-core",
