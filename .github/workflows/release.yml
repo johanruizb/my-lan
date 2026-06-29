@@ -26,7 +26,7 @@ jobs:
     name: Validate release input
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate version and GitHub release state
         env:
@@ -73,7 +73,7 @@ jobs:
             archive: mylan-cli-x86_64-pc-windows-msvc.zip
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install pinned toolchain
         run: rustup show
@@ -102,7 +102,7 @@ jobs:
           Compress-Archive -Path $packageDir -DestinationPath "dist\${{ matrix.archive }}"
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mylan-cli-${{ matrix.target }}
           path: dist/${{ matrix.archive }}
@@ -117,7 +117,7 @@ jobs:
         os: [ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install pinned toolchain
         run: rustup show
@@ -129,7 +129,7 @@ jobs:
             apps/desktop-tauri/src-tauri
 
       - name: Setup Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -180,7 +180,7 @@ jobs:
           }
 
       - name: Upload desktop artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mylan-desktop-${{ matrix.os }}
           path: release-assets/*
@@ -192,7 +192,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: release-assets
           merge-multiple: true

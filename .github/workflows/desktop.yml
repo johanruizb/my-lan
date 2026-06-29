@@ -49,7 +49,7 @@ jobs:
             artifact-glob: apps/desktop-tauri/src-tauri/target/release/bundle/**/*
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Toolchain pinneada por rust-toolchain.toml (channel 1.96.0 + rustfmt/clippy).
       # `rustup show` instala la toolchain exacta del repo.
@@ -63,7 +63,7 @@ jobs:
             apps/desktop-tauri/src-tauri
 
       - name: Setup Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -114,7 +114,7 @@ jobs:
       # del release).
       - name: Upload bundle artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mylan-desktop-${{ matrix.os }}
           path: ${{ matrix.artifact-glob }}
