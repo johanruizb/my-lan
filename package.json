@@ -11,6 +11,7 @@
     "build:desktop:bundle": "npm run --prefix apps/desktop-tauri tauri -- build",
     "build:all": "npm run build:cli && npm run build:desktop",
     "dev:desktop": "npm run --prefix apps/desktop-tauri dev",
+    "dev:app": "npm run --prefix apps/desktop-tauri tauri -- dev",
     "test": "cargo test --workspace",
     "lint": "npm run --prefix apps/desktop-tauri lint",
     "lint:a11y": "npm run --prefix apps/desktop-tauri lint:a11y",
