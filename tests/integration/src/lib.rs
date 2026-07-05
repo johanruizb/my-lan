@@ -56,3 +56,6 @@ fn ip(s: &str) -> IpAddr {
 fn mac(s: &str) -> MacAddr {
     MacAddr::parse(s).expect("valid mac")
 }
+
+#[cfg(test)]
+mod e2e_agent_event_api;

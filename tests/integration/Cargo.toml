@@ -9,6 +9,8 @@ publish = false
 
 [dependencies]
 csv.workspace = true
+mylan-agent.workspace = true
+mylan-api.workspace = true
 mylan-cli.workspace = true
 mylan-core.workspace = true
 mylan-db.workspace = true
