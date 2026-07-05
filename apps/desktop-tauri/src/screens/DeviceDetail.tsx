@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,8 +51,13 @@ import {
     type UnlistenFn,
 } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
+import { SECTION_GAP } from "@/lib/design-tokens";
 import { MaskedValue } from "@/components/masked-value";
 import { isSensitive } from "@/lib/censor";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { FormField } from "@/components/ui/form-field";
+import { formatTimestamp } from "@/lib/format";
+import { ConfidenceBadge } from "@/components/confidence-badge";
 
 // Iconos de estado de servicio (open/closed/filtered — AC-5).
 function serviceStateIcon(state: string) {
@@ -85,6 +90,21 @@ export function DeviceDetail() {
     const [openInfo, setOpenInfo] = useState(true);
     const [openScan, setOpenScan] = useState(true);
     const [openServices, setOpenServices] = useState(true);
+
+    const scanRef = useRef<HTMLDivElement>(null);
+
+    function scanPortsCta() {
+        setOpenScan(true);
+        scanRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+        });
+        // Enfoca el primer control del formulario tras la animación de apertura.
+        setTimeout(
+            () => document.getElementById("detail-profile")?.focus(),
+            100,
+        );
+    }
 
     useEffect(() => {
         let alive = true;
@@ -210,7 +230,7 @@ export function DeviceDetail() {
     const Icon = deviceIcon(d.device_type);
 
     return (
-        <div className="flex flex-col gap-4" aria-busy={scanning}>
+        <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={scanning}>
             <Button
                 variant="ghost"
                 size="sm"
@@ -242,10 +262,7 @@ export function DeviceDetail() {
                                     {deviceLabel(d.device_type)}
                                 </Badge>
                                 <ChevronDown
-                                    className={cn(
-                                        "ml-auto h-4 w-4 transition-transform",
-                                        openInfo ? "" : "-rotate-90",
-                                    )}
+                                    className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
                                     aria-hidden
                                 />
                             </CardTitle>
@@ -258,21 +275,36 @@ export function DeviceDetail() {
                                 value={d.primary_mac ?? "—"}
                                 mono
                                 field="primary_mac"
+                                glossaryKey="mac"
                             />
                             <Field
-                                label="Hostname"
+                                label="Nombre del equipo"
                                 value={d.hostname ?? d.display_name ?? "—"}
                                 field="hostname"
+                                glossaryKey="hostname"
                             />
-                            <Field label="Vendor" value={d.vendor ?? "—"} />
+                            <Field
+                                label="Fabricante"
+                                value={d.vendor ?? "—"}
+                                glossaryKey="vendor"
+                            />
                             <Field
                                 label="Tipo"
                                 value={deviceLabel(d.device_type)}
                             />
-                            <Field label="Confianza" value={d.confidence} />
+                            <div className="flex flex-col gap-1">
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    Confianza
+                                    <InfoTooltip
+                                        term="Confianza"
+                                        glossaryKey="confianza"
+                                    />
+                                </span>
+                                <ConfidenceBadge value={d.confidence} />
+                            </div>
                             <Field
                                 label="Último visto"
-                                value={d.last_seen_at}
+                                value={formatTimestamp(d.last_seen_at)}
                             />
                         </CardContent>
                     </CollapsibleContent>
@@ -280,113 +312,113 @@ export function DeviceDetail() {
             </Collapsible>
 
             {/* Sección colapsable: escaneo de puertos (AC-10). */}
-            <Collapsible open={openScan} onOpenChange={setOpenScan}>
-                <Card>
-                    <CollapsibleTrigger asChild>
-                        <CardHeader>
-                            <CardTitle className="flex w-full items-center gap-2">
-                                <Radar
-                                    className="h-5 w-5 text-primary"
-                                    aria-hidden
-                                />
-                                Escaneo de puertos
-                                <ChevronDown
-                                    className={cn(
-                                        "ml-auto h-4 w-4 transition-transform",
-                                        openScan ? "" : "-rotate-90",
-                                    )}
-                                    aria-hidden
-                                />
-                            </CardTitle>
-                        </CardHeader>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <CardContent className="flex flex-col gap-4">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label
-                                        htmlFor="detail-profile"
-                                        className="text-xs text-muted-foreground"
-                                    >
-                                        Perfil
-                                    </label>
-                                    <ProfileSelect
-                                        value={profile}
-                                        onChange={setProfile}
-                                        className="w-40"
-                                        id="detail-profile"
-                                        disabled={scanning}
+            <div ref={scanRef}>
+                <Collapsible open={openScan} onOpenChange={setOpenScan}>
+                    <Card>
+                        <CollapsibleTrigger asChild>
+                            <CardHeader>
+                                <CardTitle className="flex w-full items-center gap-2">
+                                    <Radar
+                                        className="h-5 w-5 text-primary"
+                                        aria-hidden
                                     />
-                                </div>
-                                <Button
-                                    onClick={handleScanPorts}
-                                    disabled={scanning}
-                                    className="mt-5 gap-1.5"
-                                >
-                                    {scanning ? (
-                                        <>
-                                            <Loader2
-                                                className="h-4 w-4 animate-spin"
-                                                aria-hidden
-                                            />
-                                            Escaneando…
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Play
+                                    Escaneo de puertos
+                                    <ChevronDown
+                                        className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
+                                        aria-hidden
+                                    />
+                                </CardTitle>
+                            </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <CardContent className="flex flex-col gap-4">
+                                <div className="flex flex-wrap items-end gap-3">
+                                    <FormField
+                                        label="Perfil"
+                                        htmlFor="detail-profile"
+                                        helper="Tipo de barrido de puertos"
+                                    >
+                                        <ProfileSelect
+                                            value={profile}
+                                            onChange={setProfile}
+                                            className="w-40"
+                                            id="detail-profile"
+                                            disabled={scanning}
+                                        />
+                                    </FormField>
+                                    <Button
+                                        onClick={handleScanPorts}
+                                        disabled={scanning}
+                                        className="gap-1.5"
+                                    >
+                                        {scanning ? (
+                                            <>
+                                                <Loader2
+                                                    className="h-4 w-4 animate-spin"
+                                                    aria-hidden
+                                                />
+                                                Escaneando…
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Play
+                                                    className="h-4 w-4"
+                                                    aria-hidden
+                                                />
+                                                Escanear puertos
+                                            </>
+                                        )}
+                                    </Button>
+                                    {scanning && (
+                                        <Button
+                                            variant="destructive"
+                                            onClick={handleCancel}
+                                            className="gap-1.5"
+                                        >
+                                            <Square
                                                 className="h-4 w-4"
                                                 aria-hidden
                                             />
-                                            Escanear puertos
-                                        </>
+                                            Cancelar
+                                        </Button>
                                     )}
-                                </Button>
-                                {scanning && (
-                                    <Button
-                                        variant="destructive"
-                                        onClick={handleCancel}
-                                        className="mt-5 gap-1.5"
-                                    >
-                                        <Square
-                                            className="h-4 w-4"
-                                            aria-hidden
-                                        />
-                                        Cancelar
-                                    </Button>
-                                )}
-                            </div>
-
-                            {scanning && (
-                                // Live region para progreso/heartbeat/cancel (AC-15).
-                                <div
-                                    className="flex flex-col gap-2"
-                                    aria-live="polite"
-                                    aria-atomic="true"
-                                >
-                                    <Progress
-                                        value={pct}
-                                        indeterminate={pct === 0}
-                                    />
-                                    <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>
-                                            {progress
-                                                ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
-                                                : "en progreso…"}
-                                            {progress?.latest_open_port
-                                                ? ` · último abierto: ${progress.latest_open_port}`
-                                                : ""}
-                                        </span>
-                                        <span>
-                                            {Math.round(elapsed / 100) / 10}s /{" "}
-                                            {Math.round(remainMs / 100) / 10}s
-                                        </span>
-                                    </div>
                                 </div>
-                            )}
-                        </CardContent>
-                    </CollapsibleContent>
-                </Card>
-            </Collapsible>
+
+                                {scanning && (
+                                    // Live region para progreso/heartbeat/cancel (AC-15).
+                                    <div
+                                        className="flex flex-col gap-2"
+                                        aria-live="polite"
+                                        aria-atomic="true"
+                                    >
+                                        <Progress
+                                            value={pct}
+                                            indeterminate={pct === 0}
+                                        />
+                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                            <span>
+                                                {progress
+                                                    ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
+                                                    : "en progreso…"}
+                                                {progress?.latest_open_port
+                                                    ? ` · último abierto: ${progress.latest_open_port}`
+                                                    : ""}
+                                            </span>
+                                            <span>
+                                                {Math.round(elapsed / 100) / 10}
+                                                s /{" "}
+                                                {Math.round(remainMs / 100) /
+                                                    10}
+                                                s
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Card>
+                </Collapsible>
+            </div>
 
             {/* Sección colapsable: servicios (AC-10). */}
             <Collapsible open={openServices} onOpenChange={setOpenServices}>
@@ -400,10 +432,7 @@ export function DeviceDetail() {
                                 />
                                 Servicios ({detail.services.length})
                                 <ChevronDown
-                                    className={cn(
-                                        "ml-auto h-4 w-4 transition-transform",
-                                        openServices ? "" : "-rotate-90",
-                                    )}
+                                    className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
                                     aria-hidden
                                 />
                             </CardTitle>
@@ -441,20 +470,65 @@ export function DeviceDetail() {
                                 <EmptyState
                                     icon={Cpu}
                                     title="Sin servicios"
-                                    description="Ejecuta un escaneo de puertos para descubrir los servicios de este dispositivo."
+                                    description="Aún no hay servicios detectados. Escanea los puertos de este dispositivo."
+                                    action={
+                                        <Button
+                                            size="sm"
+                                            onClick={scanPortsCta}
+                                            className="gap-1.5"
+                                        >
+                                            <Play
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden
+                                            />
+                                            Escanear puertos
+                                        </Button>
+                                    }
                                 />
                             ) : (
                                 <div className="overflow-x-auto rounded-md border border-border">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Protocolo</TableHead>
-                                                <TableHead>Puerto</TableHead>
-                                                <TableHead>Servicio</TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Protocolo
+                                                        <InfoTooltip
+                                                            term="Protocolo"
+                                                            glossaryKey="protocolo"
+                                                        />
+                                                    </span>
+                                                </TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Puerto
+                                                        <InfoTooltip
+                                                            term="Puerto"
+                                                            glossaryKey="puerto"
+                                                        />
+                                                    </span>
+                                                </TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Servicio
+                                                        <InfoTooltip
+                                                            term="Servicio"
+                                                            glossaryKey="servicio"
+                                                        />
+                                                    </span>
+                                                </TableHead>
                                                 <TableHead>Producto</TableHead>
                                                 <TableHead>Versión</TableHead>
                                                 <TableHead>Estado</TableHead>
-                                                <TableHead>Banner</TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Banner
+                                                        <InfoTooltip
+                                                            term="Banner"
+                                                            glossaryKey="banner"
+                                                        />
+                                                    </span>
+                                                </TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -521,15 +595,22 @@ function Field({
     value,
     mono,
     field,
+    glossaryKey,
 }: {
     label: string;
     value: string;
     mono?: boolean;
     field?: string;
+    glossaryKey?: string;
 }) {
     return (
         <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">{label}</span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                {label}
+                {glossaryKey && (
+                    <InfoTooltip term={label} glossaryKey={glossaryKey} />
+                )}
+            </span>
             {field && isSensitive(field) ? (
                 <MaskedValue field={field} value={value} mono={mono} />
             ) : (

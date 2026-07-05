@@ -1,12 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/card-header";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/ui/toast";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { FormField } from "@/components/ui/form-field";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SECTION_GAP } from "@/lib/design-tokens";
+import { formatTimestamp } from "@/lib/format";
 import {
     Radar,
     Loader2,
@@ -16,15 +35,18 @@ import {
     ShieldAlert,
     CircleCheck,
     CircleX,
+    RefreshCw,
 } from "lucide-react";
 import {
     cancelScan,
+    listDevices,
     listScans,
     onScanCancelled,
     onScanFinished,
     onScanHeartbeat,
     onScanProgress,
     scanPorts,
+    type Device,
     type ScanProgress,
     type ScanSummaryDto,
     type Service,
@@ -71,6 +93,28 @@ export function Scans() {
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyError, setHistoryError] = useState<string | null>(null);
 
+    // Selector de dispositivos (AC-5): lista de dispositivos descubiertos para
+    // elegir como objetivo del escaneo de puertos. IP manual preservado en
+    // Collapsible "avanzado" para IPs no descubiertas.
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [selectedDeviceId, setSelectedDeviceId] = useState("");
+    const [openManualIp, setOpenManualIp] = useState(false);
+
+    const formRef = useRef<HTMLDivElement>(null);
+
+    function scrollToForm() {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    async function refreshDevices() {
+        try {
+            const rows = await listDevices();
+            setDevices(rows);
+        } catch {
+            setDevices([]);
+        }
+    }
+
     async function refreshHistory() {
         setHistoryLoading(true);
         try {
@@ -87,6 +131,7 @@ export function Scans() {
 
     useEffect(() => {
         refreshHistory();
+        refreshDevices();
     }, []);
 
     useEffect(() => {
@@ -166,133 +211,208 @@ export function Scans() {
 
     return (
         <div
-            className="flex flex-col gap-4"
+            className={cn("flex flex-col", SECTION_GAP)}
             aria-busy={scanning || historyLoading}
         >
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Radar className="h-5 w-5 text-primary" aria-hidden />
-                        Escaneo de puertos
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                htmlFor="scan-ip"
-                                className="text-xs text-muted-foreground"
-                            >
-                                IP del host
-                            </label>
-                            <Input
-                                id="scan-ip"
-                                placeholder="192.168.1.10"
-                                value={ip}
-                                onChange={(e) => setIp(e.target.value)}
-                                className="w-48"
-                                disabled={scanning}
+            <div ref={formRef}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Radar
+                                className="h-5 w-5 text-primary"
+                                aria-hidden
                             />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                htmlFor="scan-profile"
-                                className="text-xs text-muted-foreground"
+                            Escaneo de puertos
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-end gap-3">
+                            {/* Selector de dispositivos (primario, AC-5): lista los
+                            dispositivos descubiertos como objetivo principal. */}
+                            <FormField
+                                label="Dispositivo a escanear"
+                                htmlFor="scan-device"
+                                helper="Elige un dispositivo de tu red"
                             >
-                                Perfil
-                            </label>
-                            <ProfileSelect
-                                value={profile}
-                                onChange={setProfile}
-                                className="w-40"
-                                id="scan-profile"
-                                disabled={scanning}
-                            />
-                        </div>
-                        <Button
-                            onClick={handleStart}
-                            disabled={scanning}
-                            className="mt-5 gap-1.5"
-                        >
-                            {scanning ? (
-                                <>
-                                    <Loader2
-                                        className="h-4 w-4 animate-spin"
+                                <Select
+                                    value={selectedDeviceId}
+                                    onValueChange={(v) => {
+                                        setSelectedDeviceId(v);
+                                        const d = devices.find(
+                                            (d) => d.id === v,
+                                        );
+                                        if (d) setIp(d.primary_ip ?? "");
+                                    }}
+                                    disabled={scanning}
+                                >
+                                    <SelectTrigger
+                                        id="scan-device"
+                                        className="w-64"
+                                    >
+                                        <SelectValue placeholder="Selecciona un dispositivo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {devices.length === 0 && (
+                                            <div className="p-2 text-xs text-muted-foreground">
+                                                No hay dispositivos
+                                                descubiertos. Usa IP manual.
+                                            </div>
+                                        )}
+                                        {devices.map((d) => (
+                                            <SelectItem
+                                                key={d.id}
+                                                value={d.id}
+                                                disabled={!d.primary_ip}
+                                            >
+                                                {d.primary_ip ?? d.id} —{" "}
+                                                {d.hostname ??
+                                                    d.display_name ??
+                                                    "Sin nombre"}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FormField>
+
+                            {/* IP manual (avanzado): preserva IPs arbitrarias no
+                            descubiertas (AC-5). Colapsado por defecto. */}
+                            <Collapsible
+                                open={openManualIp}
+                                onOpenChange={setOpenManualIp}
+                            >
+                                <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                                    <ChevronDown
+                                        className="h-3.5 w-3.5 transition-transform data-[state=closed]:-rotate-90"
                                         aria-hidden
                                     />
-                                    Escaneando…
-                                </>
-                            ) : (
-                                <>
-                                    <Play className="h-4 w-4" aria-hidden />
-                                    Iniciar
-                                </>
-                            )}
-                        </Button>
-                        {scanning && (
+                                    IP manual (avanzado)
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                    <div className="mt-2">
+                                        <FormField
+                                            label="IP del host"
+                                            htmlFor="scan-ip"
+                                            helper="Solo si no aparece en la lista de arriba"
+                                        >
+                                            <Input
+                                                id="scan-ip"
+                                                placeholder="192.168.1.10"
+                                                value={ip}
+                                                onChange={(e) => {
+                                                    setIp(e.target.value);
+                                                    setSelectedDeviceId("");
+                                                }}
+                                                className="w-48"
+                                                disabled={scanning}
+                                            />
+                                        </FormField>
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+
+                            <FormField label="Perfil" htmlFor="scan-profile">
+                                <ProfileSelect
+                                    value={profile}
+                                    onChange={setProfile}
+                                    className="w-40"
+                                    id="scan-profile"
+                                    disabled={scanning}
+                                />
+                            </FormField>
                             <Button
-                                variant="destructive"
-                                onClick={handleCancel}
-                                className="mt-5 gap-1.5"
+                                onClick={handleStart}
+                                disabled={scanning}
+                                className="gap-1.5"
                             >
-                                <Square className="h-4 w-4" aria-hidden />
-                                Cancelar
+                                {scanning ? (
+                                    <>
+                                        <Loader2
+                                            className="h-4 w-4 animate-spin"
+                                            aria-hidden
+                                        />
+                                        Escaneando…
+                                    </>
+                                ) : (
+                                    <>
+                                        <Play className="h-4 w-4" aria-hidden />
+                                        Iniciar
+                                    </>
+                                )}
                             </Button>
-                        )}
-                    </div>
-
-                    {scanning && (
-                        // Live region para progreso/heartbeat/cancel (AC-15).
-                        <div
-                            className="flex flex-col gap-2"
-                            aria-live="polite"
-                            aria-atomic="true"
-                        >
-                            <Progress value={pct} indeterminate={pct === 0} />
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>
-                                    {progress
-                                        ? `${progress.ports_tested}/${progress.ports_total} · ${pct}%`
-                                        : "en progreso…"}
-                                </span>
-                                <span>
-                                    {Math.round(elapsed / 100) / 10}s /{" "}
-                                    {Math.round(remainMs / 100) / 10}s
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div>
-                        <div className="text-sm font-medium">
-                            Puertos abiertos ({openPorts.length})
-                        </div>
-                        <ul
-                            className="mt-2 flex flex-wrap gap-2"
-                            aria-label="Puertos abiertos"
-                        >
-                            {openPorts.length === 0 && (
-                                <li className="text-xs text-muted-foreground">
-                                    Sin puertos abiertos detectados aún.
-                                </li>
-                            )}
-                            {openPorts.map((s) => (
-                                <li
-                                    key={s.port}
-                                    className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-mono"
+                            {scanning && (
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleCancel}
+                                    className="gap-1.5"
                                 >
-                                    {s.port}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </CardContent>
-            </Card>
+                                    <Square className="h-4 w-4" aria-hidden />
+                                    Cancelar
+                                </Button>
+                            )}
+                        </div>
+
+                        {scanning && (
+                            // Live region para progreso/heartbeat/cancel (AC-15).
+                            <div
+                                className="flex flex-col gap-2"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                <Progress
+                                    value={pct}
+                                    indeterminate={pct === 0}
+                                />
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>
+                                        {progress
+                                            ? `${progress.ports_tested}/${progress.ports_total} · ${pct}%`
+                                            : "en progreso…"}
+                                    </span>
+                                    <span>
+                                        {Math.round(elapsed / 100) / 10}s /{" "}
+                                        {Math.round(remainMs / 100) / 10}s
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div>
+                            <div className="flex items-center gap-1 text-sm font-medium">
+                                <span>
+                                    Puertos abiertos ({openPorts.length})
+                                </span>
+                                <InfoTooltip
+                                    term="Puertos abiertos"
+                                    glossaryKey="puerto"
+                                />
+                            </div>
+                            <ul
+                                className="mt-2 flex flex-wrap gap-2"
+                                aria-label="Puertos abiertos"
+                            >
+                                {openPorts.length === 0 && (
+                                    <li className="text-xs text-muted-foreground">
+                                        Sin puertos abiertos detectados aún.
+                                    </li>
+                                )}
+                                {openPorts.map((s) => (
+                                    <li
+                                        key={s.port}
+                                        className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-mono"
+                                    >
+                                        {s.port}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Historial de scans (AC-11, vía list_scans IPC). */}
             <section aria-label="Historial de escaneos">
                 <Card>
-                    <CardHeader className="flex-row items-center justify-between">
+                    <CardHeader variant="toolbar">
                         <CardTitle className="flex items-center gap-2">
                             <History
                                 className="h-5 w-5 text-primary"
@@ -316,6 +436,20 @@ export function Scans() {
                                     icon={ShieldAlert}
                                     title="No se pudo cargar el historial"
                                     description={historyError}
+                                    action={
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={refreshHistory}
+                                            className="gap-1.5"
+                                        >
+                                            <RefreshCw
+                                                className="h-4 w-4"
+                                                aria-hidden
+                                            />
+                                            Reintentar
+                                        </Button>
+                                    }
                                 />
                             </div>
                         )}
@@ -336,7 +470,20 @@ export function Scans() {
                                 <EmptyState
                                     icon={History}
                                     title="Sin escaneos previos"
-                                    description="Los escaneos de descubrimiento y de puertos aparecerán aquí."
+                                    description="Aún no hay escaneos. Inicia uno para ver puertos abiertos."
+                                    action={
+                                        <Button
+                                            size="sm"
+                                            onClick={scrollToForm}
+                                            className="gap-1.5"
+                                        >
+                                            <Play
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden
+                                            />
+                                            Iniciar escaneo
+                                        </Button>
+                                    }
                                 />
                             )}
 
@@ -347,6 +494,9 @@ export function Scans() {
                                     <table className="w-full caption-bottom text-sm">
                                         <thead className="[&_tr]:border-b">
                                             <tr className="border-b">
+                                                <th className="h-10 px-3 text-left align-middle font-medium text-muted-foreground">
+                                                    Tipo
+                                                </th>
                                                 <th className="h-10 px-3 text-left align-middle font-medium text-muted-foreground">
                                                     Perfil
                                                 </th>
@@ -375,6 +525,23 @@ export function Scans() {
                                                 >
                                                     <td className="p-3 align-middle">
                                                         <Badge
+                                                            variant={
+                                                                s.hosts_alive >
+                                                                    0 ||
+                                                                s.hosts_new > 0
+                                                                    ? "secondary"
+                                                                    : "outline"
+                                                            }
+                                                        >
+                                                            {s.hosts_alive >
+                                                                0 ||
+                                                            s.hosts_new > 0
+                                                                ? "Descubrimiento"
+                                                                : "Puertos"}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-3 align-middle">
+                                                        <Badge
                                                             variant="outline"
                                                             className="capitalize"
                                                         >
@@ -385,10 +552,14 @@ export function Scans() {
                                                         {statusBadge(s.status)}
                                                     </td>
                                                     <td className="p-3 align-middle text-xs text-muted-foreground">
-                                                        {s.started_at}
+                                                        {formatTimestamp(
+                                                            s.started_at,
+                                                        )}
                                                     </td>
                                                     <td className="p-3 align-middle text-xs text-muted-foreground">
-                                                        {s.finished_at ?? "—"}
+                                                        {formatTimestamp(
+                                                            s.finished_at,
+                                                        )}
                                                     </td>
                                                     <td className="p-3 align-middle font-medium">
                                                         {s.hosts_alive}

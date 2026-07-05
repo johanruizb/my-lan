@@ -25,6 +25,7 @@ import { ToastProviderApp } from "@/components/ui/toast";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { CensorshipProvider } from "@/components/censorship-provider";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
+import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -120,11 +121,11 @@ const navItems = [
         label: "Dispositivos",
         icon: Network,
         end: false,
-        desc: "Inventario de hosts",
+        desc: "Inventario de dispositivos",
     },
     {
         to: "/scans",
-        label: "Scans",
+        label: "Escaneo de puertos",
         icon: Radar,
         end: false,
         desc: "Historial y escaneo de puertos",
@@ -170,7 +171,7 @@ function LastScanBadge() {
     return (
         <div
             className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs"
-            aria-label={`Último escaneo: ${lastScan.hosts_alive} hosts vivos, ${lastScan.hosts_new} nuevos`}
+            aria-label={`Último escaneo: ${lastScan.hosts_alive} dispositivos activos, ${lastScan.hosts_new} nuevos`}
         >
             <Activity
                 className="h-3.5 w-3.5 text-muted-foreground"
@@ -178,7 +179,7 @@ function LastScanBadge() {
             />
             <span className="text-muted-foreground">Último scan:</span>
             <Badge variant="success" className="px-1.5 py-0">
-                {lastScan.hosts_alive} vivos
+                {lastScan.hosts_alive} activos
             </Badge>
             <Badge variant="secondary" className="px-1.5 py-0">
                 {lastScan.hosts_new} nuevos
@@ -207,7 +208,14 @@ function Sidebar() {
                         }
                     >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        <span>{n.label}</span>
+                        <span className="flex flex-col">
+                            <span>{n.label}</span>
+                            {n.desc && (
+                                <span className="text-xs font-normal">
+                                    {n.desc}
+                                </span>
+                            )}
+                        </span>
                     </NavLink>
                 );
             })}
@@ -362,7 +370,14 @@ function AppShell() {
                                 }
                             >
                                 <Icon className="h-3.5 w-3.5" aria-hidden />
-                                <span>{n.label}</span>
+                                <span className="flex flex-col">
+                                    <span>{n.label}</span>
+                                    {n.desc && (
+                                        <span className="text-[10px] font-normal">
+                                            {n.desc}
+                                        </span>
+                                    )}
+                                </span>
                             </NavLink>
                         );
                     })}
@@ -439,7 +454,9 @@ function AppInner() {
             onScanCancelled(() => {
                 cancelledRef.current = true;
                 setScanning(false);
-                toast("Escaneo cancelado. Se conservan los hosts ya hallados.");
+                toast(
+                    "Escaneo cancelado. Se conservan los dispositivos ya encontrados.",
+                );
             }),
         ]).then((fns) => {
             if (!active) {
@@ -473,7 +490,7 @@ function AppInner() {
                 // Resumen tipo Dashboard salvo que el usuario haya cancelado.
                 if (!cancelledRef.current) {
                     toast(
-                        `Escaneo completado: ${outcome.hosts_alive} hosts vivos, ${outcome.hosts_new} nuevos.`,
+                        `Escaneo completado: ${outcome.hosts_alive} dispositivos activos, ${outcome.hosts_new} nuevos.`,
                         "success",
                     );
                 }
@@ -513,6 +530,9 @@ function AppInner() {
                     AppInner para que useCensorship resuelva (CensorshipProvider
                     envuelve AppInner). */}
                 <CensuraUpgradeDialog />
+                {/* Onboarding primera ejecución (AC-4): tour discovery vs
+                    puertos. One-shot, persistido en localStorage. */}
+                <OnboardingDialog />
             </ScanContext.Provider>
         </LastScanContext.Provider>
     );

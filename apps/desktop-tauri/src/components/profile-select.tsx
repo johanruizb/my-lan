@@ -5,14 +5,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { PROFILES } from "@/lib/profiles";
 
-const PROFILES: { value: string; label: string }[] = [
-    { value: "quick", label: "Quick" },
-    { value: "normal", label: "Normal" },
-    { value: "deep", label: "Deep" },
-    { value: "iot", label: "IoT" },
-    { value: "router", label: "Router" },
-];
+// ProfileSelect: selector de perfiles con descripción visible (AC-2).
+// Mantiene value/onChange API. Descripciones desde profiles.ts (F0.6, hardcode TS).
 
 export function ProfileSelect({
     value,
@@ -39,7 +35,12 @@ export function ProfileSelect({
             <SelectContent>
                 {PROFILES.map((p) => (
                     <SelectItem key={p.value} value={p.value}>
-                        {p.label}
+                        <div className="flex flex-col gap-0.5">
+                            <span>{p.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                                {p.description}
+                            </span>
+                        </div>
                     </SelectItem>
                 ))}
             </SelectContent>

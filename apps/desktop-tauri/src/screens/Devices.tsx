@@ -1,16 +1,15 @@
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-import "dayjs/locale/es";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/card-header";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { deviceIcon, deviceLabel } from "@/components/device-icons";
 import { useToast } from "@/components/ui/toast";
+import { formatRelative, formatTimestamp } from "@/lib/format";
 import {
     LayoutGrid,
     Table as TableIcon,
@@ -22,6 +21,8 @@ import {
     ShieldAlert,
     Play,
     X,
+    ChevronDown,
+    RefreshCw,
 } from "lucide-react";
 import {
     Table,
@@ -36,11 +37,17 @@ import { deviceKey, useScan } from "@/App";
 import { MaskedValue } from "@/components/masked-value";
 import { useCensorship } from "@/components/censorship-provider";
 import { maskValue } from "@/lib/censor";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ConfidenceBadge } from "@/components/confidence-badge";
+import { cn } from "@/lib/utils";
+import { SECTION_GAP } from "@/lib/design-tokens";
 
 type View = "cards" | "table";
-
-dayjs.extend(relativeTime);
-dayjs.locale("es");
 
 export function Devices() {
     const { toast } = useToast();
@@ -52,6 +59,7 @@ export function Devices() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<View>("cards");
+    const [openFilters, setOpenFilters] = useState(true);
 
     async function refresh() {
         setLoading(true);
@@ -111,9 +119,9 @@ export function Devices() {
         navigate(`/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`);
 
     return (
-        <div className="flex flex-col gap-4" aria-busy={loading}>
+        <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={loading}>
             <Card>
-                <CardHeader className="flex-row items-center justify-between">
+                <CardHeader variant="toolbar">
                     <CardTitle className="flex items-center gap-2">
                         <NetworkIcon
                             className="h-5 w-5 text-primary"
@@ -204,19 +212,35 @@ export function Devices() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="relative mb-4 max-w-md">
-                        <Search
-                            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                            aria-hidden
-                        />
-                        <Input
-                            placeholder="Buscar por IP, MAC, hostname, vendor…"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            aria-label="Buscar dispositivos"
-                            className="pl-9"
-                        />
-                    </div>
+                    <Collapsible
+                        open={openFilters}
+                        onOpenChange={setOpenFilters}
+                        className="mb-4"
+                    >
+                        <CollapsibleTrigger className="flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground">
+                            <Search className="h-4 w-4" aria-hidden />
+                            Buscar y filtrar
+                            <ChevronDown
+                                className="h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
+                                aria-hidden
+                            />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <div className="relative mt-3 max-w-md">
+                                <Search
+                                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                    aria-hidden
+                                />
+                                <Input
+                                    placeholder="Buscar por IP, MAC, hostname, vendor…"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    aria-label="Buscar dispositivos"
+                                    className="pl-9"
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
                     {/* Barra de progreso del barrido (AC-3/AC-4): % cuando se
                         conoce el total, indeterminada si no. */}
@@ -230,7 +254,7 @@ export function Devices() {
                                 <span>
                                     {progress && progress.total > 0
                                         ? `${progress.swept}/${progress.total} (${progress.percent}%)`
-                                        : "Sondeando…"}
+                                        : "Explorando…"}
                                 </span>
                             </div>
                             <Progress
@@ -248,6 +272,20 @@ export function Devices() {
                                 icon={ShieldAlert}
                                 title="No se pudieron cargar los dispositivos"
                                 description={error}
+                                action={
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={refresh}
+                                        className="gap-1.5"
+                                    >
+                                        <RefreshCw
+                                            className="h-4 w-4"
+                                            aria-hidden
+                                        />
+                                        Reintentar
+                                    </Button>
+                                }
                             />
                         </div>
                     )}
@@ -266,7 +304,17 @@ export function Devices() {
                         <EmptyState
                             icon={NetworkIcon}
                             title="Sin dispositivos"
-                            description="Ejecuta un escaneo desde el Dashboard para descubrir los hosts de tu red."
+                            description="Aún no hay dispositivos en tu red. Escanea para descubrirlos."
+                            action={
+                                <Button
+                                    size="sm"
+                                    onClick={() => startScan()}
+                                    className="gap-1.5"
+                                >
+                                    <Play className="h-3.5 w-3.5" aria-hidden />
+                                    Descubrir dispositivos
+                                </Button>
+                            }
                         />
                     )}
 
@@ -350,25 +398,27 @@ export function Devices() {
                                                     </Badge>
                                                     {Number(d.confidence) >
                                                         0 && (
-                                                        <Badge variant="outline">
-                                                            conf. {d.confidence}
-                                                        </Badge>
+                                                        <ConfidenceBadge
+                                                            value={d.confidence}
+                                                        />
                                                     )}
                                                 </div>
                                                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                                                     <Meta
-                                                        label="Vendor"
+                                                        label="Fabricante"
                                                         value={d.vendor ?? "—"}
+                                                        glossaryKey="vendor"
                                                     />
                                                     <Meta
                                                         label="Visto"
-                                                        value={dayjs(
+                                                        value={formatRelative(
                                                             d.last_seen_at,
-                                                        ).fromNow()}
+                                                        )}
                                                     />
                                                     <Meta
                                                         label="Confianza"
                                                         value={d.confidence}
+                                                        glossaryKey="confianza"
                                                     />
                                                 </dl>
                                             </CardContent>
@@ -388,11 +438,43 @@ export function Devices() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>IP</TableHead>
-                                            <TableHead>MAC</TableHead>
-                                            <TableHead>Hostname</TableHead>
-                                            <TableHead>Vendor</TableHead>
+                                            <TableHead>
+                                                <span className="inline-flex items-center gap-1">
+                                                    MAC
+                                                    <InfoTooltip
+                                                        term="MAC"
+                                                        glossaryKey="mac"
+                                                    />
+                                                </span>
+                                            </TableHead>
+                                            <TableHead>
+                                                <span className="inline-flex items-center gap-1">
+                                                    Nombre del equipo
+                                                    <InfoTooltip
+                                                        term="Nombre del equipo"
+                                                        glossaryKey="hostname"
+                                                    />
+                                                </span>
+                                            </TableHead>
+                                            <TableHead>
+                                                <span className="inline-flex items-center gap-1">
+                                                    Fabricante
+                                                    <InfoTooltip
+                                                        term="Fabricante"
+                                                        glossaryKey="vendor"
+                                                    />
+                                                </span>
+                                            </TableHead>
                                             <TableHead>Tipo</TableHead>
-                                            <TableHead>Confianza</TableHead>
+                                            <TableHead>
+                                                <span className="inline-flex items-center gap-1">
+                                                    Confianza
+                                                    <InfoTooltip
+                                                        term="Confianza"
+                                                        glossaryKey="confianza"
+                                                    />
+                                                </span>
+                                            </TableHead>
                                             <TableHead>Último visto</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -446,10 +528,14 @@ export function Devices() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {d.confidence}
+                                                    <ConfidenceBadge
+                                                        value={d.confidence}
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="text-xs text-muted-foreground">
-                                                    {d.last_seen_at}
+                                                    {formatTimestamp(
+                                                        d.last_seen_at,
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -467,14 +553,21 @@ function Meta({
     label,
     value,
     mono,
+    glossaryKey,
 }: {
     label: string;
     value: string;
     mono?: boolean;
+    glossaryKey?: string;
 }) {
     return (
         <div className="flex flex-col">
-            <dt className="text-muted-foreground">{label}</dt>
+            <dt className="flex items-center gap-1 text-muted-foreground">
+                {label}
+                {glossaryKey && (
+                    <InfoTooltip term={label} glossaryKey={glossaryKey} />
+                )}
+            </dt>
             <dd className={`font-medium ${mono ? "font-mono" : ""}`}>
                 {value}
             </dd>
