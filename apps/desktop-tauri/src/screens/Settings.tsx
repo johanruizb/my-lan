@@ -14,6 +14,11 @@ import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/theme-provider";
 import { useCensorship } from "@/components/censorship-provider";
 import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
     Sun,
     Moon,
     Database,
@@ -22,6 +27,8 @@ import {
     Eye,
     EyeOff,
     Loader2,
+    ChevronDown,
+    Settings as SettingsIcon,
 } from "lucide-react";
 import {
     dbPath,
@@ -29,6 +36,8 @@ import {
     setSettings,
     type Settings as SettingsDto,
 } from "@/lib/tauri";
+import { cn } from "@/lib/utils";
+import { SECTION_GAP } from "@/lib/design-tokens";
 
 export function Settings() {
     const { toast } = useToast();
@@ -76,7 +85,7 @@ export function Settings() {
         );
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className={cn("flex flex-col", SECTION_GAP)}>
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -90,27 +99,7 @@ export function Settings() {
                         Configuración de MyLAN Desktop.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-6">
-                    <div className="flex flex-col gap-1.5">
-                        <label
-                            htmlFor="db-path"
-                            className="text-xs text-muted-foreground"
-                        >
-                            Path de la base de datos
-                        </label>
-                        <Input
-                            id="db-path"
-                            value={dbPathValue}
-                            onChange={(e) => setDbPathValue(e.target.value)}
-                            className="max-w-xl"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            La app crea/migra la SQLite en este path al
-                            arrancar. Para usuarios brownfield, la DB del CLI se
-                            importa automáticamente la primera vez.
-                        </p>
-                    </div>
-
+                <CardContent className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
                         <label
                             htmlFor="default-profile"
@@ -243,6 +232,43 @@ export function Settings() {
                             los ajustes.
                         </p>
                     </div>
+
+                    {/* Sección Avanzado (AC-17): db_path oculto por defecto,
+                        sin jerga técnica visible. Preserva secciones
+                        censura/tema/perfil intactas. */}
+                    <Collapsible>
+                        <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                            <SettingsIcon className="h-3.5 w-3.5" aria-hidden />
+                            Avanzado
+                            <ChevronDown
+                                className="h-3.5 w-3.5 transition-transform data-[state=closed]:-rotate-90"
+                                aria-hidden
+                            />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <div className="mt-2 flex flex-col gap-1.5">
+                                <label
+                                    htmlFor="db-path"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    Ruta de la base de datos
+                                </label>
+                                <Input
+                                    id="db-path"
+                                    value={dbPathValue}
+                                    onChange={(e) =>
+                                        setDbPathValue(e.target.value)
+                                    }
+                                    className="max-w-xl"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Ubicación donde la app guarda sus datos.
+                                    Solo necesaria si quieres usar una ruta
+                                    personalizada.
+                                </p>
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
                     <Button
                         onClick={handleSave}

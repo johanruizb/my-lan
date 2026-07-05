@@ -11,6 +11,11 @@ import { Progress } from "@/components/ui/progress";
 import { ProfileSelect } from "@/components/profile-select";
 import { EmptyState } from "@/components/empty-state";
 import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
     Wifi,
     Radio,
     Loader2,
@@ -20,6 +25,8 @@ import {
     Cpu,
     Router as RouterIcon,
     AlertCircle,
+    RefreshCw,
+    ChevronDown,
 } from "lucide-react";
 import {
     detectInterface,
@@ -31,6 +38,10 @@ import {
 import { useLastScan, useScan } from "@/App";
 import { MaskedValue } from "@/components/masked-value";
 import { isSensitive } from "@/lib/censor";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { FormField } from "@/components/ui/form-field";
+import { SECTION_GAP } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 
 export function Dashboard() {
     const { lastScan } = useLastScan();
@@ -39,6 +50,7 @@ export function Dashboard() {
     const [devices, setDevices] = useState<Device[]>([]);
     const [profile, setProfile] = useState("normal");
     const [error, setError] = useState<string | null>(null);
+    const [openNet, setOpenNet] = useState(true);
 
     async function refresh() {
         try {
@@ -70,62 +82,81 @@ export function Dashboard() {
     }, [scanning]);
 
     return (
-        <div className="flex flex-col gap-2" aria-busy={scanning}>
+        <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={scanning}>
             <section aria-label="Red activa">
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Wifi
-                                className="h-5 w-5 text-primary"
-                                aria-hidden
-                            />
-                            Red activa
-                        </CardTitle>
-                        <CardDescription>
-                            Interfaz detectada automáticamente como default
-                            route.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 sm:grid-cols-3">
-                        <Info
-                            label="Interfaz"
-                            value={iface?.name ?? "—"}
-                            icon={NetworkIcon}
-                        />
-                        <Info
-                            label="IP / CIDR"
-                            value={iface?.ip ?? "—"}
-                            icon={Cpu}
-                            field={iface ? "ip" : undefined}
-                            suffix={iface ? `/${iface.prefix_len}` : undefined}
-                        />
-                        <Info
-                            label="Gateway"
-                            value={iface?.gateway_ip ?? "—"}
-                            icon={RouterIcon}
-                            field={iface ? "gateway_ip" : undefined}
-                        />
-                        <Info
-                            label="MAC"
-                            value={iface?.mac ?? "—"}
-                            icon={NetworkIcon}
-                            field={iface ? "mac" : undefined}
-                        />
-                        <Info
-                            label="DNS"
-                            value={
-                                iface
-                                    ? iface.dns_servers.join(", ") || "—"
-                                    : "—"
-                            }
-                            icon={Wifi}
-                            field={
-                                iface && iface.dns_servers.length > 0
-                                    ? "dns_servers"
-                                    : undefined
-                            }
-                        />
-                    </CardContent>
+                    <Collapsible open={openNet} onOpenChange={setOpenNet}>
+                        <CollapsibleTrigger asChild>
+                            <CardHeader>
+                                <CardTitle className="flex w-full items-center gap-2">
+                                    <Wifi
+                                        className="h-5 w-5 text-primary"
+                                        aria-hidden
+                                    />
+                                    Red activa
+                                    <ChevronDown
+                                        className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
+                                        aria-hidden
+                                    />
+                                </CardTitle>
+                                <CardDescription>
+                                    Interfaz detectada automáticamente como ruta
+                                    por defecto.
+                                </CardDescription>
+                            </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <CardContent className="grid gap-4 sm:grid-cols-3">
+                                <Info
+                                    label="Interfaz"
+                                    value={iface?.name ?? "—"}
+                                    icon={NetworkIcon}
+                                />
+                                <Info
+                                    label="IP / CIDR"
+                                    value={iface?.ip ?? "—"}
+                                    icon={Cpu}
+                                    field={iface ? "ip" : undefined}
+                                    suffix={
+                                        iface
+                                            ? `/${iface.prefix_len}`
+                                            : undefined
+                                    }
+                                    glossaryKey="cidr"
+                                />
+                                <Info
+                                    label="Gateway"
+                                    value={iface?.gateway_ip ?? "—"}
+                                    icon={RouterIcon}
+                                    field={iface ? "gateway_ip" : undefined}
+                                    glossaryKey="gateway"
+                                />
+                                <Info
+                                    label="MAC"
+                                    value={iface?.mac ?? "—"}
+                                    icon={NetworkIcon}
+                                    field={iface ? "mac" : undefined}
+                                    glossaryKey="mac"
+                                />
+                                <Info
+                                    label="DNS"
+                                    value={
+                                        iface
+                                            ? iface.dns_servers.join(", ") ||
+                                              "—"
+                                            : "—"
+                                    }
+                                    icon={Wifi}
+                                    field={
+                                        iface && iface.dns_servers.length > 0
+                                            ? "dns_servers"
+                                            : undefined
+                                    }
+                                    glossaryKey="dns"
+                                />
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Collapsible>
                 </Card>
             </section>
 
@@ -137,19 +168,19 @@ export function Dashboard() {
                         icon={NetworkIcon}
                     />
                     <Stat
-                        label="Hosts vivos (último scan)"
+                        label="Dispositivos activos (último scan)"
                         value={lastScan?.hosts_alive ?? 0}
                         icon={Radio}
                     />
                     <Stat
-                        label="Nuevos (último scan)"
+                        label="Detectados por primera vez"
                         value={lastScan?.hosts_new ?? 0}
                         icon={Radio}
                     />
                 </div>
             </section>
 
-            <section aria-label="Escanear ahora">
+            <section aria-label="Descubrir dispositivos">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -157,32 +188,30 @@ export function Dashboard() {
                                 className="h-5 w-5 text-primary"
                                 aria-hidden
                             />
-                            Escanear ahora
+                            Descubrir dispositivos
                         </CardTitle>
                         <CardDescription>
-                            Descubre los hosts de tu LAN con el perfil
+                            Descubre los dispositivos de tu LAN con el perfil
                             seleccionado.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex flex-wrap items-center gap-4">
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                htmlFor="dash-profile"
-                                className="text-xs text-muted-foreground"
-                            >
-                                Perfil
-                            </label>
+                    <CardContent className="flex flex-wrap items-end gap-4">
+                        <FormField
+                            label="Perfil"
+                            htmlFor="dash-profile"
+                            helper="Tipo de barrido de la red"
+                        >
                             <ProfileSelect
                                 value={profile}
                                 onChange={setProfile}
                                 className="w-40"
                                 id="dash-profile"
                             />
-                        </div>
+                        </FormField>
                         <Button
                             onClick={() => startScan(profile)}
                             disabled={scanning}
-                            className="mt-5"
+                            className="gap-1.5"
                         >
                             {scanning ? (
                                 <>
@@ -195,7 +224,7 @@ export function Dashboard() {
                             ) : (
                                 <>
                                     <Play className="h-4 w-4" aria-hidden />
-                                    Escanear ahora
+                                    Descubrir dispositivos
                                 </>
                             )}
                         </Button>
@@ -205,7 +234,7 @@ export function Dashboard() {
                             <Button
                                 variant="outline"
                                 onClick={cancel}
-                                className="mt-5 gap-1.5"
+                                className="gap-1.5"
                             >
                                 <X className="h-4 w-4" aria-hidden />
                                 Cancelar
@@ -222,7 +251,7 @@ export function Dashboard() {
                                     <span>
                                         {progress && progress.total > 0
                                             ? `${progress.swept}/${progress.total} (${progress.percent}%)`
-                                            : "Sondeando…"}
+                                            : "Explorando…"}
                                     </span>
                                 </div>
                                 <Progress
@@ -243,6 +272,17 @@ export function Dashboard() {
                         icon={AlertCircle}
                         title="Error de red"
                         description={error}
+                        action={
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={refresh}
+                                className="gap-1.5"
+                            >
+                                <RefreshCw className="h-4 w-4" aria-hidden />
+                                Reintentar
+                            </Button>
+                        }
                         className="border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
                     />
                 </div>
@@ -257,18 +297,23 @@ function Info({
     icon: Icon,
     field,
     suffix,
+    glossaryKey,
 }: {
     label: string;
     value: string;
     icon: typeof Wifi;
     field?: string;
     suffix?: string;
+    glossaryKey?: string;
 }) {
     return (
         <div className="flex flex-col gap-1">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Icon className="h-3.5 w-3.5" aria-hidden />
                 {label}
+                {glossaryKey && (
+                    <InfoTooltip term={label} glossaryKey={glossaryKey} />
+                )}
             </span>
             {field && isSensitive(field) ? (
                 <span className="flex items-baseline gap-0.5 font-medium">
