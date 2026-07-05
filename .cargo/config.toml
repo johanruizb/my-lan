@@ -1,0 +1,9 @@
+# Cross-compile config for aarch64-unknown-linux-gnu.
+# Without this, rustc falls back to the host `cc` (x86_64 gcc) + rust-lld from
+# the x86_64 sysroot, which rejects aarch64 object files with:
+#   rust-lld: error: ... is incompatible with elf64-x86-64
+# Pinning the linker to the cross gcc (provided by gcc-aarch64-linux-gnu) makes
+# rustc invoke aarch64-linux-gnu-gcc -> aarch64-linux-gnu-ld for this target.
+# Target-scoped: x86_64 native and windows builds are unaffected.
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
