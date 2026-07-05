@@ -4,11 +4,9 @@
 use std::net::IpAddr;
 use std::time::Duration;
 
+use mylan_agent::{scan_network, NetworkRunner, NetworkSchedule};
 use mylan_api::event_channel;
-use mylan_agent::{NetworkRunner, NetworkSchedule, scan_network};
-use mylan_core::{
-    Enricher, EventType, MacAddr, Observation, ScanProfile, Source, noop_enricher,
-};
+use mylan_core::{noop_enricher, Enricher, EventType, MacAddr, Observation, ScanProfile, Source};
 
 #[tokio::test]
 async fn scan_network_emits_device_new_event() {
@@ -27,10 +25,7 @@ async fn scan_network_emits_device_new_event() {
     let outcome = scan_network(&db_path, &net, &obs, &enricher, true, &tx)
         .await
         .expect("scan_network");
-    assert!(
-        outcome.hosts_alive >= 1,
-        "debe reportar el host inyectado"
-    );
+    assert!(outcome.hosts_alive >= 1, "debe reportar el host inyectado");
 
     // Drenar el broadcast: device_new se emite para un host nuevo (cold_start
     // suprime online/offline pero NO device_new).
@@ -41,10 +36,7 @@ async fn scan_network_emits_device_new_event() {
             got_device_new = true;
         }
     }
-    assert!(
-        got_device_new,
-        "debe emitir DeviceNew para un host nuevo"
-    );
+    assert!(got_device_new, "debe emitir DeviceNew para un host nuevo");
 }
 
 #[tokio::test]
@@ -101,8 +93,14 @@ async fn skip_guard_independent_per_network() {
         runner.try_start("net-B").await,
         "net-B empieza independientemente de net-A"
     );
-    assert!(!runner.try_start("net-A").await, "net-A sigue en curso → skip");
-    assert!(!runner.try_start("net-B").await, "net-B sigue en curso → skip");
+    assert!(
+        !runner.try_start("net-A").await,
+        "net-A sigue en curso → skip"
+    );
+    assert!(
+        !runner.try_start("net-B").await,
+        "net-B sigue en curso → skip"
+    );
     runner.mark_done("net-A").await;
     assert!(runner.try_start("net-A").await, "net-A libre de nuevo");
 }

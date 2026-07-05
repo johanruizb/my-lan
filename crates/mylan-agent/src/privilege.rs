@@ -7,7 +7,7 @@
 //! Nunca crash: si la detección de interfaz falla, devuelve vacío + log.
 
 use mylan_core::{Observation, ScanProfile};
-use mylan_discovery::{DiscoverOptions, detect_interface, discover};
+use mylan_discovery::{detect_interface, discover, DiscoverOptions};
 
 /// Descubre hosts en la LAN, con degradación elegante de privilegios.
 ///

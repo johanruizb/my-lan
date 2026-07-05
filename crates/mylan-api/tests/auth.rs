@@ -5,14 +5,14 @@
 
 use std::sync::Arc;
 
-use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, StatusCode, header};
+use axum::http::{header, Request, StatusCode};
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
+use axum::Router;
 use tower::ServiceExt;
 
-use mylan_api::{TokenMiddleware, require_token};
+use mylan_api::{require_token, TokenMiddleware};
 
 async fn ok_handler() -> &'static str {
     "ok"

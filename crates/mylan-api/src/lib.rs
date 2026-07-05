@@ -22,7 +22,9 @@ pub mod ws;
 
 pub use auth::{require_token, TokenMiddleware};
 pub use broadcast::event_channel;
-pub use token::{default_token_path, generate_token, load_or_create_token, rotate_token, token_path_for_db};
+pub use token::{
+    default_token_path, generate_token, load_or_create_token, rotate_token, token_path_for_db,
+};
 
 use std::path::PathBuf;
 use std::sync::Arc;

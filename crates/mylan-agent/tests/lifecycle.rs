@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use tokio_util::sync::CancellationToken;
 
-use mylan_agent::{AgentConfig, run_agent_with_cancel};
+use mylan_agent::{run_agent_with_cancel, AgentConfig};
 
 #[tokio::test]
 async fn cancel_exits_promptly_with_ok() {
@@ -29,5 +29,8 @@ async fn cancel_exits_promptly_with_ok() {
     )
     .await
     .expect("run_agent_with_cancel debe terminar <2s tras cancel");
-    assert!(result.is_ok(), "scheduler debe retornar Ok(()) al cancelarse");
+    assert!(
+        result.is_ok(),
+        "scheduler debe retornar Ok(()) al cancelarse"
+    );
 }

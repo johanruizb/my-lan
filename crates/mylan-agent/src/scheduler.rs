@@ -10,12 +10,12 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use tokio::sync::{Mutex, Semaphore, broadcast};
+use tokio::sync::{broadcast, Mutex, Semaphore};
 use tokio_util::sync::CancellationToken;
 
 use mylan_core::{Enricher, Event, Network, Observation};

@@ -27,7 +27,7 @@ pub use enums::{DeviceType, Protocol, ScanKind, ScanProfile, ScanStatus, Service
 pub use identity::DeviceIdentity;
 pub use mac::MacAddr;
 pub use models::{
-    Device, DeviceAddress, DnsRecord, Event, EventType, Interface, Network, PingMethod,
-    PingResult, Scan, ScanSummary, Service, Severity, TraceHop,
+    Device, DeviceAddress, DnsRecord, Event, EventType, Interface, Network, PingMethod, PingResult,
+    Scan, ScanSummary, Service, Severity, TraceHop,
 };
 pub use observation::{aggregate, Observation, Source};

@@ -1,7 +1,7 @@
 //! `mylan serve` — foreground agent + API en un proceso (debug alias de
 //! `mylan agent run`, ADR-4). Single process: agent loop + API embebido.
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 
 use crate::ctx::AppContext;
 

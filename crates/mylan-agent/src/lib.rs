@@ -20,7 +20,7 @@ mod windows_service;
 pub use config::{AgentConfig, NetworkSchedule};
 pub use lifecycle::shutdown_token;
 pub use privilege::discover_with_degradation;
-pub use scheduler::{NetworkRunner, run_scheduler, scan_network};
+pub use scheduler::{run_scheduler, scan_network, NetworkRunner};
 pub use windows_service::install_service;
 
 use std::path::Path;

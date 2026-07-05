@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 
 use mylan_agent::{run_agent, AgentConfig};
 

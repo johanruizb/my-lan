@@ -34,7 +34,7 @@ pub fn install_shutdown_handlers(token: CancellationToken) -> Result<()> {
     {
         let sigterm_token = token.clone();
         tokio::spawn(async move {
-            use tokio::signal::unix::{SignalKind, signal};
+            use tokio::signal::unix::{signal, SignalKind};
             match signal(SignalKind::terminate()) {
                 Ok(mut s) => {
                     s.recv().await;

@@ -8,9 +8,9 @@
 
 use std::time::Duration;
 
+use mylan_agent::{scan_network, NetworkSchedule};
 use mylan_api::event_channel;
-use mylan_agent::{NetworkSchedule, scan_network};
-use mylan_core::{Enricher, EventType, ScanProfile, noop_enricher};
+use mylan_core::{noop_enricher, Enricher, EventType, ScanProfile};
 
 /// Puerto efímero libre (race pequeña: el listener se dropea antes del serve
 /// bind, pero en práctica el OS no lo reasigna inmediatamente).
@@ -96,7 +96,10 @@ async fn e2e_new_device_emits_device_new_in_events_api_and_broadcast() {
 async fn wait_for_port(port: u16) {
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     while std::time::Instant::now() < deadline {
-        if tokio::net::TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+        if tokio::net::TcpStream::connect(("127.0.0.1", port))
+            .await
+            .is_ok()
+        {
             return;
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
