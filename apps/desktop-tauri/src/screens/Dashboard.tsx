@@ -195,51 +195,56 @@ export function Dashboard() {
                             seleccionado.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex flex-wrap items-end gap-4">
+                    <CardContent className="flex flex-col gap-4">
                         <FormField
                             label="Perfil"
                             htmlFor="dash-profile"
                             helper="Tipo de barrido de la red"
                         >
-                            <ProfileSelect
-                                value={profile}
-                                onChange={setProfile}
-                                className="w-40"
-                                id="dash-profile"
-                            />
+                            <div className="flex flex-wrap items-end gap-3">
+                                <ProfileSelect
+                                    value={profile}
+                                    onChange={setProfile}
+                                    className="w-40"
+                                    id="dash-profile"
+                                />
+                                <Button
+                                    onClick={() => startScan(profile)}
+                                    disabled={scanning}
+                                    className="gap-1.5"
+                                >
+                                    {scanning ? (
+                                        <>
+                                            <Loader2
+                                                className="h-4 w-4 animate-spin"
+                                                aria-hidden
+                                            />
+                                            Escaneando…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Play
+                                                className="h-4 w-4"
+                                                aria-hidden
+                                            />
+                                            Descubrir dispositivos
+                                        </>
+                                    )}
+                                </Button>
+                                {/* Cancelar compartido con /devices (AC-8): detiene el
+                                    scan y conserva los hosts ya hallados y persistidos. */}
+                                {scanning && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={cancel}
+                                        className="gap-1.5"
+                                    >
+                                        <X className="h-4 w-4" aria-hidden />
+                                        Cancelar
+                                    </Button>
+                                )}
+                            </div>
                         </FormField>
-                        <Button
-                            onClick={() => startScan(profile)}
-                            disabled={scanning}
-                            className="gap-1.5"
-                        >
-                            {scanning ? (
-                                <>
-                                    <Loader2
-                                        className="h-4 w-4 animate-spin"
-                                        aria-hidden
-                                    />
-                                    Escaneando…
-                                </>
-                            ) : (
-                                <>
-                                    <Play className="h-4 w-4" aria-hidden />
-                                    Descubrir dispositivos
-                                </>
-                            )}
-                        </Button>
-                        {/* Cancelar compartido con /devices (AC-8): detiene el
-                            scan y conserva los hosts ya hallados y persistidos. */}
-                        {scanning && (
-                            <Button
-                                variant="outline"
-                                onClick={cancel}
-                                className="gap-1.5"
-                            >
-                                <X className="h-4 w-4" aria-hidden />
-                                Cancelar
-                            </Button>
-                        )}
                         {/* Mismo progreso compartido que /devices (AC-3/AC-11). */}
                         {scanning && (
                             <div

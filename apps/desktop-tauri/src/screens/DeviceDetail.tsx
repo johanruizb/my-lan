@@ -56,7 +56,7 @@ import { MaskedValue } from "@/components/masked-value";
 import { isSensitive } from "@/lib/censor";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { FormField } from "@/components/ui/form-field";
-import { formatTimestamp } from "@/lib/format";
+import { formatRelative, formatTimestamp } from "@/lib/format";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 
 // Iconos de estado de servicio (open/closed/filtered — AC-5).
@@ -304,7 +304,8 @@ export function DeviceDetail() {
                             </div>
                             <Field
                                 label="Último visto"
-                                value={formatTimestamp(d.last_seen_at)}
+                                value={formatRelative(d.last_seen_at)}
+                                title={formatTimestamp(d.last_seen_at)}
                             />
                         </CardContent>
                     </CollapsibleContent>
@@ -332,12 +333,12 @@ export function DeviceDetail() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <CardContent className="flex flex-col gap-4">
-                                <div className="flex flex-wrap items-end gap-3">
-                                    <FormField
-                                        label="Perfil"
-                                        htmlFor="detail-profile"
-                                        helper="Tipo de barrido de puertos"
-                                    >
+                                <FormField
+                                    label="Perfil"
+                                    htmlFor="detail-profile"
+                                    helper="Tipo de barrido de puertos"
+                                >
+                                    <div className="flex flex-wrap items-end gap-3">
                                         <ProfileSelect
                                             value={profile}
                                             onChange={setProfile}
@@ -345,44 +346,44 @@ export function DeviceDetail() {
                                             id="detail-profile"
                                             disabled={scanning}
                                         />
-                                    </FormField>
-                                    <Button
-                                        onClick={handleScanPorts}
-                                        disabled={scanning}
-                                        className="gap-1.5"
-                                    >
-                                        {scanning ? (
-                                            <>
-                                                <Loader2
-                                                    className="h-4 w-4 animate-spin"
-                                                    aria-hidden
-                                                />
-                                                Escaneando…
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Play
+                                        <Button
+                                            onClick={handleScanPorts}
+                                            disabled={scanning}
+                                            className="gap-1.5"
+                                        >
+                                            {scanning ? (
+                                                <>
+                                                    <Loader2
+                                                        className="h-4 w-4 animate-spin"
+                                                        aria-hidden
+                                                    />
+                                                    Escaneando…
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Play
+                                                        className="h-4 w-4"
+                                                        aria-hidden
+                                                    />
+                                                    Escanear puertos
+                                                </>
+                                            )}
+                                        </Button>
+                                        {scanning && (
+                                            <Button
+                                                variant="destructive"
+                                                onClick={handleCancel}
+                                                className="gap-1.5"
+                                            >
+                                                <Square
                                                     className="h-4 w-4"
                                                     aria-hidden
                                                 />
-                                                Escanear puertos
-                                            </>
+                                                Cancelar
+                                            </Button>
                                         )}
-                                    </Button>
-                                    {scanning && (
-                                        <Button
-                                            variant="destructive"
-                                            onClick={handleCancel}
-                                            className="gap-1.5"
-                                        >
-                                            <Square
-                                                className="h-4 w-4"
-                                                aria-hidden
-                                            />
-                                            Cancelar
-                                        </Button>
-                                    )}
-                                </div>
+                                    </div>
+                                </FormField>
 
                                 {scanning && (
                                     // Live region para progreso/heartbeat/cancel (AC-15).
@@ -596,12 +597,14 @@ function Field({
     mono,
     field,
     glossaryKey,
+    title,
 }: {
     label: string;
     value: string;
     mono?: boolean;
     field?: string;
     glossaryKey?: string;
+    title?: string;
 }) {
     return (
         <div className="flex flex-col gap-1">
@@ -616,6 +619,7 @@ function Field({
             ) : (
                 <span
                     className={cn("font-medium", mono && "font-mono text-xs")}
+                    title={title}
                 >
                     {value}
                 </span>

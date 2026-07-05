@@ -20,6 +20,7 @@ import {
     ExternalLink,
 } from "lucide-react";
 import { getAppVersion } from "@/lib/tauri";
+import { SECTION_GAP } from "@/lib/design-tokens";
 
 // Acerca de (AC-5/AC-6): versión unificada (leída en runtime con getVersion,
 // misma fuente que el pie de la sidebar), repo, licencia, autor y enlaces a
@@ -49,7 +50,7 @@ export function About() {
     }
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className={`flex flex-col ${SECTION_GAP}`}>
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">

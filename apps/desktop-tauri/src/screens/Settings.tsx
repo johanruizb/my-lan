@@ -13,6 +13,7 @@ import { ProfileSelect } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/theme-provider";
 import { useCensorship } from "@/components/censorship-provider";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import {
     Collapsible,
     CollapsibleContent,
@@ -225,11 +226,21 @@ export function Settings() {
                             </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            El modo censura enmascara identificadores (IP, MAC,
-                            hostname, gateway, DNS) en la UI y los exports para
-                            evitar compartirlos por error en capturas o
-                            archivos. Se aplica inmediatamente y se persiste en
-                            los ajustes.
+                            El modo censura enmascara identificadores (IP
+                            <InfoTooltip term="IP" glossaryKey="ip" />, MAC
+                            <InfoTooltip term="MAC" glossaryKey="mac" />,
+                            hostname
+                            <InfoTooltip
+                                term="Hostname"
+                                glossaryKey="hostname"
+                            />
+                            , gateway
+                            <InfoTooltip term="Gateway" glossaryKey="gateway" />
+                            , DNS
+                            <InfoTooltip term="DNS" glossaryKey="dns" />) en la
+                            UI y los exports para evitar compartirlos por error
+                            en capturas o archivos. Se aplica inmediatamente y
+                            se persiste en los ajustes.
                         </p>
                     </div>
 
