@@ -1,0 +1,114 @@
+name: packaging-smoke
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  systemd:
+    name: systemd smoke (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release -p mylan-agent
+      - name: Install service
+        run: |
+          sudo useradd -r -s /usr/sbin/nologin mylan || true
+          sudo mkdir -p /var/lib/mylan /etc/mylan
+          sudo cp agent/mylan-agent.toml /etc/mylan/
+          sudo cp target/release/mylan-agent /usr/bin/
+          sudo cp agent/systemd/mylan-agent.service /etc/systemd/system/
+          sudo chown -R mylan:mylan /var/lib/mylan
+          sudo systemctl daemon-reload
+      - name: Start + verify embedded API
+        run: |
+          sudo systemctl start mylan-agent
+          sleep 10
+          systemctl is-active mylan-agent
+          # C1 fix: /status requiere bearer token; el agent lo genera en
+          # /var/lib/mylan/api-token (0600 owned by mylan) al arrancar.
+          TOKEN=$(sudo cat /var/lib/mylan/api-token)
+          curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:43117/api/v1/status
+      - name: Stop
+        if: always()
+        run: sudo systemctl stop mylan-agent || true
+
+  docker:
+    name: docker smoke (amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build (amd64)
+        run: |
+          docker buildx build --platform linux/amd64 -f agent/docker/Dockerfile -t mylan-agent:smoke --load .
+      - name: Run + healthcheck
+        run: |
+          docker run -d --name mylan-agent -p 43117:43117 mylan-agent:smoke
+          sleep 20
+          # C1 fix: /status requiere bearer token; el agent lo genera dentro del
+          # container en /var/lib/mylan/api-token (root-owned, container corre
+          # como root). Se lee via docker exec.
+          TOKEN=$(docker exec mylan-agent cat /var/lib/mylan/api-token)
+          curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:43117/api/v1/status
+      - name: Cleanup
+        if: always()
+        run: docker stop mylan-agent || true; docker rm mylan-agent || true
+
+  rpi:
+    name: rpi cross-build (aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: Add aarch64 target
+        run: rustup target add aarch64-unknown-linux-gnu
+      - name: Install cross linker
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Cross-build
+        run: cargo build --release --target aarch64-unknown-linux-gnu -p mylan-agent
+      - name: Verify binary exists
+        run: test -f target/aarch64-unknown-linux-gnu/release/mylan-agent
+
+  windows:
+    name: windows smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pinned toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --release -p mylan-agent
+      - name: Install + start service
+        shell: pwsh
+        run: |
+          $bin = (Resolve-Path target\release\mylan-agent.exe).Path
+          $cfgDir = Join-Path $env:PROGRAMDATA "mylan"
+          New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+          Copy-Item agent\mylan-agent.toml (Join-Path $cfgDir "mylan-agent.toml") -Force
+          sc.exe create MylanAgent binPath= "$bin --serve-api --config $(Join-Path $cfgDir 'mylan-agent.toml')" start= auto
+          sc.exe start MylanAgent
+      - name: Verify + stop
+        shell: pwsh
+        run: |
+          Start-Sleep -Seconds 10
+          $status = sc.exe query MylanAgent
+          if ($LASTEXITCODE -ne 0) { throw "MylanAgent service not found" }
+          sc.exe stop MylanAgent
+          sc.exe delete MylanAgent

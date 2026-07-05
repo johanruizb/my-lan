@@ -1,0 +1,16 @@
+services:
+  mylan-agent:
+    build:
+      context: ../..
+      dockerfile: agent/docker/Dockerfile
+    image: mylan-agent:0.5.0
+    container_name: mylan-agent
+    ports:
+      - "43117:43117"
+    volumes:
+      - mylan-data:/var/lib/mylan
+      - ./mylan-agent.toml:/etc/mylan/mylan-agent.toml:ro
+    restart: unless-stopped
+
+volumes:
+  mylan-data:

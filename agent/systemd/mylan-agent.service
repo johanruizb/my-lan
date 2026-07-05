@@ -1,0 +1,30 @@
+[Unit]
+Description=MyLAN agent — network discovery + monitoring + local API
+Documentation=https://github.com/johanruizb/mylan
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mylan
+Group=mylan
+# ADR-4: --serve-api spawns the API server in-process (single binary serves
+# both the agent scan loop and the REST+WS API on 127.0.0.1).
+ExecStart=/usr/bin/mylan-agent --serve-api --config /etc/mylan/mylan-agent.toml
+Restart=on-failure
+RestartSec=5
+# C2 fix: $HOME no está seteado bajo ProtectHome=true; lo apuntamos al state
+# dir. Las rutas de DB/token se derivan del db_path del config (C2 fix robusto),
+# pero HOME ayuda a default_data_dir() como fallback.
+Environment=HOME=/var/lib/mylan
+# Hardening: the agent only needs read access to config + write to its state dir.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/mylan
+StateDirectory=mylan
+ConfigurationDirectory=mylan
+
+[Install]
+WantedBy=multi-user.target

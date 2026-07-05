@@ -1,0 +1,23 @@
+# MyLAN agent config (v0.5 Watch).
+# Copiar a ~/.config/mylan/mylan-agent.toml o pasar vía `--config`.
+
+# Intervalo entre scans en segundos.
+interval_secs = 60
+
+# Puerto del API REST+WS embebido (bind 127.0.0.1 only, ADR-4).
+api_port = 43117
+
+# db_path: ruta de la DB SQLite. En una instalación empaquetada (systemd/Docker)
+# debe apuntar a un volumen persistente bajo /var/lib/mylan (writable por el
+# User=mylan del systemd unit). Sin esto, default_data_dir() necesita $HOME
+# (no disponible bajo systemd ProtectHome=true) → el agent no arranca (C2 fix).
+db_path = "/var/lib/mylan/mylan.db"
+
+# Redes a escanear (cidr + perfil: quick | normal | deep | iot | router).
+[[networks]]
+cidr = "192.168.1.0/24"
+profile = "quick"
+
+# [[networks]]
+# cidr = "10.0.0.0/24"
+# profile = "normal"
