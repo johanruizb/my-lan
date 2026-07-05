@@ -112,11 +112,16 @@ pub enum Command {
         #[arg(long)]
         ipv6: bool,
     },
-    /// Servir la API local (stub; fase futura).
+    /// Servir la API local en foreground (debug alias de `mylan agent run`).
     Serve {
         /// Puerto de escucha.
         #[arg(long, default_value_t = 43117)]
         port: u16,
+    },
+    /// Gestión del agent daemon (escaneo periódico + API embebida).
+    Agent {
+        #[command(subcommand)]
+        what: AgentSub,
     },
 }
 
@@ -140,6 +145,30 @@ pub enum ExportTarget {
         #[arg(long)]
         output: Option<String>,
     },
+}
+
+#[derive(Subcommand)]
+pub enum AgentSub {
+    /// Iniciar el agent como daemon en background (exec `mylan-agent` + pidfile).
+    Start {
+        /// Ruta a `mylan-agent.toml` (default: ~/.config/mylan/mylan-agent.toml).
+        #[arg(long)]
+        config: Option<String>,
+        /// Override del puerto del API embebido.
+        #[arg(long)]
+        api_port: Option<u16>,
+    },
+    /// Ejecutar el agent en foreground (agent loop + API en un proceso; debug).
+    Run {
+        /// Ruta a `mylan-agent.toml`.
+        #[arg(long)]
+        config: Option<String>,
+        /// Override del puerto del API embebido.
+        #[arg(long)]
+        api_port: Option<u16>,
+    },
+    /// Detener el agent daemon (SIGTERM al pidfile).
+    Stop,
 }
 
 /// Wrapper para que clap valide `--format` reutilizando `ExportFormat::parse`.

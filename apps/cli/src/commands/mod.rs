@@ -3,6 +3,7 @@
 //! Cada subcomando es un módulo pequeño con su handler. Los handlers comparten
 //! los helpers de [`mod`] (apertura de DB y resolución de la red activa).
 
+pub mod agent;
 pub mod device;
 pub mod devices;
 pub mod diagnose;

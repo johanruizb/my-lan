@@ -60,7 +60,8 @@ async fn main() -> anyhow::Result<()> {
             ipv4,
             ipv6,
         } => commands::diagnose::run_dns(&ctx, &host, rtype.as_deref(), ipv4, ipv6).await,
-        Command::Serve { port } => commands::serve::run(&ctx, port),
+        Command::Serve { port } => commands::serve::run(&ctx, port).await,
+        Command::Agent { what } => commands::agent::run(&ctx, what).await,
     }
 }
 
