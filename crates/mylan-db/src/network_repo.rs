@@ -125,6 +125,48 @@ pub fn get_network(conn: &Connection, id: &str) -> DbResult<Option<Network>> {
     }
 }
 
+/// Lista todas las redes, ordenadas por `updated_at` descendente (más reciente
+/// primero). Para `GET /api/v1/networks`.
+pub fn list_networks(conn: &Connection) -> DbResult<Vec<Network>> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, cidr, gateway_ip, dns_servers, created_at, updated_at
+             FROM networks ORDER BY updated_at DESC",
+        )
+        .map_err(map_sqlite)?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok::<_, rusqlite::Error>((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, Option<String>>(4)?,
+                row.get::<_, String>(5)?,
+                row.get::<_, String>(6)?,
+            ))
+        })
+        .map_err(map_sqlite)?;
+    let mut out = Vec::new();
+    for row in rows {
+        let (id, name, cidr, gateway, dns_raw, created_at, updated_at) = row.map_err(map_sqlite)?;
+        let dns_servers: Vec<std::net::IpAddr> = match dns_raw {
+            Some(s) if !s.is_empty() => serde_json::from_str(&s)?,
+            _ => Vec::new(),
+        };
+        out.push(Network {
+            id,
+            name,
+            cidr,
+            gateway_ip: ip_from_db(gateway)?,
+            dns_servers,
+            created_at,
+            updated_at,
+        });
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -59,6 +59,8 @@ pub struct Device {
     pub is_trusted: bool,
     #[serde(default)]
     pub is_hidden: bool,
+    #[serde(default)]
+    pub is_online: bool,
     pub notes: Option<String>,
 }
 
@@ -88,6 +90,7 @@ impl Device {
             last_seen_at: now,
             is_trusted: false,
             is_hidden: false,
+            is_online: true,
             notes: None,
         }
     }
@@ -183,6 +186,49 @@ pub struct Scan {
     pub started_at: String,
     pub finished_at: Option<String>,
     pub summary: Option<ScanSummary>,
+}
+
+/// Evento del timeline de diferencias entre escaneos (v0.5 Watch, Step 1).
+///
+/// Producido por el motor de diff (`mylan-db::diff`) y persistido en la tabla
+/// `events`; el canal WS `/events/live` es una vista en vivo del mismo flujo.
+/// `serde` para export/JSON y broadcast. IDs como `String` (UUID) y timestamps
+/// RFC3339, generados por `mylan-db`/`apps-cli`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Event {
+    pub id: String,
+    pub network_id: String,
+    pub device_id: Option<String>,
+    pub event_type: EventType,
+    pub severity: Severity,
+    pub message: Option<String>,
+    pub data_json: Option<String>,
+    pub created_at: String,
+}
+
+/// Tipo de evento del timeline de diferencias (AC-3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EventType {
+    /// Dispositivo visto por primera vez.
+    DeviceNew,
+    /// IP primaria cambiada (DHCP).
+    DeviceIpChanged,
+    /// Dispositivo antes online, no visto en este escaneo.
+    DeviceOffline,
+    /// Dispositivo antes offline, visto de nuevo.
+    DeviceOnline,
+    /// Servicio/puerto abierto desde el último escaneo.
+    PortOpened,
+}
+
+/// Severidad de un [`Event`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Severity {
+    Info,
+    Warning,
+    Critical,
 }
 
 // ---------------------------------------------------------------------------
@@ -408,5 +454,64 @@ mod tests {
         let json = serde_json::to_string(&rec).expect("serialize");
         let back: DnsRecord = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(rec, back);
+    }
+
+    #[test]
+    fn device_is_online_default_true() {
+        let device = Device::new("dev-1", "net-1", "2026-06-27T00:00:00Z");
+        assert!(device.is_online);
+    }
+
+    #[test]
+    fn event_serde_round_trip() {
+        let event = Event {
+            id: "evt-1".to_string(),
+            network_id: "net-1".to_string(),
+            device_id: Some("dev-1".to_string()),
+            event_type: EventType::DeviceNew,
+            severity: Severity::Info,
+            message: Some("New device discovered".to_string()),
+            data_json: Some(r#"{"ip":"192.168.1.5"}"#.to_string()),
+            created_at: "2026-07-03T00:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&event).expect("serialize");
+        let back: Event = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(event, back);
+    }
+
+    #[test]
+    fn event_type_serializes_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&EventType::DeviceNew).expect("ser"),
+            "\"device_new\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EventType::DeviceIpChanged).expect("ser"),
+            "\"device_ip_changed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EventType::DeviceOffline).expect("ser"),
+            "\"device_offline\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EventType::DeviceOnline).expect("ser"),
+            "\"device_online\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EventType::PortOpened).expect("ser"),
+            "\"port_opened\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Severity::Info).expect("ser"),
+            "\"info\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Severity::Warning).expect("ser"),
+            "\"warning\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Severity::Critical).expect("ser"),
+            "\"critical\""
+        );
     }
 }

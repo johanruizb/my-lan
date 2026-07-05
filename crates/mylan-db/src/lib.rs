@@ -17,7 +17,9 @@
 pub mod codec;
 pub mod connection;
 pub mod device_repo;
+pub mod diff;
 pub mod error;
+pub mod events_repo;
 pub mod migrations;
 pub mod network_repo;
 pub mod pipeline;
@@ -26,8 +28,13 @@ pub mod service_repo;
 pub mod util;
 
 // Re-exports ergonómicos de la API pública.
+pub use diff::{run_diff, snapshot_devices_before, snapshot_services_before};
 pub use error::{DbError, DbResult};
-pub use pipeline::{run_scan_pipeline, run_scan_pipeline_at, ScanOutcome};
+pub use events_repo::{insert_event, list_events, list_events_since};
+pub use pipeline::{
+    run_scan_pipeline, run_scan_pipeline_at, run_scan_pipeline_at_in_tx,
+    run_scan_pipeline_with_diff, ScanOutcome,
+};
 
 #[cfg(test)]
 mod concurrency_tests {

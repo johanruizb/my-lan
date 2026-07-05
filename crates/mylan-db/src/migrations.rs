@@ -10,7 +10,12 @@ use rusqlite::Connection;
 use crate::error::{map_sqlite, DbResult};
 
 /// `(versión_objetivo, SQL)`. `user_version` parte de 0.
-const MIGRATIONS: &[(u32, &str)] = &[(1, MIGRATION_V1), (2, MIGRATION_V2), (3, MIGRATION_V3)];
+const MIGRATIONS: &[(u32, &str)] = &[
+    (1, MIGRATION_V1),
+    (2, MIGRATION_V2),
+    (3, MIGRATION_V3),
+    (4, MIGRATION_V4),
+];
 
 /// Esquema inicial completo del plan §8.
 const MIGRATION_V1: &str = "\
@@ -128,6 +133,48 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_services_device_proto_port
 const MIGRATION_V3: &str =
     "ALTER TABLE networks ADD COLUMN name_source TEXT NOT NULL DEFAULT 'auto';";
 
+/// v4 — Línea de tiempo de eventos del agente + estado online de devices.
+///
+/// `events` persiste los diff events (`device_new`, `device_ip_changed`,
+/// `device_offline`, `device_online`, `port_opened`) emitidos por el motor de
+/// diff entre scans; la API lee de aquí y el canal WS es una vista en vivo de
+/// la misma escritura (la DB es la fuente de verdad). `is_online` en `devices`
+/// materializa el estado online/offline derivado del scan; el backfill one-shot
+/// deriva el estado inicial del último scan por red (NO un blanket `DEFAULT 1`,
+/// que produciría un estado todo-online falso y una tormenta de eventos
+/// `device_offline` en el siguiente scan).
+const MIGRATION_V4: &str = "\
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  network_id TEXT NOT NULL,
+  device_id TEXT,
+  event_type TEXT NOT NULL,
+  severity TEXT NOT NULL,
+  message TEXT,
+  data_json TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(network_id) REFERENCES networks(id),
+  FOREIGN KEY(device_id) REFERENCES devices(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_created_at
+  ON events(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_events_network_device
+  ON events(network_id, device_id);
+
+ALTER TABLE devices ADD COLUMN is_online INTEGER NOT NULL DEFAULT 1;
+
+UPDATE devices
+SET is_online = (
+  last_seen_at = (
+    SELECT MAX(last_seen_at)
+    FROM devices d2
+    WHERE d2.network_id = devices.network_id
+  )
+);
+";
+
 /// Lee el `user_version` actual de la base de datos.
 fn current_version(conn: &Connection) -> DbResult<u32> {
     let v: i64 = conn
@@ -204,6 +251,7 @@ mod tests {
         for expected in [
             "device_addresses",
             "devices",
+            "events",
             "networks",
             "scans",
             "services",

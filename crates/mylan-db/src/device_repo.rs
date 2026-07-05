@@ -41,6 +41,7 @@ struct DeviceRow {
     is_trusted: i64,
     is_hidden: i64,
     notes: Option<String>,
+    is_online: i64,
 }
 
 impl DeviceRow {
@@ -63,6 +64,7 @@ impl DeviceRow {
             is_trusted: row.get(14)?,
             is_hidden: row.get(15)?,
             notes: row.get(16)?,
+            is_online: row.get(17)?,
         })
     }
 
@@ -85,6 +87,7 @@ impl DeviceRow {
             is_trusted: self.is_trusted != 0,
             is_hidden: self.is_hidden != 0,
             notes: self.notes,
+            is_online: self.is_online != 0,
         })
     }
 }
@@ -92,7 +95,7 @@ impl DeviceRow {
 const SELECT_COLS: &str =
     "id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, manufacturer, \
      model, device_type, os_family, confidence, first_seen_at, last_seen_at, is_trusted, \
-     is_hidden, notes";
+     is_hidden, notes, is_online";
 
 /// Ejecuta una consulta de un único `id` opcional.
 fn query_opt_id(
@@ -157,6 +160,14 @@ fn get_device_by_id(conn: &Connection, id: &str) -> DbResult<Option<Device>> {
     }
 }
 
+/// Lee un dispositivo por su `id` (público, para `GET /api/v1/devices/:id`).
+///
+/// Wrapper público sobre el helper interno [`get_device_by_id`]; incluye `is_online`
+/// (Step 1) en el `Device` devuelto. `None` si no existe.
+pub fn get_device(conn: &Connection, id: &str) -> DbResult<Option<Device>> {
+    get_device_by_id(conn, id)
+}
+
 /// Funde la observación `incoming` de este escaneo sobre la fila `existing`
 /// preservando el conocimiento acumulado (P5): un re-escaneo más pobre **no**
 /// borra datos previos.
@@ -208,6 +219,7 @@ fn merge_for_update(existing: &Device, incoming: &Device) -> Device {
         is_trusted: existing.is_trusted,
         is_hidden: existing.is_hidden,
         notes: existing.notes.clone(),
+        is_online: incoming.is_online || existing.is_online,
     }
 }
 
@@ -230,8 +242,8 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
                primary_mac = ?1, primary_ip = ?2, hostname = ?3, display_name = ?4,
                vendor = ?5, manufacturer = ?6, model = ?7, device_type = ?8,
                os_family = ?9, confidence = ?10, last_seen_at = ?11,
-               is_trusted = ?12, is_hidden = ?13, notes = ?14
-             WHERE id = ?15",
+               is_trusted = ?12, is_hidden = ?13, notes = ?14, is_online = ?15
+             WHERE id = ?16",
             rusqlite::params![
                 mac_to_db(merged.primary_mac),
                 ip_to_db(merged.primary_ip),
@@ -247,6 +259,7 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
                 merged.is_trusted,
                 merged.is_hidden,
                 merged.notes,
+                merged.is_online,
                 existing_id,
             ],
         )
@@ -257,8 +270,8 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
             "INSERT INTO devices (
                id, network_id, primary_mac, primary_ip, hostname, display_name, vendor,
                manufacturer, model, device_type, os_family, confidence, first_seen_at,
-               last_seen_at, is_trusted, is_hidden, notes
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+               last_seen_at, is_trusted, is_hidden, notes, is_online
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
             rusqlite::params![
                 device.id,
                 device.network_id,
@@ -277,6 +290,7 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
                 device.is_trusted,
                 device.is_hidden,
                 device.notes,
+                device.is_online,
             ],
         )
         .map_err(map_sqlite)?;
@@ -602,5 +616,38 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn is_online_round_trips_via_upsert() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "online");
+        let m = mac("aa:bb:cc:dd:ee:03");
+        // Nuevo device: `Device::new` fija `is_online = true`.
+        let d = device("dev-1", Some(m), Some(ip("192.168.1.11")), "t0");
+        assert_eq!(upsert_device(&conn, &d).unwrap(), UpsertOutcome::Inserted);
+        let got = get_device_by_ip(&conn, "net-1", ip("192.168.1.11"))
+            .unwrap()
+            .unwrap();
+        assert!(got.is_online, "nuevo device online");
+
+        // El motor de diff marca el device offline directamente en la DB
+        // (fuera de `upsert_device`).
+        conn.execute("UPDATE devices SET is_online = 0 WHERE id = 'dev-1'", [])
+            .unwrap();
+        let offline = get_device_by_ip(&conn, "net-1", ip("192.168.1.11"))
+            .unwrap()
+            .unwrap();
+        assert!(!offline.is_online, "marcado offline por el diff");
+
+        // Re-escaneo: el device se ve de nuevo (`incoming.is_online = true` por
+        // `Device::new`); `merge_for_update` aplica OR → restaura online.
+        let d2 = device("dev-1", Some(m), Some(ip("192.168.1.11")), "t1");
+        assert_eq!(upsert_device(&conn, &d2).unwrap(), UpsertOutcome::Updated);
+        let back = get_device_by_ip(&conn, "net-1", ip("192.168.1.11"))
+            .unwrap()
+            .unwrap();
+        assert!(back.is_online, "OR con incoming true restaura online");
+        assert_eq!(back.last_seen_at, "t1");
     }
 }

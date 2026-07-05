@@ -17,4 +17,5 @@ time = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
+mylan-core = { workspace = true }
 tempfile = "3.27.0"
