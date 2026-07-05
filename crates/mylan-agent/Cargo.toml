@@ -1,0 +1,26 @@
+[package]
+name = "mylan-agent"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+mylan-core = { workspace = true }
+mylan-db = { workspace = true }
+mylan-discovery = { workspace = true }
+mylan-fingerprint = { workspace = true }
+mylan-api = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+toml = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-service = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

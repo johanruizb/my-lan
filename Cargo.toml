@@ -6,12 +6,14 @@ members = [
     "crates/mylan-discovery",
     "crates/mylan-fingerprint",
     "crates/mylan-scanner",
+    "crates/mylan-api",
+    "crates/mylan-agent",
     "apps/cli",
     "tests/integration",
 ]
 
 [workspace.package]
-version = "0.4.4"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.96"
 license = "AGPL-3.0-or-later"
@@ -26,6 +28,8 @@ mylan-db = { path = "crates/mylan-db" }
 mylan-discovery = { path = "crates/mylan-discovery" }
 mylan-fingerprint = { path = "crates/mylan-fingerprint" }
 mylan-scanner = { path = "crates/mylan-scanner" }
+mylan-api = { path = "crates/mylan-api" }
+mylan-agent = { path = "crates/mylan-agent" }
 # Externos (versiones pinneadas; reproducibilidad vía Cargo.lock commiteado).
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
@@ -51,6 +55,14 @@ thiserror = "2"
 # en tokio-util 0.7); sin features aquí. El `sync` feature de `tokio` ya está en el
 # pin de workspace de tokio.
 tokio-util = "0.7"
+# Externos añadidos en v0.5 Watch: API REST+WS + agent config + token + packaging.
+axum = "0.8"
+tower = "0.5"
+tower-http = "0.6"
+getrandom = "0.2"
+base64 = "0.22"
+toml = "0.8"
+windows-service = "0.7"
 
 [profile.release]
 strip = true
