@@ -81,6 +81,14 @@ jobs:
       - name: Install cross linker
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
       - name: Cross-build
+        env:
+          # Preventive: the `cc` crate (libsqlite3-sys bundled via rusqlite)
+          # looks for `${target}-gcc` = aarch64-unknown-linux-gnu-gcc, but apt
+          # provides aarch64-linux-gnu-gcc (no `unknown`). Without CC_<TRIPLE>
+          # the cc crate may fall back to the host cc and emit x86_64 SQLite
+          # objects. cc crate v1.2.65 respects CC_<TRIPLE>/AR_<TRIPLE>.
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          AR_aarch64_unknown_linux_gnu: aarch64-linux-gnu-ar
         run: cargo build --release --target aarch64-unknown-linux-gnu -p mylan-agent
       - name: Verify binary exists
         run: test -f target/aarch64-unknown-linux-gnu/release/mylan-agent
