@@ -115,12 +115,13 @@ export function Devices() {
         return [...map.values()];
     }, [devices, devicesFound]);
 
+    // Filtros componen AND con la búsqueda texto (AC-14). Single predicate
+    // para una sola pasada sobre `merged` (fix review #4).
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
-        let result = merged;
-        if (q) {
-            result = result.filter((d) =>
-                [
+        return merged.filter((d) => {
+            if (q) {
+                const matches = [
                     d.primary_ip,
                     d.primary_mac,
                     d.hostname,
@@ -128,27 +129,20 @@ export function Devices() {
                     d.vendor,
                 ]
                     .filter(Boolean)
-                    .some((v) => (v as string).toLowerCase().includes(q)),
-            );
-        }
-        // Filtros componen AND con la búsqueda texto (AC-14).
-        if (filterType !== "all") {
-            result = result.filter((d) => d.device_type === filterType);
-        }
-        // AC-15: "En línea" es opt-in; sin filtro activo se ven todos.
-        if (filterOnline === "online") {
-            result = result.filter((d) => d.is_online);
-        }
-        if (filterOnline === "offline") {
-            result = result.filter((d) => !d.is_online);
-        }
-        if (filterTrust === "trusted") {
-            result = result.filter((d) => deriveTrustState(d) === "trusted");
-        }
-        if (filterTrust === "unknown") {
-            result = result.filter((d) => deriveTrustState(d) === "unknown");
-        }
-        return result;
+                    .some((v) => (v as string).toLowerCase().includes(q));
+                if (!matches) return false;
+            }
+            if (filterType !== "all" && d.device_type !== filterType)
+                return false;
+            // AC-15: "En línea" es opt-in; sin filtro activo se ven todos.
+            if (filterOnline === "online" && !d.is_online) return false;
+            if (filterOnline === "offline" && d.is_online) return false;
+            if (filterTrust === "trusted" && deriveTrustState(d) !== "trusted")
+                return false;
+            if (filterTrust === "unknown" && deriveTrustState(d) !== "unknown")
+                return false;
+            return true;
+        });
     }, [merged, query, filterType, filterOnline, filterTrust]);
 
     async function handleExport(format: string) {

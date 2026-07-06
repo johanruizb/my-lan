@@ -10,9 +10,13 @@ export interface OnlineBadgeProps {
 }
 
 export function OnlineBadge({ isOnline, className }: OnlineBadgeProps) {
-    const label = isOnline ? "En línea" : "Fuera de línea";
-    const variant = isOnline ? "success" : "outline";
-    const dotClass = isOnline ? "bg-green-500" : "bg-muted-foreground/50";
+    // Tolerate a missing value at runtime (defensive: el backend serializa
+    // is_online vía models.rs #[serde(default)], pero si llegara undefined,
+    // default a offline). fix review #2.
+    const online = isOnline ?? false;
+    const label = online ? "En línea" : "Fuera de línea";
+    const variant = online ? "success" : "outline";
+    const dotClass = online ? "bg-green-500" : "bg-muted-foreground/50";
     return (
         <Badge
             variant={variant}

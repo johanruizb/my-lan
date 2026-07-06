@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +107,18 @@ export function DeviceDetail() {
     const [notes, setNotes] = useState(detail?.device.notes ?? "");
     const [saving, setSaving] = useState(false);
 
+    // Preview del estado de confianza derivado (TrustBadge). Memoizado para
+    // mantener referencia estable y no derrotar React.memo en re-renders por
+    // edits no relacionados (fix review #5). Declarado antes de los early-returns
+    // para respetar el orden de hooks (igual que los useState de edición).
+    const trustBadgeDevice = useMemo(
+        () => ({
+            is_trusted: isTrusted,
+            confidence: detail?.device.confidence ?? "0",
+        }),
+        [isTrusted, detail?.device.confidence],
+    );
+
     const scanRef = useRef<HTMLDivElement>(null);
 
     function scanPortsCta() {
@@ -178,13 +190,24 @@ export function DeviceDetail() {
         };
     }, [scanning, scanId]);
 
-    // Resetea el estado de edición cuando `detail` cambia (re-fetch tras guardar).
+    // Resetea el estado de edición solo cuando cambia la identidad del device
+    // (no en cada refresh de `detail`, p.ej. online-status), con guards para
+    // no descartar edits en progreso ni disparar re-renders redundantes. El
+    // fallback `?? false` en is_trusted iguala el inicializador de useState
+    // (fix review #3/#6).
     useEffect(() => {
         if (!detail) return;
-        setDisplayName(detail.device.display_name ?? "");
-        setIsTrusted(detail.device.is_trusted);
-        setNotes(detail.device.notes ?? "");
-    }, [detail]);
+        const dev = detail.device;
+        setDisplayName((prev) =>
+            prev === (dev.display_name ?? "") ? prev : dev.display_name ?? "",
+        );
+        setIsTrusted((prev) =>
+            prev === (dev.is_trusted ?? false) ? prev : dev.is_trusted ?? false,
+        );
+        setNotes((prev) =>
+            prev === (dev.notes ?? "") ? prev : dev.notes ?? "",
+        );
+    }, [detail?.device.id]);
 
     async function handleScanPorts() {
         const id = newScanId();
@@ -230,21 +253,22 @@ export function DeviceDetail() {
         if (!detail) return;
         const d = detail.device;
         const dirtyName = displayName !== (d.display_name ?? "");
+        const dirtyTrusted = isTrusted !== (d.is_trusted ?? false);
         const dirtyNotes = notes !== (d.notes ?? "");
         setSaving(true);
         try {
             await updateDevice(d.id, {
                 displayName: dirtyName ? displayName.trim() : undefined,
-                isTrusted,
+                isTrusted: dirtyTrusted ? isTrusted : undefined,
                 notes: dirtyNotes ? notes.trim() : undefined,
             });
             toast("Dispositivo actualizado.", "success");
             try {
                 await getDevice(decodeURIComponent(ip)).then(setDetail);
-            } catch (e) {
+            } catch {
                 toast("Error recargando el dispositivo.", "default");
             }
-        } catch (e) {
+        } catch {
             toast("No se pudo actualizar el dispositivo.", "error");
         } finally {
             setSaving(false);
@@ -461,12 +485,7 @@ export function DeviceDetail() {
                                             "Guardar"
                                         )}
                                     </Button>
-                                    <TrustBadge
-                                        device={{
-                                            is_trusted: isTrusted,
-                                            confidence: d.confidence,
-                                        }}
-                                    />
+                                    <TrustBadge device={trustBadgeDevice} />
                                 </div>
                             </div>
                         </CardContent>
