@@ -12,7 +12,11 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
-import { deviceIcon, deviceLabel } from "@/components/device-icons";
+import {
+    deviceIcon,
+    deviceLabel,
+    isKnownDeviceType,
+} from "@/components/device-icons";
 import { OnlineBadge } from "@/components/online-badge";
 import { TrustBadge } from "@/components/trust-badge";
 import {
@@ -337,9 +341,11 @@ export function DeviceDetail() {
                                         value={d.primary_ip ?? d.id}
                                     />
                                 </span>
-                                <Badge variant="secondary" className="ml-1">
-                                    {deviceLabel(d.device_type)}
-                                </Badge>
+                                {isKnownDeviceType(d.device_type) && (
+                                    <Badge variant="secondary" className="ml-1">
+                                        {deviceLabel(d.device_type)}
+                                    </Badge>
+                                )}
                                 <OnlineBadge
                                     isOnline={d.is_online}
                                     className="ml-1"

@@ -7,7 +7,11 @@ import { CardHeader } from "@/components/ui/card-header";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { deviceIcon, deviceLabel } from "@/components/device-icons";
+import {
+    deviceIcon,
+    deviceLabel,
+    isKnownDeviceType,
+} from "@/components/device-icons";
 import { useToast } from "@/components/ui/toast";
 import { formatRelative, formatTimestamp } from "@/lib/format";
 import { RelativeTime } from "@/components/relative-time";
@@ -499,18 +503,22 @@ export function Devices() {
                                                     />
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-1.5">
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="gap-1"
-                                                    >
-                                                        <Icon
-                                                            className="h-3 w-3"
-                                                            aria-hidden
-                                                        />
-                                                        {deviceLabel(
-                                                            d.device_type,
-                                                        )}
-                                                    </Badge>
+                                                    {isKnownDeviceType(
+                                                        d.device_type,
+                                                    ) && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="gap-1"
+                                                        >
+                                                            <Icon
+                                                                className="h-3 w-3"
+                                                                aria-hidden
+                                                            />
+                                                            {deviceLabel(
+                                                                d.device_type,
+                                                            )}
+                                                        </Badge>
+                                                    )}
                                                     <OnlineBadge
                                                         isOnline={d.is_online}
                                                     />
@@ -643,11 +651,15 @@ export function Devices() {
                                                     {d.vendor ?? "—"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant="secondary">
-                                                        {deviceLabel(
-                                                            d.device_type,
-                                                        )}
-                                                    </Badge>
+                                                    {isKnownDeviceType(
+                                                        d.device_type,
+                                                    ) && (
+                                                        <Badge variant="secondary">
+                                                            {deviceLabel(
+                                                                d.device_type,
+                                                            )}
+                                                        </Badge>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <OnlineBadge
