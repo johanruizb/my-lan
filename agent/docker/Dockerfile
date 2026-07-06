@@ -11,7 +11,10 @@ COPY tests/ tests/
 COPY agent/mylan-agent.toml agent/mylan-agent.toml
 RUN cargo build --release -p mylan-agent
 
-FROM debian:bookworm-slim AS runtime
+# Runtime en trixie (Debian 13) para alinear GLIBC con el builder
+# `rust:1.96-slim` (trixie, GLIBC ≥ 2.39). Bookworm (GLIBC 2.36) hace fallar
+# al binario release al arrancar: "GLIBC_2.39 not found".
+FROM debian:trixie-slim AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*

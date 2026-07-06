@@ -1,18 +1,35 @@
-// AC-22: Tests de screen `Devices` con MemoryRouter + providers + mock
+// AC-18/AC-22: Tests de screen `Devices` con MemoryRouter + providers + mock
 // `@/lib/tauri` por función + fixtures Device[].
 
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Devices } from "@/screens/Devices";
 import { renderWithProviders } from "./helpers";
 import { deviceFixtures } from "../fixtures";
 
+// Polyfill pointer capture + scrollIntoView para Radix Select en jsdom (jsdom
+// no implementa `hasPointerCapture`/`releasePointerCapture`/`scrollIntoView`;
+// Radix los usa al abrir el Select y al enfocar la opción seleccionada).
+if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = (() => false) as () => boolean;
+}
+if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = (() => {}) as () => void;
+}
+if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = (() => {}) as () => void;
+}
+
 const listDevicesMock = vi.fn();
 const exportDevicesMock = vi.fn();
+const updateDeviceMock = vi.fn();
 
 vi.mock("@/lib/tauri", () => ({
     listDevices: () => listDevicesMock(),
     exportDevices: (format: string) => exportDevicesMock(format),
+    updateDevice: (id: string, fields: { displayName?: string; isTrusted?: boolean; notes?: string }) =>
+        updateDeviceMock(id, fields),
 }));
 
 vi.mock("@/App", () => ({
@@ -47,8 +64,10 @@ describe("Devices screen (AC-22)", () => {
     beforeEach(() => {
         listDevicesMock.mockReset();
         exportDevicesMock.mockReset();
+        updateDeviceMock.mockReset();
         listDevicesMock.mockResolvedValue(deviceFixtures);
         exportDevicesMock.mockResolvedValue("/tmp/export.csv");
+        updateDeviceMock.mockResolvedValue(deviceFixtures[0]);
     });
 
     it("renderiza y muestra el conteo de dispositivos de los fixtures", async () => {
@@ -79,5 +98,109 @@ describe("Devices screen (AC-22)", () => {
                 screen.getByRole("button", { name: /Escanear/ }),
             ).toBeInTheDocument();
         });
+    });
+
+    // AC-18: OnlineBadge renderiza "En línea" (online) / "Fuera de línea" (offline).
+    it("OnlineBadge renderiza En línea para dispositivos online y Fuera de línea para offline", async () => {
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        const cards = screen.getAllByRole("listitem");
+        expect(cards).toHaveLength(3);
+        // dev-1 y dev-2 online → "En línea"; dev-3 offline → "Fuera de línea".
+        expect(within(cards[0]).getByText("En línea")).toBeInTheDocument();
+        expect(within(cards[2]).getByText("Fuera de línea")).toBeInTheDocument();
+    });
+
+    // AC-18: TrustBadge renderiza los 3 estados derivados de deriveTrustState.
+    it("TrustBadge renderiza Confiable/Reconocido/Desconocido según deriveTrustState", async () => {
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        const cards = screen.getAllByRole("listitem");
+        // dev-1 trusted → "Confiable"; dev-2 recognized → "Reconocido";
+        // dev-3 unknown → "Desconocido".
+        expect(within(cards[0]).getByText("Confiable")).toBeInTheDocument();
+        expect(within(cards[1]).getByText("Reconocido")).toBeInTheDocument();
+        expect(within(cards[2]).getByText("Desconocido")).toBeInTheDocument();
+    });
+
+    // AC-15/AC-18: filtro Estado "En línea" oculta offline; "Todos" los restaura.
+    it("filtro Estado En línea muestra solo dispositivos online y Todos los restaura", async () => {
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        // AC-15: sin filtro activo se ven todos (offline incluidos).
+        expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+
+        // Toggle "En línea" → solo online (dev-1, dev-2) → 2 visibles.
+        fireEvent.click(screen.getByRole("button", { name: "En línea" }));
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(2\)/)).toBeInTheDocument();
+        });
+
+        // Toggle "Todos" (Estado) → se restauran los 3 (offline incluido).
+        // "Todos" aparece en los grupos Estado y Confianza; acotamos al grupo.
+        const estadoGroup = screen.getByRole("group", { name: "Filtrar por estado" });
+        fireEvent.click(
+            within(estadoGroup).getByRole("button", { name: "Todos" }),
+        );
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+    });
+
+    // AC-14/AC-18: filtro Confianza "Confiables" muestra solo el trusted.
+    it("filtro Confianza Confiables muestra solo dispositivos confiables", async () => {
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: "Confiables" }));
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
+        });
+    });
+
+    // AC-14/AC-18: filtro Tipo "router" muestra solo dispositivos router.
+    it("filtro Tipo router muestra solo dispositivos router", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        // Radix Select: userEvent.click dispara la secuencia pointer+mouse
+        // completa (jsdom no soporta `hasPointerCapture` con fireEvent solo).
+        const trigger = screen.getByRole("combobox", { name: "Filtrar por tipo" });
+        await user.click(trigger);
+
+        const option = await screen.findByRole("option", { name: "Router" });
+        await user.click(option);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
+        });
+    });
+
+    // AC-11/AC-18: el título de la tarjeta prioriza display_name sobre la IP.
+    it("título de la tarjeta prioriza display_name sobre la IP", async () => {
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        const cards = screen.getAllByRole("listitem");
+        // dev-1 tiene display_name="Router principal" → título de la tarjeta.
+        expect(within(cards[0]).getByText("Router principal")).toBeInTheDocument();
+        // La IP no se renderiza como texto visible en la tarjeta (sólo en aria-label).
+        expect(within(cards[0]).queryByText("192.168.1.1")).not.toBeInTheDocument();
     });
 });

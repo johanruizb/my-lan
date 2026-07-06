@@ -6,7 +6,7 @@
 
 use std::net::IpAddr;
 
-use rusqlite::{Connection, Row};
+use rusqlite::{params_from_iter, Connection, Row, ToSql};
 
 use mylan_core::{Confidence, Device, DeviceAddress, DeviceType};
 
@@ -287,7 +287,7 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
                 i64::from(device.confidence.score()),
                 device.first_seen_at,
                 device.last_seen_at,
-                device.is_trusted,
+                device.is_trusted || (device.device_type == DeviceType::Router),
                 device.is_hidden,
                 device.notes,
                 device.is_online,
@@ -296,6 +296,56 @@ pub fn upsert_device(conn: &Connection, device: &Device) -> DbResult<UpsertOutco
         .map_err(map_sqlite)?;
         Ok(UpsertOutcome::Inserted)
     }
+}
+
+/// Actualiza parcialmente los campos editables por el usuario (`display_name`,
+/// `is_trusted`, `notes`) de un dispositivo por su `id` (UUID `String` de
+/// `Device.id`, NO `i64`).
+///
+/// Solo fija los campos pasados como `Some`; `None` significa "no tocar". Así
+/// se preservan `first_seen_at`, `device_type`, `confidence`, `primary_mac`,
+/// `primary_ip`, `hostname`, `is_online`, `is_hidden`, `network_id`,
+/// `manufacturer`, `model`, `os_family`, `vendor` — ninguna otra columna entra
+/// en el `SET`.
+///
+/// Si ningún campo es `Some`, retorna `Ok(())` sin ejecutar `UPDATE`.
+///
+/// El SQL se construye con fragmentos constantes (`Vec<&'static str>`) y valores
+/// bind (`Vec<Box<dyn ToSql>>`) ejecutados vía `rusqlite::params_from_iter`, de
+/// forma que los valores nunca se interpolan en el string (evita SQL injection)
+/// y los placeholders `?` no se calculan a mano (evita off-by-one).
+pub fn update_device_fields(
+    conn: &Connection,
+    id: &str,
+    display_name: Option<&str>,
+    is_trusted: Option<bool>,
+    notes: Option<&str>,
+) -> DbResult<()> {
+    let mut set_fragments: Vec<&'static str> = Vec::new();
+    let mut values: Vec<Box<dyn ToSql>> = Vec::new();
+    if let Some(name) = display_name {
+        set_fragments.push("display_name = ?");
+        values.push(Box::new(name.to_string()));
+    }
+    if let Some(trusted) = is_trusted {
+        set_fragments.push("is_trusted = ?");
+        values.push(Box::new(trusted));
+    }
+    if let Some(note) = notes {
+        set_fragments.push("notes = ?");
+        values.push(Box::new(note.to_string()));
+    }
+    if set_fragments.is_empty() {
+        return Ok(());
+    }
+    let sql = format!(
+        "UPDATE devices SET {} WHERE id = ?",
+        set_fragments.join(", ")
+    );
+    values.push(Box::new(id.to_string()));
+    conn.execute(&sql, params_from_iter(values))
+        .map_err(map_sqlite)?;
+    Ok(())
 }
 
 /// Lista todos los dispositivos de una red, ordenados por `last_seen_at` desc.
@@ -649,5 +699,182 @@ mod tests {
             .unwrap();
         assert!(back.is_online, "OR con incoming true restaura online");
         assert_eq!(back.last_seen_at, "t1");
+    }
+
+    #[test]
+    fn update_device_fields_partial_display_name_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "udf_dname");
+        let m = mac("aa:bb:cc:dd:ee:10");
+        let mut d = device("dev-1", Some(m), Some(ip("192.168.1.50")), "t0");
+        d.display_name = Some("original".to_string());
+        d.notes = Some("nota inicial".to_string());
+        upsert_device(&conn, &d).unwrap();
+
+        update_device_fields(&conn, "dev-1", Some("nuevo nombre"), None, None).unwrap();
+
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert_eq!(got.display_name.as_deref(), Some("nuevo nombre"));
+        assert_eq!(
+            got.notes.as_deref(),
+            Some("nota inicial"),
+            "notes preservado"
+        );
+        assert!(!got.is_trusted, "is_trusted preservado");
+        assert_eq!(got.first_seen_at, "t0", "first_seen_at preservado");
+    }
+
+    #[test]
+    fn update_device_fields_all_none_no_change() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "udf_none");
+        let m = mac("aa:bb:cc:dd:ee:11");
+        let mut d = device("dev-1", Some(m), Some(ip("192.168.1.51")), "t0");
+        d.display_name = Some("original".to_string());
+        d.notes = Some("nota inicial".to_string());
+        upsert_device(&conn, &d).unwrap();
+
+        update_device_fields(&conn, "dev-1", None, None, None).unwrap();
+
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert_eq!(got.display_name.as_deref(), Some("original"));
+        assert_eq!(got.notes.as_deref(), Some("nota inicial"));
+        assert!(!got.is_trusted);
+    }
+
+    #[test]
+    fn update_device_fields_is_trusted_toggle_false_to_true() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "udf_toggle");
+        let m = mac("aa:bb:cc:dd:ee:12");
+        let d = device("dev-1", Some(m), Some(ip("192.168.1.52")), "t0");
+        upsert_device(&conn, &d).unwrap();
+        // Insert path: device.is_trusted=false y no-Router => is_trusted=false.
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert!(!got.is_trusted, "insert deja is_trusted=false");
+
+        update_device_fields(&conn, "dev-1", None, Some(true), None).unwrap();
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert!(got.is_trusted, "toggle false->true");
+
+        update_device_fields(&conn, "dev-1", None, Some(false), None).unwrap();
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert!(!got.is_trusted, "toggle true->false");
+    }
+
+    #[test]
+    fn update_device_fields_notes_only_display_name_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "udf_notes");
+        let m = mac("aa:bb:cc:dd:ee:13");
+        let mut d = device("dev-1", Some(m), Some(ip("192.168.1.53")), "t0");
+        d.display_name = Some("original".to_string());
+        upsert_device(&conn, &d).unwrap();
+
+        update_device_fields(&conn, "dev-1", None, None, Some("mi nota nueva")).unwrap();
+
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert_eq!(got.notes.as_deref(), Some("mi nota nueva"));
+        assert_eq!(
+            got.display_name.as_deref(),
+            Some("original"),
+            "display_name preservado (None no toca)"
+        );
+    }
+
+    #[test]
+    fn router_insert_marks_trusted() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "router_trust");
+        let m = mac("aa:bb:cc:dd:ee:20");
+        let mut d = device("dev-router", Some(m), Some(ip("192.168.1.1")), "t0");
+        d.device_type = DeviceType::Router;
+        d.is_trusted = false; // explícito: el pipeline no lo marca
+        assert_eq!(upsert_device(&conn, &d).unwrap(), UpsertOutcome::Inserted);
+
+        let got = get_device(&conn, "dev-router").unwrap().unwrap();
+        assert!(got.is_trusted, "router insert => is_trusted=true");
+    }
+
+    #[test]
+    fn non_router_insert_respects_device_is_trusted() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "phone_laptop_trust");
+        let m = mac("aa:bb:cc:dd:ee:21");
+        let mut d = device("dev-phone", Some(m), Some(ip("192.168.1.54")), "t0");
+        d.device_type = DeviceType::Phone;
+        d.is_trusted = false;
+        assert_eq!(upsert_device(&conn, &d).unwrap(), UpsertOutcome::Inserted);
+        let got = get_device(&conn, "dev-phone").unwrap().unwrap();
+        assert!(!got.is_trusted, "phone false => false (no forzado)");
+
+        let m2 = mac("aa:bb:cc:dd:ee:22");
+        let mut d2 = device("dev-laptop", Some(m2), Some(ip("192.168.1.55")), "t0");
+        d2.device_type = DeviceType::Laptop;
+        d2.is_trusted = true;
+        assert_eq!(upsert_device(&conn, &d2).unwrap(), UpsertOutcome::Inserted);
+        let got2 = get_device(&conn, "dev-laptop").unwrap().unwrap();
+        assert!(
+            got2.is_trusted,
+            "laptop true => true (respeta device.is_trusted)"
+        );
+    }
+
+    #[test]
+    fn is_trusted_preserved_after_rescan_untrust() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "preserve_untrust");
+        let m = mac("aa:bb:cc:dd:ee:23");
+        let mut d = device("dev-1", Some(m), Some(ip("192.168.1.56")), "t0");
+        d.device_type = DeviceType::Phone;
+        upsert_device(&conn, &d).unwrap();
+        // Usuario marca confiable y luego lo desmarca directamente en la DB.
+        conn.execute("UPDATE devices SET is_trusted = 1 WHERE id = 'dev-1'", [])
+            .unwrap();
+        conn.execute("UPDATE devices SET is_trusted = 0 WHERE id = 'dev-1'", [])
+            .unwrap();
+
+        // Re-escaneo: misma MAC => UPDATE path (merge_for_update preserva
+        // existing.is_trusted=false, línea 219).
+        let mut d2 = device("dev-1", Some(m), Some(ip("192.168.1.56")), "t1");
+        d2.device_type = DeviceType::Phone;
+        assert_eq!(upsert_device(&conn, &d2).unwrap(), UpsertOutcome::Updated);
+
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert!(
+            !got.is_trusted,
+            "is_trusted=false del usuario preservado por merge_for_update"
+        );
+    }
+
+    #[test]
+    fn non_router_then_router_rescan_preserves_existing_trust() {
+        // Edge case: un dispositivo se inserta como Phone (is_trusted=false).
+        // En un re-escaneo, enrich_device lo reclasifica como Router (p.ej. su IP
+        // cambió al gateway). El UPDATE path de upsert_device preserva
+        // existing.is_trusted=false (merge_for_update, línea 219), por lo que NO
+        // se marca confiable automáticamente — "solo en insert" es consistente.
+        // El usuario puede marcarlo confiable manualmente vía update_device_fields.
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "router_rescan");
+        let m = mac("aa:bb:cc:dd:ee:24");
+        let mut d1 = device("dev-1", Some(m), Some(ip("192.168.1.57")), "t0");
+        d1.device_type = DeviceType::Phone;
+        d1.is_trusted = false;
+        assert_eq!(upsert_device(&conn, &d1).unwrap(), UpsertOutcome::Inserted);
+
+        // Re-escaneo: misma MAC, ahora clasificado como Router (simula IP cambió
+        // al gateway). El INSERT-path `|| Router` NO aplica: es UPDATE path.
+        let mut d2 = device("dev-1", Some(m), Some(ip("192.168.1.57")), "t1");
+        d2.device_type = DeviceType::Router;
+        d2.is_trusted = false; // incoming no fuerza true
+        assert_eq!(upsert_device(&conn, &d2).unwrap(), UpsertOutcome::Updated);
+
+        let got = get_device(&conn, "dev-1").unwrap().unwrap();
+        assert!(
+            !got.is_trusted,
+            "router descubierto tras cambio de IP NO se marca confiable \
+             (UPDATE path preserva existing.is_trusted=false)"
+        );
     }
 }

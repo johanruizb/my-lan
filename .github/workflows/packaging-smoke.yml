@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Build (amd64)
         run: |
           docker buildx build --platform linux/amd64 -f agent/docker/Dockerfile -t mylan-agent:smoke --load .
@@ -62,8 +62,11 @@ jobs:
           # C1 fix: /status requiere bearer token; el agent lo genera dentro del
           # container en /var/lib/mylan/api-token (root-owned, container corre
           # como root). Se lee via docker exec.
+          # C2 fix: el agent bind 127.0.0.1 del container (ADR-4, no 0.0.0.0); el
+          # curl debe correr DENTRO del container (docker exec), no desde el
+          # host — el puerto publicado -p no enruta a 127.0.0.1 del container.
           TOKEN=$(docker exec mylan-agent cat /var/lib/mylan/api-token)
-          curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:43117/api/v1/status
+          docker exec mylan-agent curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:43117/api/v1/status
       - name: Cleanup
         if: always()
         run: docker stop mylan-agent || true; docker rm mylan-agent || true
@@ -103,20 +106,43 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build release
         run: cargo build --release -p mylan-agent
-      - name: Install + start service
+      # Windows service (SCM) integration es Step 5 pendiente
+      # (windows_service.rs::install_service es stub; main.rs no despacha
+      # StartServiceCtrlDispatcher -> sc.exe start falla con 1053). Smoke
+      # prueba el agent como PROCESO (igual que systemd/docker smoke):
+      # arranca, sirve API en 127.0.0.1:43117, /status responde. El config
+      # ad-hoc usa db_path en PROGRAMDATA (el config compartido tiene
+      # /var/lib/mylan, ruta Unix inválida en Windows).
+      # Un solo step: GitHub Actions Windows mata los procesos hijos al
+      # terminar cada step (Job Object); lanzar y verificar en steps
+      # separados dejaba al agent muerto. Aquí lanzar+verificar+stop en el
+      # mismo step. -RedirectStandardError captura el crash si el agent
+      # falla al arrancar.
+      - name: Run agent + verify (process smoke)
         shell: pwsh
         run: |
           $bin = (Resolve-Path target\release\mylan-agent.exe).Path
           $cfgDir = Join-Path $env:PROGRAMDATA "mylan"
           New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
-          Copy-Item agent\mylan-agent.toml (Join-Path $cfgDir "mylan-agent.toml") -Force
-          sc.exe create MylanAgent binPath= "$bin --serve-api --config $(Join-Path $cfgDir 'mylan-agent.toml')" start= auto
-          sc.exe start MylanAgent
-      - name: Verify + stop
-        shell: pwsh
-        run: |
+          $dbPath = Join-Path $cfgDir "mylan.db"
+          $cfgPath = Join-Path $cfgDir "mylan-agent.toml"
+          $errLog = Join-Path $env:RUNNER_TEMP "mylan-agent.err"
+          $dbPathEsc = $dbPath -replace '\\', '\\'
+          @"
+          interval_secs = 60
+          api_port = 43117
+          db_path = "$dbPathEsc"
+          [[networks]]
+          cidr = "192.168.1.0/24"
+          profile = "quick"
+          "@ | Out-File -FilePath $cfgPath -Encoding utf8
+          $proc = Start-Process -FilePath $bin -ArgumentList "--serve-api","--config",$cfgPath -PassThru -RedirectStandardError $errLog
           Start-Sleep -Seconds 10
-          $status = sc.exe query MylanAgent
-          if ($LASTEXITCODE -ne 0) { throw "MylanAgent service not found" }
-          sc.exe stop MylanAgent
-          sc.exe delete MylanAgent
+          if ($proc.HasExited) {
+            Write-Error "Agent exited (code $($proc.ExitCode)) before serving. stderr:"
+            if (Test-Path $errLog) { Get-Content $errLog -Raw | Write-Error }
+            throw "agent crashed before serving"
+          }
+          $token = Get-Content (Join-Path $cfgDir "api-token") -Raw
+          curl.exe -sf -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status
+          Stop-Process -Id $proc.Id -Force

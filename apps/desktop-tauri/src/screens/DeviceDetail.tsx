@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/empty-state";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
 import { deviceIcon, deviceLabel } from "@/components/device-icons";
+import { OnlineBadge } from "@/components/online-badge";
+import { TrustBadge } from "@/components/trust-badge";
 import {
     ArrowLeft,
     Loader2,
@@ -46,6 +48,7 @@ import {
     onScanHeartbeat,
     onScanProgress,
     scanPorts,
+    updateDevice,
     type DeviceDetailDto,
     type ScanProgress,
     type UnlistenFn,
@@ -56,6 +59,7 @@ import { MaskedValue } from "@/components/masked-value";
 import { isSensitive } from "@/lib/censor";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
 import { formatRelative, formatTimestamp } from "@/lib/format";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 
@@ -90,6 +94,30 @@ export function DeviceDetail() {
     const [openInfo, setOpenInfo] = useState(true);
     const [openScan, setOpenScan] = useState(true);
     const [openServices, setOpenServices] = useState(true);
+
+    // Estado local de edición (AC-8, AC-9). Debe declararse antes de los
+    // early-returns para respetar las reglas de hooks. Se resetea cuando
+    // `detail` cambia (re-fetch tras guardar) vía el effect más abajo.
+    const [displayName, setDisplayName] = useState(
+        detail?.device.display_name ?? "",
+    );
+    const [isTrusted, setIsTrusted] = useState(
+        detail?.device.is_trusted ?? false,
+    );
+    const [notes, setNotes] = useState(detail?.device.notes ?? "");
+    const [saving, setSaving] = useState(false);
+
+    // Preview del estado de confianza derivado (TrustBadge). Memoizado para
+    // mantener referencia estable y no derrotar React.memo en re-renders por
+    // edits no relacionados (fix review #5). Declarado antes de los early-returns
+    // para respetar el orden de hooks (igual que los useState de edición).
+    const trustBadgeDevice = useMemo(
+        () => ({
+            is_trusted: isTrusted,
+            confidence: detail?.device.confidence ?? "0",
+        }),
+        [isTrusted, detail?.device.confidence],
+    );
 
     const scanRef = useRef<HTMLDivElement>(null);
 
@@ -162,6 +190,25 @@ export function DeviceDetail() {
         };
     }, [scanning, scanId]);
 
+    // Resetea el estado de edición solo cuando cambia la identidad del device
+    // (no en cada refresh de `detail`, p.ej. online-status), con guards para
+    // no descartar edits en progreso ni disparar re-renders redundantes. El
+    // fallback `?? false` en is_trusted iguala el inicializador de useState
+    // (fix review #3/#6).
+    useEffect(() => {
+        if (!detail) return;
+        const dev = detail.device;
+        setDisplayName((prev) =>
+            prev === (dev.display_name ?? "") ? prev : dev.display_name ?? "",
+        );
+        setIsTrusted((prev) =>
+            prev === (dev.is_trusted ?? false) ? prev : dev.is_trusted ?? false,
+        );
+        setNotes((prev) =>
+            prev === (dev.notes ?? "") ? prev : dev.notes ?? "",
+        );
+    }, [detail?.device.id]);
+
     async function handleScanPorts() {
         const id = newScanId();
         setScanId(id);
@@ -193,6 +240,38 @@ export function DeviceDetail() {
             toast(`Servicios exportados a: ${path}`, "success");
         } catch (e) {
             toast(`Error exportando: ${e}`, "error");
+        }
+    }
+
+    // Edición por `d.id` (UUID), no por hostname/IP (AC-9): un dispositivo
+    // sin hostname es editable. Se trackea dirty-state por campo (vs valor
+    // inicial del device): un campo modificado se envía siempre (incluso
+    // vacío → backend `Some("")` limpia); un campo sin tocar se envía
+    // `undefined` (backend `None` = no sobrescribe). Así el usuario puede
+    // revertir un nombre personalizado a vacío (fix review MEDIUM).
+    async function handleSaveEdit() {
+        if (!detail) return;
+        const d = detail.device;
+        const dirtyName = displayName !== (d.display_name ?? "");
+        const dirtyTrusted = isTrusted !== (d.is_trusted ?? false);
+        const dirtyNotes = notes !== (d.notes ?? "");
+        setSaving(true);
+        try {
+            await updateDevice(d.id, {
+                displayName: dirtyName ? displayName.trim() : undefined,
+                isTrusted: dirtyTrusted ? isTrusted : undefined,
+                notes: dirtyNotes ? notes.trim() : undefined,
+            });
+            toast("Dispositivo actualizado.", "success");
+            try {
+                await getDevice(decodeURIComponent(ip)).then(setDetail);
+            } catch {
+                toast("Error recargando el dispositivo.", "default");
+            }
+        } catch {
+            toast("No se pudo actualizar el dispositivo.", "error");
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -261,6 +340,10 @@ export function DeviceDetail() {
                                 <Badge variant="secondary" className="ml-1">
                                     {deviceLabel(d.device_type)}
                                 </Badge>
+                                <OnlineBadge
+                                    isOnline={d.is_online}
+                                    className="ml-1"
+                                />
                                 <ChevronDown
                                     className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
                                     aria-hidden
@@ -307,6 +390,104 @@ export function DeviceDetail() {
                                 value={formatRelative(d.last_seen_at)}
                                 title={formatTimestamp(d.last_seen_at)}
                             />
+                            {/* Formulario de edición (AC-8, AC-9). Edición por
+                                d.id (UUID), no por hostname/IP — un dispositivo
+                                sin hostname es editable. */}
+                            <div className="mt-2 border-t pt-4 sm:col-span-2">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <FormField
+                                        label="Nombre personalizado"
+                                        htmlFor="detail-display-name"
+                                    >
+                                        {/* El input de edición muestra el valor
+                                            real; la censura aplica al
+                                            exportar/compartir, no a la edición
+                                            local del propietario (AC-17). */}
+                                        <Input
+                                            id="detail-display-name"
+                                            value={displayName}
+                                            onChange={(e) =>
+                                                setDisplayName(e.target.value)
+                                            }
+                                            placeholder={
+                                                d.hostname ?? d.primary_ip ?? ""
+                                            }
+                                        />
+                                    </FormField>
+                                    <FormField
+                                        label="Confiable"
+                                        htmlFor="detail-is-trusted"
+                                        helper="Marca el dispositivo como confiable"
+                                    >
+                                        <Button
+                                            id="detail-is-trusted"
+                                            type="button"
+                                            variant={
+                                                isTrusted
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            onClick={() =>
+                                                setIsTrusted((v) => !v)
+                                            }
+                                            aria-pressed={isTrusted}
+                                            className="w-fit gap-1.5"
+                                        >
+                                            {isTrusted ? "Sí" : "No"}
+                                        </Button>
+                                    </FormField>
+                                    <FormField
+                                        label="Notas"
+                                        htmlFor="detail-notes"
+                                        helper="Notas internas (no se comparten)"
+                                    >
+                                        {/* notes NO es sensible (censor.ts:17),
+                                            visible directo. */}
+                                        <Input
+                                            id="detail-notes"
+                                            value={notes}
+                                            onChange={(e) =>
+                                                setNotes(e.target.value)
+                                            }
+                                            placeholder="Notas sobre este dispositivo"
+                                        />
+                                    </FormField>
+                                    <FormField
+                                        label="Tipo"
+                                        helper="Auto-detectado"
+                                    >
+                                        <div className="flex h-9 items-center gap-2 text-sm">
+                                            <Icon
+                                                className="h-4 w-4 text-muted-foreground"
+                                                aria-hidden
+                                            />
+                                            <span>
+                                                {deviceLabel(d.device_type)}
+                                            </span>
+                                        </div>
+                                    </FormField>
+                                </div>
+                                <div className="mt-3 flex items-center gap-3">
+                                    <Button
+                                        onClick={handleSaveEdit}
+                                        disabled={saving}
+                                        className="gap-1.5"
+                                    >
+                                        {saving ? (
+                                            <>
+                                                <Loader2
+                                                    className="h-4 w-4 animate-spin"
+                                                    aria-hidden
+                                                />
+                                                Guardando…
+                                            </>
+                                        ) : (
+                                            "Guardar"
+                                        )}
+                                    </Button>
+                                    <TrustBadge device={trustBadgeDevice} />
+                                </div>
+                            </div>
                         </CardContent>
                     </CollapsibleContent>
                 </Card>

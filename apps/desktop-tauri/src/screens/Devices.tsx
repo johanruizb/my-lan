@@ -44,7 +44,16 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ConfidenceBadge } from "@/components/confidence-badge";
+import { OnlineBadge } from "@/components/online-badge";
+import { TrustBadge } from "@/components/trust-badge";
+import { deriveTrustState } from "@/lib/trust-state";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { SECTION_GAP } from "@/lib/design-tokens";
 
@@ -61,6 +70,15 @@ export function Devices() {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<View>("cards");
     const [openFilters, setOpenFilters] = useState(true);
+    // Filtros de la lista (AC-14): tipo, estado online y confianza derivada.
+    // Por defecto "all" → se ven todos (offline incluidos, AC-15).
+    const [filterType, setFilterType] = useState<string>("all");
+    const [filterOnline, setFilterOnline] = useState<
+        "all" | "online" | "offline"
+    >("all");
+    const [filterTrust, setFilterTrust] = useState<
+        "all" | "trusted" | "unknown"
+    >("all");
 
     async function refresh() {
         setLoading(true);
@@ -97,15 +115,35 @@ export function Devices() {
         return [...map.values()];
     }, [devices, devicesFound]);
 
+    // Filtros componen AND con la búsqueda texto (AC-14). Single predicate
+    // para una sola pasada sobre `merged` (fix review #4).
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return merged;
-        return merged.filter((d) =>
-            [d.primary_ip, d.primary_mac, d.hostname, d.display_name, d.vendor]
-                .filter(Boolean)
-                .some((v) => (v as string).toLowerCase().includes(q)),
-        );
-    }, [merged, query]);
+        return merged.filter((d) => {
+            if (q) {
+                const matches = [
+                    d.primary_ip,
+                    d.primary_mac,
+                    d.hostname,
+                    d.display_name,
+                    d.vendor,
+                ]
+                    .filter(Boolean)
+                    .some((v) => (v as string).toLowerCase().includes(q));
+                if (!matches) return false;
+            }
+            if (filterType !== "all" && d.device_type !== filterType)
+                return false;
+            // AC-15: "En línea" es opt-in; sin filtro activo se ven todos.
+            if (filterOnline === "online" && !d.is_online) return false;
+            if (filterOnline === "offline" && d.is_online) return false;
+            if (filterTrust === "trusted" && deriveTrustState(d) !== "trusted")
+                return false;
+            if (filterTrust === "unknown" && deriveTrustState(d) !== "unknown")
+                return false;
+            return true;
+        });
+    }, [merged, query, filterType, filterOnline, filterTrust]);
 
     async function handleExport(format: string) {
         try {
@@ -240,6 +278,72 @@ export function Devices() {
                                     className="pl-9"
                                 />
                             </div>
+                            {/* Filtros por tipo, estado y confianza (AC-14). */}
+                            <div className="mt-3 flex flex-wrap items-end gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <span
+                                        id="filter-type-label"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        Tipo
+                                    </span>
+                                    <Select
+                                        value={filterType}
+                                        onValueChange={setFilterType}
+                                    >
+                                        <SelectTrigger
+                                            className="w-40"
+                                            aria-label="Filtrar por tipo"
+                                        >
+                                            <SelectValue placeholder="Todos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Todos
+                                            </SelectItem>
+                                            {DEVICE_TYPE_OPTIONS.map((t) => (
+                                                <SelectItem key={t} value={t}>
+                                                    {deviceLabel(t)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <FilterToggle
+                                    label="Estado"
+                                    ariaLabel="Filtrar por estado"
+                                    options={[
+                                        { value: "all", label: "Todos" },
+                                        {
+                                            value: "online",
+                                            label: "En línea",
+                                        },
+                                        {
+                                            value: "offline",
+                                            label: "Fuera de línea",
+                                        },
+                                    ]}
+                                    value={filterOnline}
+                                    onChange={setFilterOnline}
+                                />
+                                <FilterToggle
+                                    label="Confianza"
+                                    ariaLabel="Filtrar por confianza"
+                                    options={[
+                                        { value: "all", label: "Todos" },
+                                        {
+                                            value: "trusted",
+                                            label: "Confiables",
+                                        },
+                                        {
+                                            value: "unknown",
+                                            label: "Desconocidos",
+                                        },
+                                    ]}
+                                    value={filterTrust}
+                                    onChange={setFilterTrust}
+                                />
+                            </div>
                         </CollapsibleContent>
                     </Collapsible>
 
@@ -361,8 +465,18 @@ export function Devices() {
                                                         <div className="flex min-w-0 flex-col">
                                                             <span className="truncate font-medium">
                                                                 <MaskedValue
-                                                                    field="primary_ip"
+                                                                    field={
+                                                                        d.display_name
+                                                                            ? "display_name"
+                                                                            : d.hostname
+                                                                              ? "hostname"
+                                                                              : d.primary_ip
+                                                                                ? "primary_ip"
+                                                                                : "id"
+                                                                    }
                                                                     value={
+                                                                        d.display_name ??
+                                                                        d.hostname ??
                                                                         d.primary_ip ??
                                                                         d.id
                                                                     }
@@ -397,12 +511,15 @@ export function Devices() {
                                                             d.device_type,
                                                         )}
                                                     </Badge>
-                                                    {Number(d.confidence) >
-                                                        0 && (
-                                                        <ConfidenceBadge
-                                                            value={d.confidence}
-                                                        />
-                                                    )}
+                                                    <OnlineBadge
+                                                        isOnline={d.is_online}
+                                                    />
+                                                    {/* AC-13: TrustBadge es el
+                                                        único badge de confianza
+                                                        visible en la lista; el
+                                                        score va en su
+                                                        title/aria-label. */}
+                                                    <TrustBadge device={d} />
                                                 </div>
                                                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                                                     <Meta
@@ -470,6 +587,7 @@ export function Devices() {
                                                 </span>
                                             </TableHead>
                                             <TableHead>Tipo</TableHead>
+                                            <TableHead>Estado</TableHead>
                                             <TableHead>
                                                 <span className="inline-flex items-center gap-1">
                                                     Confianza
@@ -532,9 +650,12 @@ export function Devices() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <ConfidenceBadge
-                                                        value={d.confidence}
+                                                    <OnlineBadge
+                                                        isOnline={d.is_online}
                                                     />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TrustBadge device={d} />
                                                 </TableCell>
                                                 <TableCell className="text-xs text-muted-foreground">
                                                     <RelativeTime
@@ -549,6 +670,63 @@ export function Devices() {
                         )}
                 </CardContent>
             </Card>
+        </div>
+    );
+}
+
+// Opciones del filtro Tipo (AC-14): las 12 variantes de `device-icons`.
+const DEVICE_TYPE_OPTIONS = [
+    "router",
+    "phone",
+    "tablet",
+    "laptop",
+    "desktop",
+    "tv",
+    "printer",
+    "camera",
+    "nas",
+    "console",
+    "iot",
+    "unknown",
+] as const;
+
+// Grupo de botones toggle para filtros (AC-14). Sigue el patrón del toggle de
+// vista tarjetas/tabla. Genérico sobre el tipo de valor para reutilizar en
+// Estado y Confianza.
+function FilterToggle<T extends string>({
+    label,
+    ariaLabel,
+    options,
+    value,
+    onChange,
+}: {
+    label: string;
+    ariaLabel: string;
+    options: { value: T; label: string }[];
+    value: T;
+    onChange: (v: T) => void;
+}) {
+    return (
+        <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">{label}</span>
+            <div
+                className="flex rounded-md border border-border p-0.5"
+                role="group"
+                aria-label={ariaLabel}
+            >
+                {options.map((o) => (
+                    <Button
+                        key={o.value}
+                        variant={value === o.value ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => onChange(o.value)}
+                        aria-pressed={value === o.value}
+                        className="gap-1.5"
+                    >
+                        {o.label}
+                    </Button>
+                ))}
+            </div>
         </div>
     );
 }

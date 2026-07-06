@@ -140,6 +140,32 @@ pub fn set_network_name_cmd(
         .map_err(|e| e.to_string())
 }
 
+/// Actualiza los campos editables por el usuario (`display_name`, `is_trusted`,
+/// `notes`) de un dispositivo por id (UUID `String` — ver `models.rs`). Solo
+/// fija los campos `Some`; `None` deja el campo intacto (AC-2). Re-lee el
+/// `Device` actualizado por id y lo devuelve (AC-4).
+#[tauri::command]
+pub fn update_device_cmd(
+    id: String,
+    display_name: Option<String>,
+    is_trusted: Option<bool>,
+    notes: Option<String>,
+    state: State<'_, DesktopState>,
+) -> Result<mylan_core::Device, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::device_repo::update_device_fields(
+        &conn,
+        &id,
+        display_name.as_deref(),
+        is_trusted,
+        notes.as_deref(),
+    )
+    .map_err(|e| e.to_string())?;
+    mylan_db::device_repo::get_device(&conn, &id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("No se encontró el dispositivo {id} tras actualizar."))
+}
+
 #[tauri::command]
 pub fn list_devices_cmd(state: State<'_, DesktopState>) -> Result<Vec<mylan_core::Device>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;

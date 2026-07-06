@@ -31,6 +31,7 @@ export interface Device {
     last_seen_at: string;
     is_trusted: boolean;
     is_hidden: boolean;
+    is_online: boolean;
     notes: string | null;
 }
 
@@ -177,6 +178,19 @@ export const listDevices = () => invoke<Device[]>("list_devices_cmd");
 
 export const getDevice = (ip: string) =>
     invoke<DeviceDetailDto>("get_device_cmd", { ip });
+
+// Edición parcial de un dispositivo por `id` (UUID `string`, NO number).
+// Los campos `null` significan "no tocar" (UPDATE parcial en backend).
+export const updateDevice = (
+    id: string,
+    fields: { displayName?: string; isTrusted?: boolean; notes?: string },
+) =>
+    invoke<Device>("update_device_cmd", {
+        id,
+        displayName: fields.displayName ?? null,
+        isTrusted: fields.isTrusted ?? null,
+        notes: fields.notes ?? null,
+    });
 
 export const runDiscovery = (
     profile: string,
