@@ -1,0 +1,20 @@
+# Build artifacts — no deben entrar al contexto del Docker build
+# (evita copiar GBs de target/node_modules/dist al builder, que llena el disco).
+**/target/
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+
+# VCS y tooling local
+.git
+.github
+.omc
+.claude
+.vscode
+.idea
+
+# Docs y misc (no necesarios para build mylan-agent)
+docs/
+*.md
+LICENSE
