@@ -37,6 +37,7 @@ pub async fn tcp_sweep(
     concurrency: usize,
     tx: UnboundedSender<DiscoveryEvent>,
     cancel: CancellationToken,
+    sweep_budget: Duration,
 ) {
     let hosts = enumerate_hosts(iface.ip, iface.prefix_len);
     let total = u32::try_from(hosts.len()).unwrap_or(u32::MAX);
@@ -45,15 +46,20 @@ pub async fn tcp_sweep(
     let ports: Vec<u16> = PROBE_PORTS.to_vec();
     let swept = Arc::new(AtomicU32::new(0));
 
+    // Token local hijo del compartido: el watchdog del budget cancela solo el
+    // barrido TCP, sin afectar mDNS/SSDP/ICMP (que usan el token padre). La
+    // cancelación padre→hijo sigue propagando (graceful shutdown).
+    let local = cancel.child_token();
+
     let mut handles = Vec::new();
     for host in hosts {
-        if cancel.is_cancelled() {
+        if local.is_cancelled() {
             break;
         }
         let sem = sem.clone();
         let ports = ports.clone();
         let tx = tx.clone();
-        let cancel = cancel.clone();
+        let cancel = local.clone();
         let swept = swept.clone();
         handles.push(tokio::spawn(probe_host(
             host,
@@ -66,9 +72,19 @@ pub async fn tcp_sweep(
             total,
         )));
     }
+
+    // Watchdog: cancela el barrido tras `sweep_budget`. Las tareas en vuelo
+    // rompen su `select!` cancel-aware de inmediato (no esperan per_port_timeout).
+    let wd_token = local.clone();
+    let watchdog = tokio::spawn(async move {
+        tokio::time::sleep(sweep_budget).await;
+        wd_token.cancel();
+    });
+
     for handle in handles {
         let _ = handle.await;
     }
+    watchdog.abort();
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -87,18 +103,23 @@ async fn probe_host(
     };
     if !cancel.is_cancelled() {
         for port in &ports {
+            if cancel.is_cancelled() {
+                break;
+            }
             let addr = SocketAddr::new(IpAddr::V4(host), *port);
             let connect = TcpStream::connect(addr);
-            if tokio::time::timeout(per_port_timeout, connect)
-                .await
-                .is_ok_and(|r| r.is_ok())
-            {
-                let _ = tx.send(DiscoveryEvent::Host(
-                    Observation::new(Source::TcpPing)
-                        .with_ip(IpAddr::V4(host))
-                        .with_hint("tcp.ports", port.to_string()),
-                ));
-                break;
+            tokio::select! {
+                res = tokio::time::timeout(per_port_timeout, connect) => {
+                    if res.is_ok_and(|r| r.is_ok()) {
+                        let _ = tx.send(DiscoveryEvent::Host(
+                            Observation::new(Source::TcpPing)
+                                .with_ip(IpAddr::V4(host))
+                                .with_hint("tcp.ports", port.to_string()),
+                        ));
+                        break;
+                    }
+                }
+                () = cancel.cancelled() => break,
             }
         }
     }
@@ -121,5 +142,69 @@ mod tests {
         assert!(PROBE_PORTS.contains(&22));
         assert!(PROBE_PORTS.contains(&53));
         assert!(!PROBE_PORTS.is_empty());
+    }
+
+    /// AC-7: `tcp_sweep` respeta `sweep_budget` sobre una subnet ancha (/16 →
+    /// 4096 hosts capped). La cancelación cooperativa (child token + `select!`
+    /// en `probe_host`) hace que el barrido termine en ~budget, no en
+    /// 4096 × 2.4 s. IP 240.0.0.0/4 (reservada RFC 1112) evita hit servicios
+    /// locales del runner (no loopback); en runners con default route los SYNs a
+    /// 240/4 se descartan en la gateway — es el budget, no la IP, quien
+    /// garantiza el determinismo (la aserción de tiempo no depende de
+    /// respuestas de red, transit-safe per AGENTS.md).
+    #[tokio::test]
+    async fn tcp_sweep_respects_budget_on_wide_subnet() {
+        use tokio_util::sync::CancellationToken;
+        let iface = LanInterface {
+            // 240.0.0.0/4 reservado RFC 1112: evita servicios locales del runner.
+            // El budget (no la IP) garantiza el determinismo via cancel cooperativa.
+            name: "lo".into(),
+            ip: "240.0.0.1".parse().unwrap(),
+            prefix_len: 16,
+            mac: None,
+            gateway_ip: None,
+            gateway_mac: None,
+            dns_servers: Vec::new(),
+            ssid: None,
+        };
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        let cancel = CancellationToken::new();
+        let start = std::time::Instant::now();
+        let res = tokio::time::timeout(
+            Duration::from_secs(2),
+            tcp_sweep(
+                &iface,
+                Duration::from_millis(400),
+                256,
+                tx,
+                cancel,
+                Duration::from_millis(200),
+            ),
+        )
+        .await;
+        assert!(
+            res.is_ok(),
+            "tcp_sweep debe respetar sweep_budget (200ms) y no colgar 4096 hosts"
+        );
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "elapsed {elapsed:?} excede margen; budget no respetado"
+        );
+    }
+
+    /// AC-8: cancelar el child token (watchdog del budget) NO cancela el parent
+    /// (mDNS/SSDP/ICMP quedan intactos). Invariante de aislamiento del budget.
+    #[test]
+    fn child_token_cancel_is_isolated() {
+        use tokio_util::sync::CancellationToken;
+        let parent = CancellationToken::new();
+        let child = parent.child_token();
+        child.cancel();
+        assert!(
+            !parent.is_cancelled(),
+            "cancelar child (watchdog budget) no debe cancelar parent (mDNS/SSDP/ICMP)"
+        );
+        assert!(child.is_cancelled());
     }
 }

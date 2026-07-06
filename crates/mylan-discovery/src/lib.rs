@@ -92,6 +92,10 @@ pub struct DiscoverOptions {
     pub ssdp_timeout: Duration,
     /// Tiempo total de ARP sweep (solo con CAP_NET_RAW).
     pub arp_sweep_timeout: Duration,
+    /// Presupuesto total del barrido TCP; al expirar se cancela cooperativamente
+    /// un child token (NO el compartido) devolviendo lo recolectado. Defensa
+    /// contra subnets anchas que de otro modo excederían el presupuesto del perfil.
+    pub sweep_budget: Duration,
     /// Concurrencia máxima del barrido TCP.
     pub concurrency: usize,
 }
@@ -115,6 +119,7 @@ impl DiscoverOptions {
                 mdns_timeout: Duration::from_secs(3),
                 ssdp_timeout: Duration::from_secs(3),
                 arp_sweep_timeout: Duration::from_secs(2),
+                sweep_budget: Duration::from_secs(10),
                 concurrency: 256,
             },
             // iot/router gobiernan la selección de puertos en `mylan ports`, no
@@ -128,6 +133,7 @@ impl DiscoverOptions {
                 mdns_timeout: Duration::from_secs(5),
                 ssdp_timeout: Duration::from_secs(5),
                 arp_sweep_timeout: Duration::from_secs(4),
+                sweep_budget: Duration::from_secs(20),
                 concurrency: 256,
             },
             ScanProfile::Deep => Self {
@@ -138,6 +144,7 @@ impl DiscoverOptions {
                 mdns_timeout: Duration::from_secs(8),
                 ssdp_timeout: Duration::from_secs(8),
                 arp_sweep_timeout: Duration::from_secs(6),
+                sweep_budget: Duration::from_secs(40),
                 concurrency: 512,
             },
         }
@@ -231,6 +238,7 @@ pub async fn discover_stream(
             opts.concurrency,
             tx.clone(),
             cancel.clone(),
+            opts.sweep_budget,
         ),
         icmp::icmp_sweep(iface, opts.icmp_timeout, tx.clone(), cancel.clone()),
         forward_burst(mdns::mdns_discover(iface, opts.mdns_timeout), &tx, &cancel),
@@ -302,6 +310,9 @@ mod tests {
         // El cuello de botella (mDNS/SSDP) debe ser < 30 s para AC-12.
         assert!(opts.mdns_timeout.as_secs() < 30);
         assert!(opts.ssdp_timeout.as_secs() < 30);
+        // Budget total del TCP sweep (defensa contra subnets anchas) — AC-6.
+        assert_eq!(opts.sweep_budget, Duration::from_secs(10));
+        assert!(opts.sweep_budget.as_secs() < 30);
     }
 
     #[test]
