@@ -35,3 +35,20 @@ jobs:
 
       - name: Test
         run: cargo test --workspace
+
+      # AC-2: cobertura de la frontera Core (mylan-core + mylan-db + mylan-fingerprint) con umbral 80%.
+      # Baseline actual: 89.80% líneas (AC-3). llvm-tools-preview viene de rust-toolchain.toml.
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Coverage (Core frontier, umbral 80%)
+        run: cargo llvm-cov -p mylan-core -p mylan-db -p mylan-fingerprint --fail-under-lines 80 --lcov --output-path lcov.info
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-core-frontier
+          path: lcov.info

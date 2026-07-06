@@ -175,3 +175,119 @@ fn send_sigterm(pid: i32) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::AgentSub;
+    use crate::ctx::AppContext;
+
+    fn ctx_in(tmp: &std::path::Path) -> AppContext {
+        AppContext {
+            db_path: tmp.join("mylan.db"),
+            signatures_dir: tmp.to_path_buf(),
+            verbose: false,
+        }
+    }
+
+    #[test]
+    fn mylan_agent_binary_is_pathname() {
+        assert_eq!(mylan_agent_binary(), PathBuf::from("mylan-agent"));
+    }
+
+    #[test]
+    fn pidfile_path_uses_db_parent_dir() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let pidfile = pidfile_path(&ctx);
+        assert_eq!(pidfile.file_name().unwrap(), "mylan-agent.pid");
+        // El pidfile vive junto a la DB (parent dir de `db_path`).
+        assert_eq!(pidfile.parent().unwrap(), ctx.db_path.parent().unwrap());
+    }
+
+    #[test]
+    fn read_pid_returns_none_when_missing() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let pidfile = tmp.path().join("no-existe.pid");
+        assert!(read_pid(&pidfile).is_none());
+    }
+
+    #[test]
+    fn read_pid_returns_none_for_invalid_content() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let pidfile = tmp.path().join("bad.pid");
+        std::fs::write(&pidfile, "not-a-number").unwrap();
+        assert!(read_pid(&pidfile).is_none());
+    }
+
+    #[test]
+    fn read_pid_parses_valid_pid() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let pidfile = tmp.path().join("agent.pid");
+        std::fs::write(&pidfile, "12345\n").unwrap();
+        assert_eq!(read_pid(&pidfile), Some(12345));
+    }
+
+    #[test]
+    fn read_pid_trims_whitespace() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let pidfile = tmp.path().join("agent.pid");
+        std::fs::write(&pidfile, "  6789  \n").unwrap();
+        assert_eq!(read_pid(&pidfile), Some(6789));
+    }
+
+    #[test]
+    fn resolve_config_path_explicit_override() {
+        let p = resolve_config_path(Some("/tmp/mylan-agent.toml")).unwrap();
+        assert_eq!(p, PathBuf::from("/tmp/mylan-agent.toml"));
+    }
+
+    #[test]
+    fn resolve_config_path_explicit_relative() {
+        let p = resolve_config_path(Some("custom.toml")).unwrap();
+        assert_eq!(p, PathBuf::from("custom.toml"));
+    }
+
+    #[tokio::test]
+    async fn run_stop_errors_when_no_pidfile() {
+        // Sin pidfile previo, `agent stop` debe reportar error determinista
+        // (no depende de procesos externos ni red).
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, AgentSub::Stop).await;
+        assert!(result.is_err(), "agent stop sin pidfile debe errar");
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("pidfile"),
+            "mensaje debe mencionar pidfile: {msg}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn is_process_alive_current_pid_is_alive() {
+        // El proceso del test mismo está vivo (determinista: no requiere red).
+        let pid = std::process::id() as i32;
+        assert!(is_process_alive(pid), "pid propio ({pid}) debe estar vivo");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn is_process_alive_dead_pid_is_false() {
+        // PID muy alto, fuera del rango máximo de pids reales (Linux: 4194304
+        // por defecto). `kill -0` sobre un pid inexistente → ESRCH → exit != 0.
+        let dead_pid = i32::MAX - 1;
+        assert!(
+            !is_process_alive(dead_pid),
+            "pid {dead_pid} no debe estar vivo"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn send_sigterm_dead_pid_errors() {
+        let dead_pid = i32::MAX - 1;
+        let result = send_sigterm(dead_pid);
+        assert!(result.is_err(), "SIGTERM a pid inexistente debe errar");
+    }
+}

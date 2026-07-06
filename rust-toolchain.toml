@@ -1,5 +1,5 @@
 [toolchain]
 # Pin exacto (capturado en Paso 0). NO usar "stable" flotante: reproducibilidad CI.
 channel = "1.96.0"
-components = ["rustfmt", "clippy"]
+components = ["rustfmt", "clippy", "llvm-tools-preview"]
 profile = "minimal"

@@ -195,3 +195,93 @@ mod windows_wlan {
         result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::Ipv4Addr;
+
+    /// Crea una [`LanInterface`] mínima para tests (sin I/O, sin hardware).
+    fn fake_iface(name: &str) -> LanInterface {
+        LanInterface {
+            name: name.to_string(),
+            ip: Ipv4Addr::new(192, 168, 1, 10),
+            prefix_len: 24,
+            mac: None,
+            gateway_ip: None,
+            gateway_mac: None,
+            dns_servers: Vec::new(),
+            ssid: None,
+        }
+    }
+
+    /// Detector mock que devuelve un SSID fijo (sin hardware/D-Bus/WLAN).
+    struct MockSsid {
+        ssid: Option<String>,
+    }
+
+    impl SsidDetector for MockSsid {
+        fn current_ssid(&self, _iface: &LanInterface) -> Option<String> {
+            self.ssid.clone()
+        }
+    }
+
+    #[test]
+    fn mock_detector_returns_configured_ssid() {
+        let iface = fake_iface("wlan0");
+        let detector = MockSsid {
+            ssid: Some("MyHomeNetwork".to_string()),
+        };
+        assert_eq!(
+            detector.current_ssid(&iface).as_deref(),
+            Some("MyHomeNetwork")
+        );
+    }
+
+    #[test]
+    fn mock_detector_returns_none_when_unconfigured() {
+        let iface = fake_iface("eth0");
+        let detector = MockSsid { ssid: None };
+        assert!(detector.current_ssid(&iface).is_none());
+    }
+
+    #[test]
+    fn ssid_detector_is_object_safe_as_dyn() {
+        // El trait debe poder usarse vía `dyn SsidDetector` (object-safe) para
+        // permitir inyección de mocks/detectores alternativos.
+        let iface = fake_iface("wlan0");
+        let detector: Box<dyn SsidDetector> = Box::new(MockSsid {
+            ssid: Some("ObjSafe".to_string()),
+        });
+        assert_eq!(detector.current_ssid(&iface).as_deref(), Some("ObjSafe"));
+    }
+
+    #[test]
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    fn detect_ssid_returns_none_on_stub_platform() {
+        // En plataformas sin impl nativa (macOS y otras), `PlatformSsidDetector`
+        // devuelve `None` siempre. Test cfg-gated al stub.
+        let iface = fake_iface("wlan0");
+        assert!(detect_ssid(&iface).is_none());
+    }
+
+    #[test]
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    fn detect_ssid_returns_none_for_arbitrary_iface_on_stub() {
+        // Cualquier nombre de interfaz en la plataforma stub devuelve None.
+        for name in ["eth0", "wlan0", "enp3s0", "", "lo"] {
+            let iface = fake_iface(name);
+            assert!(
+                detect_ssid(&iface).is_none(),
+                "stub detect_ssid debe devolver None para '{name}'"
+            );
+        }
+    }
+}
+
+// Nota de determinismo: en Linux (`#[cfg(target_os = "linux")]`) y Windows
+// (`#[cfg(target_os = "windows")]`), `detect_ssid` delega en D-Bus/WLAN API
+// nativas que requieren hardware/daemon reales (NetworkManager, wlanapi). No
+// se testea el camino live aquí por no ser determinista; el contrato del trait
+// `SsidDetector` se valida vía `MockSsid` y la degradación a `None` en la
+// plataforma stub. Ver AC-5 del plan ralplan-crear-set-pruebas-core-ui.

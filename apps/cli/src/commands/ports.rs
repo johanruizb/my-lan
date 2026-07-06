@@ -143,3 +143,98 @@ fn fill_service(svc: &Service, device_id: &str, now: &str) -> Service {
         last_seen_at: now.to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ctx::AppContext;
+    use mylan_core::{Protocol, Service, ServiceState};
+
+    fn ctx_in(tmp: &std::path::Path) -> AppContext {
+        AppContext {
+            db_path: tmp.join("mylan.db"),
+            signatures_dir: tmp.to_path_buf(),
+            verbose: false,
+        }
+    }
+
+    fn sample_service() -> Service {
+        Service {
+            id: "template-id".to_string(),
+            device_id: "ignored".to_string(),
+            protocol: Protocol::Tcp,
+            port: 22,
+            service_name: Some("ssh".to_string()),
+            product: Some("OpenSSH".to_string()),
+            version: Some("9.0".to_string()),
+            banner: Some("SSH-2.0-OpenSSH_9.0".to_string()),
+            state: ServiceState::Open,
+            first_seen_at: "ignored".to_string(),
+            last_seen_at: "ignored".to_string(),
+        }
+    }
+
+    #[test]
+    fn fill_service_copies_protocol_port_and_metadata() {
+        let svc = sample_service();
+        let now = "2024-01-01T00:00:00Z";
+        let filled = fill_service(&svc, "dev-abc", now);
+        assert_eq!(filled.protocol, Protocol::Tcp);
+        assert_eq!(filled.port, 22);
+        assert_eq!(filled.service_name.as_deref(), Some("ssh"));
+        assert_eq!(filled.product.as_deref(), Some("OpenSSH"));
+        assert_eq!(filled.version.as_deref(), Some("9.0"));
+        assert_eq!(filled.banner.as_deref(), Some("SSH-2.0-OpenSSH_9.0"));
+        assert_eq!(filled.state, ServiceState::Open);
+    }
+
+    #[test]
+    fn fill_service_sets_device_id_and_timestamps() {
+        let svc = sample_service();
+        let now = "2024-06-15T12:30:00Z";
+        let filled = fill_service(&svc, "dev-xyz", now);
+        assert_eq!(filled.device_id, "dev-xyz");
+        assert_eq!(filled.first_seen_at, now);
+        assert_eq!(filled.last_seen_at, now);
+    }
+
+    #[test]
+    fn fill_service_generates_fresh_uuid_id() {
+        // El id del template se ignora; se genera un UUID v4 nuevo.
+        let svc = sample_service();
+        let filled = fill_service(&svc, "dev-1", "now");
+        assert_ne!(filled.id, "template-id");
+        assert_eq!(filled.id.len(), 36, "UUID canónico de 36 chars");
+        uuid::Uuid::parse_str(&filled.id).expect("id debe ser UUID válido");
+    }
+
+    #[test]
+    fn fill_service_generates_unique_ids_across_calls() {
+        let svc = sample_service();
+        let a = fill_service(&svc, "d1", "t1");
+        let b = fill_service(&svc, "d2", "t2");
+        assert_ne!(a.id, b.id, "cada fill debe generar un id único");
+    }
+
+    #[tokio::test]
+    async fn run_rejects_invalid_ip() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, "not-an-ip", 100, ScanProfile::Quick).await;
+        assert!(result.is_err(), "IP inválida debe errar");
+    }
+
+    #[tokio::test]
+    async fn run_errors_when_no_inventory() {
+        // DB vacía (sin scans) → bail antes de escanear puertos.
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, "192.168.1.1", 100, ScanProfile::Quick).await;
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("inventario") || msg.contains("scan"),
+            "mensaje debe indicar falta de inventario: {msg}"
+        );
+    }
+}

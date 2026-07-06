@@ -40,6 +40,12 @@ cargo build --workspace
 # Run unit and integration tests
 cargo test --workspace
 
+# Core gate (frontera determinista, sin red ni I/O pesado): mylan-core + mylan-db + mylan-fingerprint
+cargo test -p mylan-core -p mylan-db -p mylan-fingerprint
+
+# Cobertura de la frontera Core (umbral 80%, requiere `llvm-tools-preview` + `cargo-llvm-cov`)
+cargo llvm-cov -p mylan-core -p mylan-db -p mylan-fingerprint --fail-under-lines 80
+
 # Run code linter
 cargo clippy --all-targets -- -D warnings
 

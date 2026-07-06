@@ -186,3 +186,87 @@ fn write_services_json(path: &std::path::Path, rows: &[ServiceExportRow]) -> any
     let json = serde_json::to_string_pretty(rows)?;
     write_file(path, json.as_bytes())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ctx::AppContext;
+
+    fn ctx_in(tmp: &std::path::Path) -> AppContext {
+        AppContext {
+            db_path: tmp.join("mylan.db"),
+            signatures_dir: tmp.to_path_buf(),
+            verbose: false,
+        }
+    }
+
+    #[test]
+    fn parse_accepts_json() {
+        assert_eq!(ExportFormat::parse("json").unwrap(), ExportFormat::Json);
+    }
+
+    #[test]
+    fn parse_accepts_csv() {
+        assert_eq!(ExportFormat::parse("csv").unwrap(), ExportFormat::Csv);
+    }
+
+    #[test]
+    fn parse_is_case_insensitive() {
+        assert_eq!(ExportFormat::parse("JSON").unwrap(), ExportFormat::Json);
+        assert_eq!(ExportFormat::parse("Csv").unwrap(), ExportFormat::Csv);
+        assert_eq!(ExportFormat::parse("jSoN").unwrap(), ExportFormat::Json);
+    }
+
+    #[test]
+    fn parse_rejects_unknown_format() {
+        assert!(ExportFormat::parse("xml").is_err());
+        assert!(ExportFormat::parse("").is_err());
+        assert!(ExportFormat::parse("yaml").is_err());
+    }
+
+    #[test]
+    fn run_errors_when_no_inventory() {
+        // DB vacía (sin scans) → bail "No hay inventario".
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, ExportFormat::Json, None);
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("inventario") || msg.contains("scan"),
+            "mensaje debe indicar falta de inventario: {msg}"
+        );
+    }
+
+    #[test]
+    fn run_errors_when_no_inventory_csv() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        assert!(run(&ctx, ExportFormat::Csv, None).is_err());
+    }
+
+    #[test]
+    fn write_file_creates_file_with_content() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let path = tmp.path().join("out.txt");
+        write_file(&path, b"hello-world").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"hello-world");
+    }
+
+    #[test]
+    fn write_file_errors_on_unwritable_path() {
+        // Un path bajo /proc no admite creación de ficheros.
+        let bad = std::path::Path::new("/proc/sys/kernel/nonexistent_dir_export/file.txt");
+        assert!(write_file(bad, b"x").is_err());
+    }
+
+    #[test]
+    fn export_services_with_empty_db_returns_ok() {
+        // Sin red activa y sin servicios → "No hay servicios para exportar."
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let conn = crate::commands::open_db(&ctx).unwrap();
+        let result = export_services(&conn, ExportFormat::Json, None);
+        assert!(result.is_ok(), "sin servicios debe ser Ok (mensaje)");
+    }
+}

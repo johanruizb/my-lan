@@ -84,7 +84,7 @@ interface ScanContextValue {
     startScan: (profile?: string) => Promise<void>;
     cancel: () => void;
 }
-const ScanContext = createContext<ScanContextValue | null>(null);
+export const ScanContext = createContext<ScanContextValue | null>(null);
 
 export function useScan(): ScanContextValue {
     const ctx = useContext(ScanContext);
@@ -98,8 +98,9 @@ export function deviceKey(d: Device): string {
 }
 
 // Merge en sitio por identidad: reemplaza la entrada existente o la añade, sin
-// duplicados (AC-6). Inmutable: devuelve una nueva lista.
-function mergeDevice(list: Device[], device: Device): Device[] {
+// duplicados (AC-6). Inmutable: devuelve una nueva lista. Exportado para test
+// unit directo del dedup (code-review MAJOR #2).
+export function mergeDevice(list: Device[], device: Device): Device[] {
     const k = deviceKey(device);
     const idx = list.findIndex((d) => deviceKey(d) === k);
     if (idx === -1) return [...list, device];

@@ -191,3 +191,47 @@ async fn resolve_target(name: &str, ipv4: bool, ipv6: bool) -> anyhow::Result<Ip
         .next()
         .ok_or_else(|| anyhow::anyhow!("no se pudo resolver ninguna IP para '{name}'"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Nota de determinismo: los caminos `run_ping`/`run_traceroute`/`run_dns`
+    // y la resolución DNS de `resolve_target` para hostnames requieren red
+    // (ICMP/UDP/DNS) y no se testean aquí. Solo el camino de IP literal (sin
+    // I/O de red) es determinista y se cubre abajo. Ver AC-4 del plan.
+
+    #[tokio::test]
+    async fn resolve_target_ipv4_literal_skips_dns() {
+        // Una IP literal parsea directamente; no hay llamada DNS.
+        let addr = resolve_target("192.168.1.1", false, false)
+            .await
+            .expect("ipv4 literal");
+        assert_eq!(addr.to_string(), "192.168.1.1");
+    }
+
+    #[tokio::test]
+    async fn resolve_target_ipv6_literal_skips_dns() {
+        let addr = resolve_target("::1", false, false)
+            .await
+            .expect("ipv6 literal");
+        assert_eq!(addr.to_string(), "::1");
+    }
+
+    #[tokio::test]
+    async fn resolve_target_loopback_literal() {
+        let addr = resolve_target("127.0.0.1", false, false)
+            .await
+            .expect("loopback literal");
+        assert_eq!(addr.to_string(), "127.0.0.1");
+    }
+
+    #[tokio::test]
+    async fn resolve_target_ignores_family_filters_for_literal() {
+        // Los flags ipv4/ipv6 no aplican a literales: la IP se usa tal cual.
+        let addr = resolve_target("10.0.0.1", true, false)
+            .await
+            .expect("literal con ipv4=true");
+        assert_eq!(addr.to_string(), "10.0.0.1");
+    }
+}
