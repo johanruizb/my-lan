@@ -56,3 +56,11 @@ export function deviceIcon(type: string): LucideIcon {
 export function deviceLabel(type: string): string {
     return DEVICE_LABEL[type] ?? "Desconocido";
 }
+
+/** ¿El device_type es conocido (no `unknown` ni fallback)? Úsalo para
+ * ocultar el chip de tipo cuando la clasificación falló, evitando
+ * duplicar el "Desconocido" del `TrustBadge`. Cubre tanto `unknown`
+ * literal como tipos no presentes en `DEVICE_LABEL` (fallback). */
+export function isKnownDeviceType(type: string): boolean {
+    return type !== "unknown" && type in DEVICE_LABEL;
+}
