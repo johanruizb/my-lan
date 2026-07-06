@@ -36,8 +36,9 @@ mod tests {
     use super::*;
     use crate::ctx::AppContext;
 
-    // Mutex para serializar tests que mutan `XDG_CONFIG_HOME` (evita carrera
-    // con otros tests del crate que puedan leer la variable concurrentemente).
+    // Mutex para serializar tests que mutan `XDG_CONFIG_HOME`/`HOME` (evita
+    // carrera con otros tests del crate que puedan leer las variables
+    // concurrentemente).
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     fn ctx_in(tmp: &std::path::Path) -> AppContext {
@@ -45,6 +46,41 @@ mod tests {
             db_path: tmp.join("mylan.db"),
             signatures_dir: tmp.to_path_buf(),
             verbose: false,
+        }
+    }
+
+    /// RAII guard que captura el valor previo de una var de entorno al
+    /// construirse y lo restaura en `Drop`, incluso ante pánico. Evita
+    /// corrupción del entorno de proceso y cascadas de envenenamiento del
+    /// `ENV_LOCK` si un `block_on` o `assert!` panic en medio de la mutación.
+    struct EnvGuard {
+        key: &'static str,
+        old: Option<std::ffi::OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: Option<&std::ffi::OsStr>) -> Self {
+            let old = std::env::var_os(key);
+            match value {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+            EnvGuard { key, old }
+        }
+
+        fn remove(key: &'static str) -> Self {
+            let old = std::env::var_os(key);
+            std::env::remove_var(key);
+            EnvGuard { key, old }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match self.old.take() {
+                Some(v) => std::env::set_var(self.key, v),
+                None => std::env::remove_var(self.key),
+            }
         }
     }
 
@@ -60,23 +96,21 @@ mod tests {
 
     #[test]
     fn run_errors_when_config_file_missing() {
-        let _guard = ENV_LOCK.lock().expect("env lock");
+        // unwrap_or_else sobre poison: si un test previo envenenó el mutex,
+        // recuperamos el guard interno en vez de cascader el fallo.
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = ctx_in(tmp.path());
 
         // Apunta XDG_CONFIG_HOME al tempdir: default_config_path devuelve
         // `<tmp>/mylan/mylan-agent.toml` que no existe → AgentConfig::load falla.
-        let old_xdg = std::env::var("XDG_CONFIG_HOME").ok();
-        std::env::set_var("XDG_CONFIG_HOME", tmp.path());
+        let _xdg = EnvGuard::set("XDG_CONFIG_HOME", Some(tmp.path().as_os_str()));
 
         let rt = tokio::runtime::Runtime::new().expect("tokio rt");
         let result = rt.block_on(run(&ctx, 43117));
 
-        // Restaurar el entorno.
-        match old_xdg {
-            Some(v) => std::env::set_var("XDG_CONFIG_HOME", v),
-            None => std::env::remove_var("XDG_CONFIG_HOME"),
-        }
+        // `_xdg` restaura XDG_CONFIG_HOME al salir (Drop), incluso si los
+        // asserts de abajo panic.
 
         assert!(result.is_err(), "run debe errar si el config no existe");
         let msg = format!("{}", result.unwrap_err());
@@ -90,26 +124,17 @@ mod tests {
     fn run_errors_when_no_home_no_xdg() {
         // Sin XDG_CONFIG_HOME ni HOME, default_config_path devuelve None →
         // error "no se pudo resolver config path".
-        let _guard = ENV_LOCK.lock().expect("env lock");
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = ctx_in(tmp.path());
 
-        let old_xdg = std::env::var("XDG_CONFIG_HOME").ok();
-        let old_home = std::env::var("HOME").ok();
-        std::env::remove_var("XDG_CONFIG_HOME");
-        std::env::remove_var("HOME");
+        let _xdg = EnvGuard::remove("XDG_CONFIG_HOME");
+        let _home = EnvGuard::remove("HOME");
 
         let rt = tokio::runtime::Runtime::new().expect("tokio rt");
         let result = rt.block_on(run(&ctx, 43117));
 
-        match old_xdg {
-            Some(v) => std::env::set_var("XDG_CONFIG_HOME", v),
-            None => std::env::remove_var("XDG_CONFIG_HOME"),
-        }
-        match old_home {
-            Some(v) => std::env::set_var("HOME", v),
-            None => std::env::remove_var("HOME"),
-        }
+        // `_xdg`/`_home` restauran las vars al salir (Drop), incluso ante pánico.
 
         assert!(result.is_err(), "run sin HOME/XDG debe errar");
     }
