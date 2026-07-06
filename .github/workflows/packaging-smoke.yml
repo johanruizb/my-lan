@@ -113,7 +113,12 @@ jobs:
       # arranca, sirve API en 127.0.0.1:43117, /status responde. El config
       # ad-hoc usa db_path en PROGRAMDATA (el config compartido tiene
       # /var/lib/mylan, ruta Unix inválida en Windows).
-      - name: Run agent (process smoke)
+      # Un solo step: GitHub Actions Windows mata los procesos hijos al
+      # terminar cada step (Job Object); lanzar y verificar en steps
+      # separados dejaba al agent muerto. Aquí lanzar+verificar+stop en el
+      # mismo step. -RedirectStandardError captura el crash si el agent
+      # falla al arrancar.
+      - name: Run agent + verify (process smoke)
         shell: pwsh
         run: |
           $bin = (Resolve-Path target\release\mylan-agent.exe).Path
@@ -121,6 +126,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
           $dbPath = Join-Path $cfgDir "mylan.db"
           $cfgPath = Join-Path $cfgDir "mylan-agent.toml"
+          $errLog = Join-Path $env:RUNNER_TEMP "mylan-agent.err"
           $dbPathEsc = $dbPath -replace '\\', '\\'
           @"
           interval_secs = 60
@@ -130,14 +136,13 @@ jobs:
           cidr = "192.168.1.0/24"
           profile = "quick"
           "@ | Out-File -FilePath $cfgPath -Encoding utf8
-          $proc = Start-Process -FilePath $bin -ArgumentList "--serve-api","--config",$cfgPath -NoNewWindow -PassThru
-          $proc.Id | Out-File -FilePath "$env:RUNNER_TEMP\mylan-agent.pid"
-      - name: Verify + stop
-        shell: pwsh
-        run: |
+          $proc = Start-Process -FilePath $bin -ArgumentList "--serve-api","--config",$cfgPath -PassThru -RedirectStandardError $errLog
           Start-Sleep -Seconds 10
-          $cfgDir = Join-Path $env:PROGRAMDATA "mylan"
+          if ($proc.HasExited) {
+            Write-Error "Agent exited (code $($proc.ExitCode)) before serving. stderr:"
+            if (Test-Path $errLog) { Get-Content $errLog -Raw | Write-Error }
+            throw "agent crashed before serving"
+          }
           $token = Get-Content (Join-Path $cfgDir "api-token") -Raw
           curl.exe -sf -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status
-          $agentPid = Get-Content "$env:RUNNER_TEMP\mylan-agent.pid"
-          Stop-Process -Id $agentPid -Force
+          Stop-Process -Id $proc.Id -Force
