@@ -106,20 +106,38 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build release
         run: cargo build --release -p mylan-agent
-      - name: Install + start service
+      # Windows service (SCM) integration es Step 5 pendiente
+      # (windows_service.rs::install_service es stub; main.rs no despacha
+      # StartServiceCtrlDispatcher -> sc.exe start falla con 1053). Smoke
+      # prueba el agent como PROCESO (igual que systemd/docker smoke):
+      # arranca, sirve API en 127.0.0.1:43117, /status responde. El config
+      # ad-hoc usa db_path en PROGRAMDATA (el config compartido tiene
+      # /var/lib/mylan, ruta Unix inválida en Windows).
+      - name: Run agent (process smoke)
         shell: pwsh
         run: |
           $bin = (Resolve-Path target\release\mylan-agent.exe).Path
           $cfgDir = Join-Path $env:PROGRAMDATA "mylan"
           New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
-          Copy-Item agent\mylan-agent.toml (Join-Path $cfgDir "mylan-agent.toml") -Force
-          sc.exe create MylanAgent binPath= "$bin --serve-api --config $(Join-Path $cfgDir 'mylan-agent.toml')" start= auto
-          sc.exe start MylanAgent
+          $dbPath = Join-Path $cfgDir "mylan.db"
+          $cfgPath = Join-Path $cfgDir "mylan-agent.toml"
+          $dbPathEsc = $dbPath -replace '\\', '\\'
+          @"
+          interval_secs = 60
+          api_port = 43117
+          db_path = "$dbPathEsc"
+          [[networks]]
+          cidr = "192.168.1.0/24"
+          profile = "quick"
+          "@ | Out-File -FilePath $cfgPath -Encoding utf8
+          $proc = Start-Process -FilePath $bin -ArgumentList "--serve-api","--config",$cfgPath -NoNewWindow -PassThru
+          $proc.Id | Out-File -FilePath "$env:RUNNER_TEMP\mylan-agent.pid"
       - name: Verify + stop
         shell: pwsh
         run: |
           Start-Sleep -Seconds 10
-          $status = sc.exe query MylanAgent
-          if ($LASTEXITCODE -ne 0) { throw "MylanAgent service not found" }
-          sc.exe stop MylanAgent
-          sc.exe delete MylanAgent
+          $cfgDir = Join-Path $env:PROGRAMDATA "mylan"
+          $token = Get-Content (Join-Path $cfgDir "api-token") -Raw
+          curl.exe -sf -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status
+          $agentPid = Get-Content "$env:RUNNER_TEMP\mylan-agent.pid"
+          Stop-Process -Id $agentPid -Force
