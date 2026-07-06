@@ -279,3 +279,11 @@ export function onScanDevice(cb: (d: ScanDevice) => void): Promise<UnlistenFn> {
 export function onDbImported(cb: () => void): Promise<UnlistenFn> {
     return listen("db:imported", () => cb());
 }
+
+// Evento `censorship:fresh`: emitido por `lib.rs` cuando el archivo de ajustes
+// no existía antes de esta versión (install nuevo). Mueve el `listen()` al seam
+// para que `vi.mock("@/lib/tauri")` cubra el 100% de componentes (AC-14).
+// La lógica de timing (race listener/timeout, cleanup) queda en el consumidor.
+export function onCensorshipFresh(cb: () => void): Promise<UnlistenFn> {
+    return listen("censorship:fresh", () => cb());
+}

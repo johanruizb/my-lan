@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { useCensorship } from "@/components/censorship-provider";
+import { onCensorshipFresh } from "@/lib/tauri";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -52,7 +52,7 @@ export function CensuraUpgradeDialog() {
         };
 
         // Escucha una sola vez el evento de install nuevo emitido por lib.rs.
-        listen("censorship:fresh", () => finish(true))
+        onCensorshipFresh(() => finish(true))
             .then((fn) => {
                 if (resolved) {
                     // Ya resuelto por timeout: limpiar listener y salir.

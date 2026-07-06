@@ -71,3 +71,94 @@ fn build_enricher(signatures_dir: &Path, gateway_ip: Option<IpAddr>) -> Enricher
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ctx::AppContext;
+
+    fn ctx_in(tmp: &std::path::Path) -> AppContext {
+        AppContext {
+            db_path: tmp.join("mylan.db"),
+            signatures_dir: tmp.to_path_buf(),
+            verbose: false,
+        }
+    }
+
+    // Nota de determinismo: `run` ejecuta el pipeline de descubrimiento real
+    // (liveness ARP/ICMP/mDNS/SSDP) que requiere red. No se testea el happy
+    // path aquí. Sí se testea `build_enricher` (degradación a noop sin
+    // signatures) y el error determinista de `run` con interfaz inexistente.
+
+    #[test]
+    fn build_enricher_degrades_to_noop_on_missing_signatures() {
+        // Un directorio de signatures inexistente → Fingerprint::load falla →
+        // noop_enricher. El Enricher resultante no debe entrar en pánico al
+        // aplicarse a un Device con observaciones vacías.
+        let enricher = build_enricher(std::path::Path::new("/nonexistent-signatures"), None);
+        let mut device = mylan_core::Device {
+            id: "dev-1".to_string(),
+            network_id: "net-1".to_string(),
+            primary_mac: None,
+            primary_ip: None,
+            hostname: None,
+            display_name: None,
+            vendor: None,
+            manufacturer: None,
+            model: None,
+            device_type: mylan_core::DeviceType::Unknown,
+            os_family: None,
+            confidence: mylan_core::Confidence::default(),
+            is_trusted: false,
+            is_hidden: false,
+            is_online: false,
+            notes: None,
+            first_seen_at: "2024-01-01T00:00:00Z".to_string(),
+            last_seen_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+        // Llamar al enricher no debe entrar en pánico; con noop el device queda
+        // inalterado (no hay reglas que clasifiquen).
+        enricher(&mut device, &[]);
+        assert_eq!(device.id, "dev-1");
+        assert_eq!(device.device_type, mylan_core::DeviceType::Unknown);
+    }
+
+    #[test]
+    fn build_enricher_with_empty_signatures_dir_degrades() {
+        // Un dir vacío (sin oui.csv ni rules YAML) → load falla → noop.
+        let tmp = tempfile::tempdir().expect("tmp");
+        let enricher = build_enricher(tmp.path(), None);
+        let mut device = mylan_core::Device {
+            id: "dev-2".to_string(),
+            network_id: "net-1".to_string(),
+            primary_mac: None,
+            primary_ip: None,
+            hostname: None,
+            display_name: None,
+            vendor: None,
+            manufacturer: None,
+            model: None,
+            device_type: mylan_core::DeviceType::Unknown,
+            os_family: None,
+            confidence: mylan_core::Confidence::default(),
+            is_trusted: false,
+            is_hidden: false,
+            is_online: false,
+            notes: None,
+            first_seen_at: "2024-01-01T00:00:00Z".to_string(),
+            last_seen_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+        enricher(&mut device, &[]);
+        assert_eq!(device.device_type, mylan_core::DeviceType::Unknown);
+    }
+
+    #[tokio::test]
+    async fn run_errors_on_nonexistent_interface() {
+        // Una interfaz que no existe → detect_interface devuelve InterfaceNotFound.
+        // Determinista: get_interfaces() lee info del sistema (sin I/O de red).
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, ScanProfile::Quick, Some("nonexistent_iface_xyz")).await;
+        assert!(result.is_err(), "interfaz inexistente debe errar");
+    }
+}

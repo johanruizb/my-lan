@@ -101,6 +101,12 @@ jobs:
         run: npm run lint
         working-directory: apps/desktop-tauri
 
+      # Tests del frontend (vitest run, AC-23). Node 20 ya configurado arriba
+      # (actions/setup-node@v5) y deps instaladas con `npm ci`.
+      - name: Frontend tests
+        run: npm test
+        working-directory: apps/desktop-tauri
+
       # Construye el bundle. `tauri build` filtra `bundle.targets` por
       # plataforma: en Linux produce AppImage+deb, en Windows NSIS+MSI. El job
       # de Windows valida el cfg-gate del Paso 0 + la herencia workspace de los

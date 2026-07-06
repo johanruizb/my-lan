@@ -52,10 +52,8 @@ export function maskHostname(h: string): string {
     return `${h.slice(0, idx)}.*`;
 }
 
-/**
- * Mascara de CIDR: enmascara la parte de direccion pero conserva el prefix-len
- * (es estructural, no un identificador) -> "192.168.1.0/24" => "192.168.*.0/24".
- */
+// Mascara de CIDR: enmascara la parte de direccion pero conserva el prefix-len
+// (es estructural, no un identificador). Ej: "192.168.1.0/24" => "192.168.*.*/24".
 export function maskCidr(cidr: string): string {
     const slash = cidr.indexOf("/");
     if (slash === -1) return maskIp(cidr);

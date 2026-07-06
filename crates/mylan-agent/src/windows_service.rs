@@ -19,3 +19,37 @@ pub fn install_service() -> anyhow::Result<()> {
 pub fn install_service() -> anyhow::Result<()> {
     anyhow::bail!("Windows service management solo disponible en Windows")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // En plataformas no-Windows, `install_service` es un stub determinista que
+    // siempre devuelve Err con un mensaje fijo. En Windows, la implementación
+    // real (Step 5) también devuelve Err (stub pendiente); test cfg-gated.
+
+    #[cfg(not(windows))]
+    #[test]
+    fn install_service_errors_on_non_windows() {
+        let result = install_service();
+        assert!(result.is_err(), "stub non-Windows debe errar");
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("Windows"),
+            "mensaje debe mencionar Windows: {msg}"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn install_service_stub_errors_on_windows() {
+        // Hasta Step 5, el stub Windows también devuelve Err (pendiente).
+        let result = install_service();
+        assert!(result.is_err(), "stub Windows debe errar (pendiente)");
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("pendiente") || msg.contains("Step 5"),
+            "mensaje debe indicar implementación pendiente: {msg}"
+        );
+    }
+}

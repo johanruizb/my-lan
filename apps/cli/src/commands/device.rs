@@ -106,3 +106,70 @@ fn opt_mac(mac: Option<mylan_core::MacAddr>) -> String {
 fn type_label(t: &mylan_core::DeviceType) -> String {
     format!("{t:?}").to_lowercase()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ctx::AppContext;
+    use mylan_core::DeviceType;
+
+    fn ctx_in(tmp: &std::path::Path) -> AppContext {
+        AppContext {
+            db_path: tmp.join("mylan.db"),
+            signatures_dir: tmp.to_path_buf(),
+            verbose: false,
+        }
+    }
+
+    #[test]
+    fn opt_ip_formats_known_address() {
+        let ip: IpAddr = "192.168.1.42".parse().unwrap();
+        assert_eq!(opt_ip(Some(ip)), "192.168.1.42");
+    }
+
+    #[test]
+    fn opt_ip_dash_for_missing() {
+        assert_eq!(opt_ip(None), "-");
+    }
+
+    #[test]
+    fn opt_mac_formats_known_address() {
+        let mac = mylan_core::MacAddr::parse("aa:bb:cc:dd:ee:ff").unwrap();
+        assert_eq!(opt_mac(Some(mac)), "aa:bb:cc:dd:ee:ff");
+    }
+
+    #[test]
+    fn opt_mac_dash_for_missing() {
+        assert_eq!(opt_mac(None), "-");
+    }
+
+    #[test]
+    fn type_label_is_lowercase_snake() {
+        assert_eq!(type_label(&DeviceType::Router), "router");
+        assert_eq!(type_label(&DeviceType::Phone), "phone");
+        assert_eq!(type_label(&DeviceType::Iot), "iot");
+        assert_eq!(type_label(&DeviceType::Unknown), "unknown");
+    }
+
+    #[test]
+    fn run_rejects_invalid_ip() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, "not-an-ip");
+        assert!(result.is_err(), "IP inválida debe errar");
+    }
+
+    #[test]
+    fn run_errors_when_no_inventory() {
+        // DB vacía (sin scans) → no hay red activa → bail "No hay inventario".
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_in(tmp.path());
+        let result = run(&ctx, "192.168.1.1");
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("inventario") || msg.contains("scan"),
+            "mensaje debe indicar falta de inventario: {msg}"
+        );
+    }
+}
