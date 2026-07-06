@@ -21,29 +21,48 @@ export function makeDevice(overrides: Partial<Device> = {}): Device {
         last_seen_at: "2025-01-02T00:00:00Z",
         is_trusted: false,
         is_hidden: false,
+        is_online: true,
         notes: null,
         ...overrides,
     };
 }
 
+// AC-18: fixtures variados para cubrir las 3 ramas de `deriveTrustState`
+// (trusted/recognized/unknown) + offline. Valores numéricos-string para
+// `confidence` (el backend serializa `Confidence(u8)` como número, no "high").
 export const deviceFixtures: Device[] = [
+    // (a) trusted + online + router.
     makeDevice({
         id: "dev-1",
-        primary_ip: "192.168.1.10",
+        primary_ip: "192.168.1.1",
         hostname: "router.lan",
-        display_name: "router.lan",
+        display_name: "Router principal",
+        device_type: "router",
+        confidence: "90",
+        is_trusted: true,
+        is_online: true,
     }),
+    // (b) recognized + online + phone.
     makeDevice({
         id: "dev-2",
-        primary_ip: "192.168.1.11",
-        hostname: "laptop.lan",
-        display_name: "laptop.lan",
+        primary_ip: "192.168.1.50",
+        hostname: "phone.lan",
+        display_name: "Móvil de Johan",
+        device_type: "phone",
+        confidence: "60",
+        is_trusted: false,
+        is_online: true,
     }),
+    // (c) unknown + offline + tablet.
     makeDevice({
         id: "dev-3",
-        primary_ip: "192.168.1.12",
-        hostname: "phone.lan",
-        display_name: "phone.lan",
+        primary_ip: "192.168.1.99",
+        hostname: "tablet.lan",
+        display_name: "Tablet salón",
+        device_type: "tablet",
+        confidence: "30",
+        is_trusted: false,
+        is_online: false,
     }),
 ];
 

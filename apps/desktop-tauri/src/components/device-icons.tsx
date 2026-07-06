@@ -1,6 +1,7 @@
 import {
     Router,
     Smartphone,
+    Tablet,
     Laptop,
     Monitor,
     Tv,
@@ -15,10 +16,11 @@ import {
 
 // Mapeo de device_type (snake_case de mylan-core::DeviceType) a icono lucide
 // (AC-5). Los valores son los que emite serde: router, phone, laptop, desktop,
-// tv, printer, camera, nas, console, iot, unknown.
+// tv, printer, camera, nas, console, iot, tablet, unknown.
 const DEVICE_ICON: Record<string, LucideIcon> = {
     router: Router,
     phone: Smartphone,
+    tablet: Tablet,
     laptop: Laptop,
     desktop: Monitor,
     tv: Tv,
@@ -32,9 +34,10 @@ const DEVICE_ICON: Record<string, LucideIcon> = {
 
 const DEVICE_LABEL: Record<string, string> = {
     router: "Router",
-    phone: "Teléfono",
+    phone: "Móvil",
+    tablet: "Tablet",
     laptop: "Portátil",
-    desktop: "Escritorio",
+    desktop: "PC",
     tv: "TV",
     printer: "Impresora",
     camera: "Cámara",
