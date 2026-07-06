@@ -36,6 +36,7 @@ pub enum DeviceType {
     Nas,
     Console,
     Iot,
+    Tablet,
     #[default]
     Unknown,
 }
@@ -106,6 +107,7 @@ mod tests {
             DeviceType::Phone,
             DeviceType::Camera,
             DeviceType::Iot,
+            DeviceType::Tablet,
             DeviceType::Unknown,
         ] {
             let json = serde_json::to_string(&variant).expect("ser");

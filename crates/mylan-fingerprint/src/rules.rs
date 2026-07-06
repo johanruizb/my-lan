@@ -291,6 +291,8 @@ enum DeviceTypeSerde {
     Console,
     #[serde(rename = "iot")]
     Iot,
+    #[serde(rename = "tablet")]
+    Tablet,
     #[serde(rename = "unknown")]
     Unknown,
 }
@@ -308,6 +310,7 @@ impl From<DeviceTypeSerde> for DeviceType {
             DeviceTypeSerde::Nas => DeviceType::Nas,
             DeviceTypeSerde::Console => DeviceType::Console,
             DeviceTypeSerde::Iot => DeviceType::Iot,
+            DeviceTypeSerde::Tablet => DeviceType::Tablet,
             DeviceTypeSerde::Unknown => DeviceType::Unknown,
         }
     }

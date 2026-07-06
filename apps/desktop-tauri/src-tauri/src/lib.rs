@@ -112,6 +112,7 @@ pub fn run() {
             commands::detect_interface_cmd,
             commands::get_network_name_cmd,
             commands::set_network_name_cmd,
+            commands::update_device_cmd,
             commands::list_devices_cmd,
             commands::get_device_cmd,
             commands::run_discovery_cmd,
