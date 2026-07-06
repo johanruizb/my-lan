@@ -6,7 +6,7 @@
 // `censorshipEnabled` sin montar el provider real.
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCensorship } from "@/components/censorship-provider";
 import { MaskedValue } from "@/components/masked-value";
 
