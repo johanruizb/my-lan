@@ -18,6 +18,9 @@
     "fmt:check": "cargo fmt --all --check",
     "fmt": "cargo fmt --all",
     "clippy": "cargo clippy --workspace -- -D warnings && cargo clippy --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml -- -D warnings",
-    "check": "npm run version:check && npm run fmt:check && npm run clippy && npm run test && npm run lint && npm run build:desktop"
+    "check": "npm run version:check && npm run fmt:check && npm run clippy && npm run test && npm run lint && npm run build:desktop",
+    "clean": "rm -rf target apps/desktop-tauri/src-tauri/target apps/desktop-tauri/src-tauri/gen apps/desktop-tauri/dist",
+    "clean:cache": "rm -rf ~/.npm ~/.cargo/registry ~/.cargo/git",
+    "clean:all": "npm run clean && rm -rf apps/desktop-tauri/node_modules && npm run clean:cache"
   }
 }
