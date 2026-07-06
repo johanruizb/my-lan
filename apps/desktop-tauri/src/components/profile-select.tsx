@@ -5,7 +5,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { PROFILES } from "@/lib/profiles";
+import { getProfile, PROFILES } from "@/lib/profiles";
 
 // ProfileSelect: selector de perfiles con descripción visible (AC-2).
 // Mantiene value/onChange API. Descripciones desde profiles.ts (F0.6, hardcode TS).
@@ -23,6 +23,7 @@ export function ProfileSelect({
     disabled?: boolean;
     id?: string;
 }) {
+    const selected = getProfile(value);
     return (
         <Select value={value} onValueChange={onChange} disabled={disabled}>
             <SelectTrigger
@@ -30,7 +31,11 @@ export function ProfileSelect({
                 aria-label="Perfil de escaneo"
                 id={id}
             >
-                <SelectValue placeholder="Perfil" />
+                <SelectValue placeholder="Perfil">
+                    <span className="truncate">
+                        {selected ? selected.label : value}
+                    </span>
+                </SelectValue>
             </SelectTrigger>
             <SelectContent>
                 {PROFILES.map((p) => (

@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/empty-state";
 import { deviceIcon, deviceLabel } from "@/components/device-icons";
 import { useToast } from "@/components/ui/toast";
 import { formatRelative, formatTimestamp } from "@/lib/format";
+import { RelativeTime } from "@/components/relative-time";
 import {
     LayoutGrid,
     Table as TableIcon,
@@ -414,6 +415,9 @@ export function Devices() {
                                                         value={formatRelative(
                                                             d.last_seen_at,
                                                         )}
+                                                        title={formatTimestamp(
+                                                            d.last_seen_at,
+                                                        )}
                                                     />
                                                     <Meta
                                                         label="Confianza"
@@ -533,9 +537,9 @@ export function Devices() {
                                                     />
                                                 </TableCell>
                                                 <TableCell className="text-xs text-muted-foreground">
-                                                    {formatTimestamp(
-                                                        d.last_seen_at,
-                                                    )}
+                                                    <RelativeTime
+                                                        value={d.last_seen_at}
+                                                    />
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -554,11 +558,13 @@ function Meta({
     value,
     mono,
     glossaryKey,
+    title,
 }: {
     label: string;
     value: string;
     mono?: boolean;
     glossaryKey?: string;
+    title?: string;
 }) {
     return (
         <div className="flex flex-col">
@@ -568,7 +574,10 @@ function Meta({
                     <InfoTooltip term={label} glossaryKey={glossaryKey} />
                 )}
             </dt>
-            <dd className={`font-medium ${mono ? "font-mono" : ""}`}>
+            <dd
+                className={`font-medium ${mono ? "font-mono" : ""}`}
+                title={title}
+            >
                 {value}
             </dd>
         </div>

@@ -19,6 +19,11 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
         tooltip:
             "Identificador único de fábrica de la tarjeta de red de un dispositivo. No cambia aunque cambie la IP.",
     },
+    ip: {
+        term: "IP",
+        tooltip:
+            "Dirección única que identifica un dispositivo en la red, como un número de teléfono para conectarlo.",
+    },
     gateway: {
         term: "Gateway",
         translation: "Puerta de enlace",

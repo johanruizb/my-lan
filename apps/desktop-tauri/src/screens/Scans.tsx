@@ -25,7 +25,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SECTION_GAP } from "@/lib/design-tokens";
-import { formatTimestamp } from "@/lib/format";
+import { RelativeTime } from "@/components/relative-time";
 import {
     Radar,
     Loader2,
@@ -226,14 +226,12 @@ export function Scans() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-4">
-                        <div className="flex flex-wrap items-end gap-3">
-                            {/* Selector de dispositivos (primario, AC-5): lista los
-                            dispositivos descubiertos como objetivo principal. */}
-                            <FormField
-                                label="Dispositivo a escanear"
-                                htmlFor="scan-device"
-                                helper="Elige un dispositivo de tu red"
-                            >
+                        <FormField
+                            label="Dispositivo a escanear"
+                            htmlFor="scan-device"
+                            helper="Elige un dispositivo de tu red"
+                        >
+                            <div className="flex flex-wrap items-end gap-3">
                                 <Select
                                     value={selectedDeviceId}
                                     onValueChange={(v) => {
@@ -272,84 +270,87 @@ export function Scans() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                            </FormField>
-
-                            {/* IP manual (avanzado): preserva IPs arbitrarias no
-                            descubiertas (AC-5). Colapsado por defecto. */}
-                            <Collapsible
-                                open={openManualIp}
-                                onOpenChange={setOpenManualIp}
-                            >
-                                <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                                    <ChevronDown
-                                        className="h-3.5 w-3.5 transition-transform data-[state=closed]:-rotate-90"
-                                        aria-hidden
-                                    />
-                                    IP manual (avanzado)
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                    <div className="mt-2">
-                                        <FormField
-                                            label="IP del host"
-                                            htmlFor="scan-ip"
-                                            helper="Solo si no aparece en la lista de arriba"
-                                        >
-                                            <Input
-                                                id="scan-ip"
-                                                placeholder="192.168.1.10"
-                                                value={ip}
-                                                onChange={(e) => {
-                                                    setIp(e.target.value);
-                                                    setSelectedDeviceId("");
-                                                }}
-                                                className="w-48"
-                                                disabled={scanning}
-                                            />
-                                        </FormField>
-                                    </div>
-                                </CollapsibleContent>
-                            </Collapsible>
-
-                            <FormField label="Perfil" htmlFor="scan-profile">
                                 <ProfileSelect
+                                    id="scan-profile"
                                     value={profile}
                                     onChange={setProfile}
                                     className="w-40"
-                                    id="scan-profile"
                                     disabled={scanning}
                                 />
-                            </FormField>
-                            <Button
-                                onClick={handleStart}
-                                disabled={scanning}
-                                className="gap-1.5"
-                            >
-                                {scanning ? (
-                                    <>
-                                        <Loader2
-                                            className="h-4 w-4 animate-spin"
-                                            aria-hidden
-                                        />
-                                        Escaneando…
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play className="h-4 w-4" aria-hidden />
-                                        Iniciar
-                                    </>
-                                )}
-                            </Button>
-                            {scanning && (
                                 <Button
-                                    variant="destructive"
-                                    onClick={handleCancel}
+                                    onClick={handleStart}
+                                    disabled={scanning}
                                     className="gap-1.5"
                                 >
-                                    <Square className="h-4 w-4" aria-hidden />
-                                    Cancelar
+                                    {scanning ? (
+                                        <>
+                                            <Loader2
+                                                className="h-4 w-4 animate-spin"
+                                                aria-hidden
+                                            />
+                                            Escaneando…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Play
+                                                className="h-4 w-4"
+                                                aria-hidden
+                                            />
+                                            Iniciar
+                                        </>
+                                    )}
                                 </Button>
-                            )}
-                        </div>
+                                {scanning && (
+                                    <Button
+                                        variant="destructive"
+                                        onClick={handleCancel}
+                                        className="gap-1.5"
+                                    >
+                                        <Square
+                                            className="h-4 w-4"
+                                            aria-hidden
+                                        />
+                                        Cancelar
+                                    </Button>
+                                )}
+                            </div>
+                        </FormField>
+
+                        {/* IP manual (avanzado): preserva IPs arbitrarias no
+                            descubiertas (AC-5). Colapsado por defecto. */}
+                        <Collapsible
+                            open={openManualIp}
+                            onOpenChange={setOpenManualIp}
+                        >
+                            <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                                <ChevronDown
+                                    className="h-3.5 w-3.5 transition-transform data-[state=closed]:-rotate-90"
+                                    aria-hidden
+                                />
+                                IP manual (avanzado)
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <div className="mt-2">
+                                    <FormField
+                                        label="IP del host"
+                                        htmlFor="scan-ip"
+                                        helper="Solo si no aparece en la lista de arriba"
+                                    >
+                                        <Input
+                                            id="scan-ip"
+                                            placeholder="192.168.1.10"
+                                            value={ip}
+                                            onChange={(e) => {
+                                                setIp(e.target.value);
+                                                setSelectedDeviceId("");
+                                            }}
+                                            className="w-48"
+                                            disabled={scanning}
+                                        />
+                                    </FormField>
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
 
                         {scanning && (
                             // Live region para progreso/heartbeat/cancel (AC-15).
@@ -552,20 +553,28 @@ export function Scans() {
                                                         {statusBadge(s.status)}
                                                     </td>
                                                     <td className="p-3 align-middle text-xs text-muted-foreground">
-                                                        {formatTimestamp(
-                                                            s.started_at,
-                                                        )}
+                                                        <RelativeTime
+                                                            value={s.started_at}
+                                                        />
                                                     </td>
                                                     <td className="p-3 align-middle text-xs text-muted-foreground">
-                                                        {formatTimestamp(
-                                                            s.finished_at,
-                                                        )}
+                                                        <RelativeTime
+                                                            value={
+                                                                s.finished_at
+                                                            }
+                                                        />
                                                     </td>
-                                                    <td className="p-3 align-middle font-medium">
-                                                        {s.hosts_alive}
+                                                    <td className="p-3 align-middle font-medium text-muted-foreground">
+                                                        {s.hosts_alive > 0 ||
+                                                        s.hosts_new > 0
+                                                            ? s.hosts_alive
+                                                            : "—"}
                                                     </td>
-                                                    <td className="p-3 align-middle font-medium">
-                                                        {s.hosts_new}
+                                                    <td className="p-3 align-middle font-medium text-muted-foreground">
+                                                        {s.hosts_alive > 0 ||
+                                                        s.hosts_new > 0
+                                                            ? s.hosts_new
+                                                            : "—"}
                                                     </td>
                                                 </tr>
                                             ))}
