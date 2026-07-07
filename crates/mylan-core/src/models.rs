@@ -168,18 +168,30 @@ pub struct Service {
 }
 
 /// Resumen agregado de un escaneo (se persiste como `summary_json`).
+///
+/// `open_ports` lleva el conteo de puertos abiertos en un escaneo de puertos
+/// (`scan_type = ports`); es 0 para descubrimiento. `#[serde(default)]` para que
+/// los `summary_json` persistidos antes de v0.5.4 (sin el campo) deserialicen a
+/// `0` y no rompan el historial existente.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScanSummary {
     pub hosts_alive: u32,
     pub hosts_new: u32,
     pub duration_ms: u64,
+    #[serde(default)]
+    pub open_ports: u32,
 }
 
 /// Ejecución de un escaneo (descubrimiento o puertos).
+///
+/// `target_ip` fija la IP sondeada en un escaneo de puertos; `None` para
+/// descubrimiento (escaneo de toda la red, sin target único). Se persiste en la
+/// columna `target_ip` (v5) y alimenta el link `→ /devices/:ip` del historial.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Scan {
     pub id: String,
     pub network_id: String,
+    pub target_ip: Option<String>,
     pub scan_type: ScanKind,
     pub profile: ScanProfile,
     pub status: ScanStatus,
@@ -385,6 +397,7 @@ mod tests {
         let scan = Scan {
             id: "scan-1".to_string(),
             network_id: "net-1".to_string(),
+            target_ip: None,
             scan_type: ScanKind::Discovery,
             profile: ScanProfile::Quick,
             status: ScanStatus::Completed,
@@ -394,11 +407,22 @@ mod tests {
                 hosts_alive: 12,
                 hosts_new: 2,
                 duration_ms: 18_500,
+                open_ports: 0,
             }),
         };
         let json = serde_json::to_string(&scan).expect("serialize");
         let back: Scan = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(scan, back);
+    }
+
+    #[test]
+    fn scan_summary_default_open_ports_backward_compat() {
+        // summary_json viejo (pre-v0.5.4) sin `open_ports` deserializa a 0:
+        // el #[serde(default)] cubre el historial existente.
+        let old_json = r#"{"hosts_alive":3,"hosts_new":1,"duration_ms":1200}"#;
+        let summary: ScanSummary = serde_json::from_str(old_json).expect("deserialize");
+        assert_eq!(summary.open_ports, 0);
+        assert_eq!(summary.hosts_alive, 3);
     }
 
     #[test]

@@ -220,12 +220,15 @@ pub fn list_scans_cmd(state: State<'_, DesktopState>) -> Result<Vec<ScanSummaryD
         .into_iter()
         .map(|r| ScanSummaryDto {
             id: r.id,
+            scan_type: r.scan_type,
+            target_ip: r.target_ip,
             profile: r.profile,
             status: r.status,
             started_at: r.started_at,
             finished_at: r.finished_at,
             hosts_alive: r.hosts_alive,
             hosts_new: r.hosts_new,
+            open_ports: r.open_ports,
         })
         .collect())
 }
@@ -353,6 +356,7 @@ pub async fn run_discovery_cmd(
             &Scan {
                 id: scan_db_id.clone(),
                 network_id: network.id.clone(),
+                target_ip: None,
                 scan_type: ScanKind::Discovery,
                 profile: scan_profile,
                 status: ScanStatus::Running,
@@ -430,6 +434,7 @@ pub async fn run_discovery_cmd(
                     hosts_alive,
                     hosts_new,
                     duration_ms,
+                    open_ports: 0,
                 };
                 mylan_db::scan_repo::finish_scan(
                     &conn,
@@ -499,6 +504,37 @@ pub async fn scan_ports_cmd(
     let options = mylan_scanner::profile_options(scan_profile);
     let scan_timeout_ms = options.scan_timeout.as_millis().max(1) as u64;
 
+    // net_id + device_id + insert_scan Running ANTES de registrar el token: así
+    // un fallo de setup (sin inventario / dispositivo no encontrado) no deja un
+    // token zombie ni un scan `running` colgado (paridad con `run_discovery_cmd`).
+    // El `scan_id` del IPC se reusa como id de la fila `scans` (UUID del frontend)
+    // y `target_ip` fija la IP sondeada para el historial (ADR-0001 #23).
+    let (device_id, started_at) = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        let net_id = latest_network_id(&conn)?
+            .ok_or_else(|| "No hay inventario; ejecuta un escaneo primero.".to_string())?;
+        let device = mylan_db::device_repo::get_device_by_ip(&conn, &net_id, ip_addr)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("No se encontró un dispositivo con IP {ip}."))?;
+        let started_at = mylan_db::util::now_rfc3339().map_err(|e| e.to_string())?;
+        mylan_db::scan_repo::insert_scan(
+            &conn,
+            &Scan {
+                id: scan_id.clone(),
+                network_id: net_id,
+                target_ip: Some(ip.clone()),
+                scan_type: ScanKind::Ports,
+                profile: scan_profile,
+                status: ScanStatus::Running,
+                started_at: started_at.clone(),
+                finished_at: None,
+                summary: None,
+            },
+        )
+        .map_err(|e| e.to_string())?;
+        (device.id, started_at)
+    };
+
     let cancel = tokio_util::sync::CancellationToken::new();
     state
         .scan_tokens
@@ -540,7 +576,7 @@ pub async fn scan_ports_cmd(
 
     // on_progress captura SOLO `app` (Clone+Send+Sync) — no `State` (Send).
     let app_for_progress = app.clone();
-    let services = mylan_scanner::scan_target(
+    let scan_result = mylan_scanner::scan_target(
         ip_addr,
         scan_profile,
         options,
@@ -549,35 +585,57 @@ pub async fn scan_ports_cmd(
             let _ = app_for_progress.emit("scan:progress", &p);
         },
     )
-    .await
-    .map_err(|e| e.to_string())?;
+    .await;
 
     heartbeat_handle.abort();
 
-    // Limpieza del token (sin zombies — AC-12).
+    // Limpieza del token en TODA salida (sin zombies — AC-12).
     state
         .scan_tokens
         .lock()
         .map_err(|e| e.to_string())?
         .remove(&scan_id);
 
-    // Persistencia (sync) en el blocking pool sobre un clone.
-    let device_id = {
-        let conn = state.db.lock().map_err(|e| e.to_string())?;
-        let net_id = latest_network_id(&conn)?
-            .ok_or_else(|| "No hay inventario; ejecuta un escaneo primero.".to_string())?;
-        let device = mylan_db::device_repo::get_device_by_ip(&conn, &net_id, ip_addr)
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| format!("No se encontró un dispositivo con IP {ip}."))?;
-        device.id
+    let services = match scan_result {
+        Ok(services) => services,
+        Err(e) => {
+            // Cancelación/error: marca el scan Failed (best-effort) y propaga.
+            // `ScanStatus` no tiene variante Cancelled → Failed cubre ambos
+            // caminos. Los servicios parciales NO se persisten (consistencia con
+            // el path batch: un scan Failed no enriquece el inventario).
+            let now_err = mylan_db::util::now_rfc3339()
+                .unwrap_or_else(|_| started_at.clone());
+            if let Ok(conn) = state.db.lock() {
+                let _ = mylan_db::scan_repo::finish_scan(
+                    &conn,
+                    &scan_id,
+                    ScanStatus::Failed,
+                    &now_err,
+                    None,
+                );
+            }
+            let _ = app.emit(
+                "scan:finished",
+                &ScanFinished {
+                    scan_id: scan_id.clone(),
+                },
+            );
+            return Err(e.to_string());
+        }
     };
+
+    // Persistencia de servicios (sync) en el blocking pool sobre un clone.
     let now = mylan_db::util::now_rfc3339().map_err(|e| e.to_string())?;
     let conn = clone_for_blocking(&state)?;
     let services_to_persist: Vec<Service> = services.clone();
+    let now_for_persist = now.clone();
     tokio::task::spawn_blocking(move || {
         for svc in &services_to_persist {
             if let Err(e) =
-                mylan_db::service_repo::upsert_service(&conn, &fill_service(svc, &device_id, &now))
+                mylan_db::service_repo::upsert_service(
+                    &conn,
+                    &fill_service(svc, &device_id, &now_for_persist),
+                )
             {
                 eprintln!(
                     "[mylan-desktop] upsert_service falló (puerto {}): {e}",
@@ -588,6 +646,26 @@ pub async fn scan_ports_cmd(
     })
     .await
     .map_err(|e| format!("persist join: {e}"))?;
+
+    // Finaliza el scan como Completed con `open_ports` = servicios detectados
+    // (alimenta el historial de Scans — ADR-0001 #23).
+    let open_ports = u32::try_from(services.len()).unwrap_or(u32::MAX);
+    {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        let summary = ScanSummary {
+            hosts_alive: 0,
+            hosts_new: 0,
+            duration_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+            open_ports,
+        };
+        let _ = mylan_db::scan_repo::finish_scan(
+            &conn,
+            &scan_id,
+            ScanStatus::Completed,
+            &now,
+            Some(&summary),
+        );
+    }
 
     let _ = timeout; // ya aplicado por scan_target vía options.scan_timeout
     let _ = app.emit(

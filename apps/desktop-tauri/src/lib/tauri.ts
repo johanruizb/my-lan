@@ -108,14 +108,20 @@ export interface ScanOutcomeDto {
 }
 
 // Resumen de un escaneo para el historial (AC-17 IPC `list_scans`).
+// `scan_type` ("discovery" | "ports") distingue el camino; `target_ip` es la IP
+// sondeada en un scan de puertos (null en descubrimiento); `open_ports` es el
+// conteo de puertos abiertos (0 para descubrimiento). ADR-0001 #23.
 export interface ScanSummaryDto {
     id: string;
+    scan_type: string;
+    target_ip: string | null;
     profile: string;
     status: string;
     started_at: string;
     finished_at: string | null;
     hosts_alive: number;
     hosts_new: number;
+    open_ports: number;
 }
 
 export interface ServiceFiltersDto {

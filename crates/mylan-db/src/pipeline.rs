@@ -112,6 +112,7 @@ pub fn run_scan_pipeline_at_in_tx(
         &Scan {
             id: scan_id.clone(),
             network_id: network.id.clone(),
+            target_ip: None,
             scan_type: ScanKind::Discovery,
             profile,
             status: ScanStatus::Running,
@@ -144,6 +145,7 @@ pub fn run_scan_pipeline_at_in_tx(
         hosts_alive,
         hosts_new,
         duration_ms,
+        open_ports: 0,
     };
     scan_repo::finish_scan(tx, &scan_id, ScanStatus::Completed, now, Some(&summary))?;
 

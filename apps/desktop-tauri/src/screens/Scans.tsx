@@ -20,9 +20,10 @@ import {
 import { listScans, type ScanSummaryDto } from "@/lib/tauri";
 
 // Scans (ADR-0001 #23, #12): vista de solo-lectura — tabla cronológica de
-// escaneos pasados. El launch de escaneo de puertos vive en DeviceDetail (T15).
-// Click en fila → navigate a /devices (los escaneos listados son de
-// descubrimiento de red; el DTO no expone IP destino ni puertos abiertos).
+// escaneos pasados (descubrimiento de red y de puertos por IP). El launch de
+// escaneo de puertos vive en DeviceDetail (T15). Click en fila:
+// - scan de puertos con target_ip → /devices/:ip (detalle del dispositivo).
+// - scan de descubrimiento → /devices (inventario).
 
 function statusBadge(status: string) {
     const s = status.toLowerCase();
@@ -46,6 +47,20 @@ function statusBadge(status: string) {
             En curso
         </Badge>
     );
+}
+
+// Ruta de detalle asociada a un escaneo: puertos con target → /devices/:ip;
+// descubrimiento (o puertos sin target) → /devices.
+function scanTargetPath(s: ScanSummaryDto): string {
+    if (s.scan_type === "ports" && s.target_ip) {
+        return `/devices/${encodeURIComponent(s.target_ip)}`;
+    }
+    return "/devices";
+}
+
+// Etiqueta legible del tipo de escaneo para la columna "Tipo".
+function scanTypeLabel(scanType: string): string {
+    return scanType.toLowerCase() === "ports" ? "Puertos" : "Descubrimiento";
 }
 
 export function Scans() {
@@ -76,10 +91,14 @@ export function Scans() {
         navigate("/devices");
     }
 
-    function handleRowKeyDown(e: React.KeyboardEvent) {
+    function openScan(s: ScanSummaryDto) {
+        navigate(scanTargetPath(s));
+    }
+
+    function handleRowKeyDown(e: React.KeyboardEvent, s: ScanSummaryDto) {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            openDevices();
+            openScan(s);
         }
     }
 
@@ -179,7 +198,13 @@ export function Scans() {
                                                     scope="col"
                                                     className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
                                                 >
-                                                    Dispositivo
+                                                    Tipo
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
+                                                >
+                                                    Destino
                                                 </th>
                                                 <th
                                                     scope="col"
@@ -209,25 +234,50 @@ export function Scans() {
                                         </thead>
                                         <tbody className="[&_tr:last-child]:border-0">
                                             {history.map((s) => {
+                                                const isPorts =
+                                                    s.scan_type.toLowerCase() ===
+                                                    "ports";
                                                 const hasDiscovery =
-                                                    s.hosts_alive > 0 ||
-                                                    s.hosts_new > 0;
+                                                    !isPorts &&
+                                                    (s.hosts_alive > 0 ||
+                                                        s.hosts_new > 0);
+                                                const targetLabel =
+                                                    isPorts && s.target_ip
+                                                        ? s.target_ip
+                                                        : "Red local";
                                                 return (
                                                     <tr
                                                         key={s.id}
                                                         className="cursor-pointer border-b transition-colors hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                                                        onClick={openDevices}
+                                                        onClick={() =>
+                                                            openScan(s)
+                                                        }
                                                         tabIndex={0}
-                                                        onKeyDown={
-                                                            handleRowKeyDown
+                                                        onKeyDown={(e) =>
+                                                            handleRowKeyDown(
+                                                                e,
+                                                                s,
+                                                            )
                                                         }
                                                         role="button"
-                                                        aria-label={`Abrir dispositivos del escaneo ${s.profile} del ${s.started_at}`}
+                                                        aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
                                                     >
+                                                        <td className="p-3 align-middle">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="capitalize"
+                                                            >
+                                                                {scanTypeLabel(
+                                                                    s.scan_type,
+                                                                )}
+                                                            </Badge>
+                                                        </td>
                                                         <td className="p-3 align-middle">
                                                             <div className="flex flex-col gap-0.5">
                                                                 <span className="font-medium text-primary">
-                                                                    Red local
+                                                                    {
+                                                                        targetLabel
+                                                                    }
                                                                 </span>
                                                                 {hasDiscovery && (
                                                                     <span className="text-xs text-muted-foreground">
@@ -259,7 +309,9 @@ export function Scans() {
                                                             </Badge>
                                                         </td>
                                                         <td className="p-3 align-middle text-muted-foreground">
-                                                            —
+                                                            {isPorts
+                                                                ? s.open_ports
+                                                                : "—"}
                                                         </td>
                                                         <td className="p-3 align-middle">
                                                             {statusBadge(

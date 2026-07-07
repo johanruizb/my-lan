@@ -15,6 +15,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (2, MIGRATION_V2),
     (3, MIGRATION_V3),
     (4, MIGRATION_V4),
+    (5, MIGRATION_V5),
 ];
 
 /// Esquema inicial completo del plan §8.
@@ -174,6 +175,15 @@ SET is_online = (
   )
 );
 ";
+
+/// v5 — IP destino en escaneos de puertos (historial de Scans, ADR-0001 #23).
+///
+/// `target_ip` persiste la IP sondeada en un escaneo de puertos (`scan_type =
+/// 'ports'`); es `NULL` para escaneos de descubrimiento (escaneo de red completa,
+/// sin target único). Aditiva y nullable: las filas existentes (todos
+/// descubrimiento hasta ahora) quedan `NULL`, lo que el mapeo trata como
+/// `Option::<String>::None`. Sólo corre si `user_version < 5` (idempotente).
+const MIGRATION_V5: &str = "ALTER TABLE scans ADD COLUMN target_ip TEXT;";
 
 /// Lee el `user_version` actual de la base de datos.
 fn current_version(conn: &Connection) -> DbResult<u32> {
