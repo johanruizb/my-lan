@@ -631,59 +631,66 @@ export function DeviceDetail() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-4 flex flex-col gap-4">
-                                <div className="flex flex-wrap items-end justify-between gap-4">
-                                    <FormField
-                                        label="Perfil de escaneo"
+                                <div className="flex flex-col gap-1.5">
+                                    <label
                                         htmlFor="detail-profile"
-                                        helper="Intensidad del barrido"
-                                        className="flex-1 min-w-[200px]"
+                                        className="text-sm font-medium leading-none text-foreground"
                                     >
+                                        Perfil de escaneo
+                                    </label>
+                                    <div className="flex flex-wrap items-end gap-4">
                                         <ProfileSelect
                                             value={profile}
                                             onChange={setProfile}
-                                            className="w-full bg-background/50 border-border/30"
+                                            className="flex-1 min-w-[200px] w-full bg-background/50 border-border/30"
                                             id="detail-profile"
                                             disabled={scanning}
                                         />
-                                    </FormField>
-                                    <div className="flex gap-2 shrink-0">
-                                        <Button
-                                            onClick={handleScanPorts}
-                                            disabled={scanning}
-                                            className="gap-1.5"
-                                        >
-                                            {scanning ? (
-                                                <>
-                                                    <Loader2
-                                                        className="h-4 w-4 animate-spin"
-                                                        aria-hidden
-                                                    />
-                                                    Escaneando…
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Play
+                                        <div className="flex gap-2 shrink-0">
+                                            <Button
+                                                onClick={handleScanPorts}
+                                                disabled={scanning}
+                                                className="gap-1.5"
+                                            >
+                                                {scanning ? (
+                                                    <>
+                                                        <Loader2
+                                                            className="h-4 w-4 animate-spin"
+                                                            aria-hidden
+                                                        />
+                                                        Escaneando…
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Play
+                                                            className="h-4 w-4"
+                                                            aria-hidden
+                                                        />
+                                                        Escanear puertos
+                                                    </>
+                                                )}
+                                            </Button>
+                                            {scanning && (
+                                                <Button
+                                                    variant="destructive"
+                                                    onClick={handleCancel}
+                                                    className="gap-1.5"
+                                                >
+                                                    <Square
                                                         className="h-4 w-4"
                                                         aria-hidden
                                                     />
-                                                    Escanear puertos
-                                                </>
+                                                    Cancelar
+                                                </Button>
                                             )}
-                                        </Button>
-                                        {scanning && (
-                                            <Button
-                                                variant="destructive"
-                                                onClick={handleCancel}
-                                                className="gap-1.5"
-                                            >
-                                                <Square
-                                                    className="h-4 w-4"
-                                                    aria-hidden
-                                                />
-                                                Cancelar
-                                            </Button>
-                                        )}
+                                        </div>
                                     </div>
+                                    <p
+                                        id="detail-profile-helper"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        Intensidad del barrido
+                                    </p>
                                 </div>
 
                                 {scanning && (
