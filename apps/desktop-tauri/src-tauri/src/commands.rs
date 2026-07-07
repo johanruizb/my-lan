@@ -603,8 +603,7 @@ pub async fn scan_ports_cmd(
             // `ScanStatus` no tiene variante Cancelled → Failed cubre ambos
             // caminos. Los servicios parciales NO se persisten (consistencia con
             // el path batch: un scan Failed no enriquece el inventario).
-            let now_err = mylan_db::util::now_rfc3339()
-                .unwrap_or_else(|_| started_at.clone());
+            let now_err = mylan_db::util::now_rfc3339().unwrap_or_else(|_| started_at.clone());
             if let Ok(conn) = state.db.lock() {
                 let _ = mylan_db::scan_repo::finish_scan(
                     &conn,
@@ -631,12 +630,10 @@ pub async fn scan_ports_cmd(
     let now_for_persist = now.clone();
     tokio::task::spawn_blocking(move || {
         for svc in &services_to_persist {
-            if let Err(e) =
-                mylan_db::service_repo::upsert_service(
-                    &conn,
-                    &fill_service(svc, &device_id, &now_for_persist),
-                )
-            {
+            if let Err(e) = mylan_db::service_repo::upsert_service(
+                &conn,
+                &fill_service(svc, &device_id, &now_for_persist),
+            ) {
                 eprintln!(
                     "[mylan-desktop] upsert_service falló (puerto {}): {e}",
                     svc.port
@@ -999,11 +996,7 @@ pub async fn export_services_cmd(
 /// notificaciones no está disponible, se devuelve `Err` y el frontend hace
 /// fallback al toast existente (sin error visible al usuario).
 #[tauri::command]
-pub fn notify_scan_finished_cmd(
-    app: AppHandle,
-    title: String,
-    body: String,
-) -> Result<(), String> {
+pub fn notify_scan_finished_cmd(app: AppHandle, title: String, body: String) -> Result<(), String> {
     app.notification()
         .builder()
         .title(&title)
