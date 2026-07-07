@@ -5,13 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import {
-    deviceIcon,
-    deviceLabel,
-    isKnownDeviceType,
-} from "@/components/device-icons";
+import { deviceIcon, deviceLabel } from "@/components/device-icons";
 import { useToast } from "@/components/ui/toast";
 import { RelativeTime } from "@/components/relative-time";
 import {
@@ -23,10 +18,9 @@ import {
     Network as NetworkIcon,
     ShieldAlert,
     Play,
-    X,
-    ChevronDown,
     ChevronRight,
     RefreshCw,
+    ChevronDown,
 } from "lucide-react";
 import {
     Table,
@@ -42,14 +36,17 @@ import { MaskedValue } from "@/components/masked-value";
 import { useCensorship } from "@/components/censorship-provider";
 import { maskValue } from "@/lib/censor";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { OnlineBadge } from "@/components/online-badge";
 import { TrustBadge } from "@/components/trust-badge";
-import { deriveTrustState } from "@/lib/trust-state";
+import { ConfidenceBadge } from "@/components/confidence-badge";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
     Select,
     SelectContent,
@@ -65,22 +62,22 @@ type View = "cards" | "table";
 export function Devices() {
     const { toast } = useToast();
     const navigate = useNavigate();
-    const { scanning, progress, devicesFound, startScan, cancel } = useScan();
+    const { scanning, progress, devicesFound, startScan } = useScan();
     const { censorshipEnabled } = useCensorship();
     const [devices, setDevices] = useState<Device[]>([]);
     const [query, setQuery] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<View>("cards");
-    const [openFilters, setOpenFilters] = useState(false);
-    // Filtros de la lista (AC-14): tipo, estado online y confianza derivada.
-    // Por defecto "all" → se ven todos (offline incluidos, AC-15).
+    // Filtros de la lista (AC-14): tipo, estado online y confiable (manual
+    // binario via is_trusted, ADR-0006). Por defecto "all" → se ven todos
+    // (offline incluidos, AC-15).
     const [filterType, setFilterType] = useState<string>("all");
     const [filterOnline, setFilterOnline] = useState<
         "all" | "online" | "offline"
     >("all");
     const [filterTrust, setFilterTrust] = useState<
-        "all" | "trusted" | "unknown"
+        "all" | "trusted" | "untrusted"
     >("all");
 
     async function refresh() {
@@ -140,10 +137,9 @@ export function Devices() {
             // AC-15: "En línea" es opt-in; sin filtro activo se ven todos.
             if (filterOnline === "online" && !d.is_online) return false;
             if (filterOnline === "offline" && d.is_online) return false;
-            if (filterTrust === "trusted" && deriveTrustState(d) !== "trusted")
-                return false;
-            if (filterTrust === "unknown" && deriveTrustState(d) !== "unknown")
-                return false;
+            // Confiable: etiqueta manual binaria (is_trusted, ADR-0006).
+            if (filterTrust === "trusted" && !d.is_trusted) return false;
+            if (filterTrust === "untrusted" && d.is_trusted) return false;
             return true;
         });
     }, [merged, query, filterType, filterOnline, filterTrust]);
@@ -211,147 +207,139 @@ export function Devices() {
                                 Tabla
                             </Button>
                         </div>
-                        {/* Botón único "Escanear" (perfil por defecto de Ajustes,
-                            sin selector) y "Cancelar" mientras corre (AC-1/AC-2/AC-8). */}
-                        {scanning ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={cancel}
-                                className="gap-1.5"
-                            >
-                                <X className="h-3.5 w-3.5" aria-hidden />
-                                Cancelar
-                            </Button>
-                        ) : (
-                            <Button
-                                size="sm"
-                                onClick={() => startScan()}
-                                className="gap-1.5"
-                            >
-                                <Play className="h-3.5 w-3.5" aria-hidden />
-                                Escanear
-                            </Button>
-                        )}
+                        {/* #15: El descubrimiento se lanza desde el Dashboard; aquí
+                            solo Refrescar la lista. Export agrupado en un dropdown
+                            (#27) con formato CSV/JSON. */}
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleExport("csv")}
+                            onClick={refresh}
                             className="gap-1.5"
                         >
-                            <Download className="h-3.5 w-3.5" aria-hidden />
-                            CSV
+                            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                            Refrescar
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleExport("json")}
-                            className="gap-1.5"
-                        >
-                            <Download className="h-3.5 w-3.5" aria-hidden />
-                            JSON
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5"
+                                >
+                                    <Download
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                    Exportar
+                                    <ChevronDown
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>
+                                    Formato de exportación
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onSelect={() => handleExport("csv")}
+                                >
+                                    CSV
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={() => handleExport("json")}
+                                >
+                                    JSON
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Collapsible
-                        open={openFilters}
-                        onOpenChange={setOpenFilters}
-                        className="mb-4"
-                    >
-                        <CollapsibleTrigger className="flex w-fit items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors py-1 px-2.5 rounded-md hover:bg-muted/50 border border-border/30">
-                            <Search className="h-3.5 w-3.5" aria-hidden />
-                            <span>Buscar y filtrar</span>
-                            <ChevronDown
-                                className={cn(
-                                    "h-3.5 w-3.5 transition-transform duration-300",
-                                    openFilters && "transform rotate-180",
-                                )}
+                    {/* #26: Filtros siempre visibles (sin Collapsible). Búsqueda
+                        por texto + filtros por tipo, estado y confiable. */}
+                    <div className="mb-4">
+                        <div className="relative max-w-md">
+                            <Search
+                                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                                 aria-hidden
                             />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <div className="relative mt-3 max-w-md">
-                                <Search
-                                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                                    aria-hidden
-                                />
-                                <Input
-                                    placeholder="Buscar por IP, MAC, hostname, vendor…"
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    aria-label="Buscar dispositivos"
-                                    className="pl-9"
-                                />
-                            </div>
-                            {/* Filtros por tipo, estado y confianza (AC-14). */}
-                            <div className="mt-3 flex flex-wrap items-end gap-3">
-                                <div className="flex flex-col gap-1">
-                                    <span
-                                        id="filter-type-label"
-                                        className="text-xs text-muted-foreground"
+                            <Input
+                                placeholder="Buscar por IP, MAC, hostname, vendor…"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                aria-label="Buscar dispositivos"
+                                className="pl-9"
+                            />
+                        </div>
+                        {/* Filtros por tipo, estado y confiable (AC-14). */}
+                        <div className="mt-3 flex flex-wrap items-end gap-3">
+                            <div className="flex flex-col gap-1">
+                                <span
+                                    id="filter-type-label"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    Tipo
+                                </span>
+                                <Select
+                                    value={filterType}
+                                    onValueChange={setFilterType}
+                                >
+                                    <SelectTrigger
+                                        className="w-40"
+                                        aria-label="Filtrar por tipo"
                                     >
-                                        Tipo
-                                    </span>
-                                    <Select
-                                        value={filterType}
-                                        onValueChange={setFilterType}
-                                    >
-                                        <SelectTrigger
-                                            className="w-40"
-                                            aria-label="Filtrar por tipo"
-                                        >
-                                            <SelectValue placeholder="Todos" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">
-                                                Todos
+                                        <SelectValue placeholder="Todos" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            Todos
+                                        </SelectItem>
+                                        {DEVICE_TYPE_OPTIONS.map((t) => (
+                                            <SelectItem key={t} value={t}>
+                                                {deviceLabel(t)}
                                             </SelectItem>
-                                            {DEVICE_TYPE_OPTIONS.map((t) => (
-                                                <SelectItem key={t} value={t}>
-                                                    {deviceLabel(t)}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <FilterToggle
-                                    label="Estado"
-                                    ariaLabel="Filtrar por estado"
-                                    options={[
-                                        { value: "all", label: "Todos" },
-                                        {
-                                            value: "online",
-                                            label: "En línea",
-                                        },
-                                        {
-                                            value: "offline",
-                                            label: "Fuera de línea",
-                                        },
-                                    ]}
-                                    value={filterOnline}
-                                    onChange={setFilterOnline}
-                                />
-                                <FilterToggle
-                                    label="Confianza"
-                                    ariaLabel="Filtrar por confianza"
-                                    options={[
-                                        { value: "all", label: "Todos" },
-                                        {
-                                            value: "trusted",
-                                            label: "Confiables",
-                                        },
-                                        {
-                                            value: "unknown",
-                                            label: "Desconocidos",
-                                        },
-                                    ]}
-                                    value={filterTrust}
-                                    onChange={setFilterTrust}
-                                />
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+                            <FilterToggle
+                                label="Estado"
+                                ariaLabel="Filtrar por estado"
+                                options={[
+                                    { value: "all", label: "Todos" },
+                                    {
+                                        value: "online",
+                                        label: "En línea",
+                                    },
+                                    {
+                                        value: "offline",
+                                        label: "Fuera de línea",
+                                    },
+                                ]}
+                                value={filterOnline}
+                                onChange={setFilterOnline}
+                            />
+                            <FilterToggle
+                                label="Confiable"
+                                ariaLabel="Filtrar por confiable"
+                                options={[
+                                    { value: "all", label: "Todos" },
+                                    {
+                                        value: "trusted",
+                                        label: "Confiables",
+                                    },
+                                    {
+                                        value: "untrusted",
+                                        label: "No confiables",
+                                    },
+                                ]}
+                                value={filterTrust}
+                                onChange={setFilterTrust}
+                            />
+                        </div>
+                    </div>
 
                     {/* Barra de progreso del barrido (AC-3/AC-4): % cuando se
                         conoce el total, indeterminada si no. */}
@@ -516,23 +504,9 @@ export function Devices() {
                                                     </div>
                                                 </div>
 
+                                                {/* #14: Card con 2 badges (Online + Confiable); el ícono grande
+                                                    ya codifica el tipo, se quitó el Badge de texto de tipo. */}
                                                 <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 pt-3">
-                                                    {isKnownDeviceType(
-                                                        d.device_type,
-                                                    ) && (
-                                                        <Badge
-                                                            variant="secondary"
-                                                            className="gap-1 h-5 px-2 text-[10px] font-semibold"
-                                                        >
-                                                            <Icon
-                                                                className="h-3 w-3"
-                                                                aria-hidden
-                                                            />
-                                                            {deviceLabel(
-                                                                d.device_type,
-                                                            )}
-                                                        </Badge>
-                                                    )}
                                                     <OnlineBadge
                                                         isOnline={d.is_online}
                                                     />
@@ -592,6 +566,25 @@ export function Devices() {
                                                 </span>
                                             </TableHead>
                                             <TableHead>IP</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                            <TableHead>
+                                                <span className="inline-flex items-center gap-1">
+                                                    Certeza
+                                                    <InfoTooltip
+                                                        term="Certeza"
+                                                        glossaryKey="certeza"
+                                                    />
+                                                </span>
+                                            </TableHead>
+                                            <TableHead>
+                                                <span className="inline-flex items-center gap-1">
+                                                    Confiable
+                                                    <InfoTooltip
+                                                        term="Confiable"
+                                                        glossaryKey="confiable"
+                                                    />
+                                                </span>
+                                            </TableHead>
                                             <TableHead>
                                                 <span className="inline-flex items-center gap-1">
                                                     Fabricante
@@ -601,17 +594,7 @@ export function Devices() {
                                                     />
                                                 </span>
                                             </TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead>
-                                                <span className="inline-flex items-center gap-1">
-                                                    Confianza
-                                                    <InfoTooltip
-                                                        term="Confianza"
-                                                        glossaryKey="confianza"
-                                                    />
-                                                </span>
-                                            </TableHead>
-                                            <TableHead>Último visto</TableHead>
+                                            <TableHead>Visto</TableHead>
                                             <TableHead className="w-[50px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -678,9 +661,6 @@ export function Devices() {
                                                             }
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-xs">
-                                                        {d.vendor ?? "—"}
-                                                    </TableCell>
                                                     <TableCell>
                                                         <OnlineBadge
                                                             isOnline={
@@ -689,9 +669,17 @@ export function Devices() {
                                                         />
                                                     </TableCell>
                                                     <TableCell>
+                                                        <ConfidenceBadge
+                                                            value={d.confidence}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <TrustBadge
                                                             device={d}
                                                         />
+                                                    </TableCell>
+                                                    <TableCell className="text-xs">
+                                                        {d.vendor ?? "—"}
                                                     </TableCell>
                                                     <TableCell className="text-xs text-muted-foreground">
                                                         <RelativeTime

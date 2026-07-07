@@ -17,7 +17,7 @@ export function CardHeader({
     return (
         <div
             className={cn(
-                "p-6",
+                "p-3",
                 variant === "toolbar"
                     ? "flex flex-row items-center justify-between gap-4"
                     : "flex flex-col gap-1",

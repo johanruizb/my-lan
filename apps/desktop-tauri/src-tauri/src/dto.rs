@@ -154,15 +154,23 @@ pub struct ScanDevice {
 /// Resumen de un escaneo para el historial de la pantalla Scans (AC-17 IPC
 /// `list_scans`). Read-only: espejo de `mylan_db::scan_repo::ScanRow` con
 /// nombres snake_case (convención IPC).
+///
+/// `scan_type` (`"discovery"` | `"ports"`) distingue ambos caminos para que la
+/// UI pueda renderizar el target y el contador de puertos; `target_ip` es la IP
+/// sondeada en un scan de puertos (`None` en descubrimiento); `open_ports` es el
+/// conteo de puertos abiertos persistido en `summary_json` (0 para descubrimiento).
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ScanSummaryDto {
     pub id: String,
+    pub scan_type: String,
+    pub target_ip: Option<String>,
     pub profile: String,
     pub status: String,
     pub started_at: String,
     pub finished_at: Option<String>,
     pub hosts_alive: u32,
     pub hosts_new: u32,
+    pub open_ports: u32,
 }
 
 /// Valor por defecto para `Settings::censorship_enabled` en deserialización:

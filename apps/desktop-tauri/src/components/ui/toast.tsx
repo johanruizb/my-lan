@@ -25,8 +25,10 @@ export const ToastViewport = React.forwardRef<
 ));
 ToastViewport.displayName = "ToastViewport";
 
-type ToastVariant = "default" | "success" | "error";
+type ToastVariant = "default" | "success" | "warning" | "error";
 
+// #39: variantes migran de bg-green-50/bg-red-50 hardcoded a tokens
+// semánticos --success/--warning/--destructive con sus foregrounds.
 const toastVariants = cva(
     "group pointer-events-auto relative flex w-full items-start justify-between gap-3 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full",
     {
@@ -34,13 +36,23 @@ const toastVariants = cva(
             variant: {
                 default: "border-border bg-card text-card-foreground",
                 success:
-                    "border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100",
-                error: "border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100",
+                    "border-transparent bg-success text-success-foreground",
+                warning:
+                    "border-transparent bg-warning text-warning-foreground",
+                error: "border-transparent bg-destructive text-destructive-foreground",
             },
         },
         defaultVariants: { variant: "default" },
     },
 );
+
+// #42: duración por variante (ms). success breve, error persistente.
+const toastDurations: Record<ToastVariant, number> = {
+    default: 4000,
+    success: 3000,
+    warning: 4000,
+    error: 6000,
+};
 
 export interface ToastProps
     extends
@@ -100,6 +112,7 @@ export function ToastProviderApp({ children }: { children: React.ReactNode }) {
                     <Toast
                         key={t.id}
                         variant={t.variant}
+                        duration={toastDurations[t.variant]}
                         onOpenChange={(open) => {
                             if (!open)
                                 setItems((prev) =>

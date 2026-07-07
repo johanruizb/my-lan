@@ -8,8 +8,9 @@
         --foreground: 222.2 84% 4.9%;
         --card: 0 0% 100%;
         --card-foreground: 222.2 84% 4.9%;
-        --primary: 221.2 83.2% 53.3%;
-        --primary-foreground: 210 40% 98%;
+        /* #2: Primary cyan único en ambos modos. Light más oscuro para contraste con texto blanco. */
+        --primary: 192 88% 36%;
+        --primary-foreground: 0 0% 100%;
         --secondary: 210 40% 96.1%;
         --secondary-foreground: 222.2 47.4% 11.2%;
         --muted: 210 40% 96.1%;
@@ -18,12 +19,18 @@
         --accent-foreground: 222.2 47.4% 11.2%;
         --destructive: 0 72.2% 50.6%;
         --destructive-foreground: 210 40% 98%;
+        /* #39: Tokens semánticos success/warning junto a --destructive. */
+        --success: 142 71% 45%;
+        --success-foreground: 0 0% 100%;
+        --warning: 38 92% 50%;
+        --warning-foreground: 28 80% 15%;
         --popover: 0 0% 100%;
         --popover-foreground: 222.2 84% 4.9%;
         --border: 214.3 31.8% 91.4%;
         --input: 214.3 31.8% 91.4%;
-        --ring: 221.2 83.2% 53.3%;
-        --radius: 0.75rem;
+        --ring: 192 88% 36%;
+        /* #10: Radius 0.5rem (era 0.75rem). */
+        --radius: 0.5rem;
     }
 
     .dark {
@@ -31,6 +38,7 @@
         --foreground: 210 40% 98%;
         --card: 222 47% 9%;
         --card-foreground: 210 40% 98%;
+        /* #2: Primary cyan único en ambos modos. */
         --primary: 191 91% 48%;
         --primary-foreground: 222.2 47.4% 11.2%;
         --secondary: 217.2 32.6% 14%;
@@ -41,6 +49,11 @@
         --accent-foreground: 210 40% 98%;
         --destructive: 0 62.8% 45.4%;
         --destructive-foreground: 210 40% 98%;
+        /* #39: Tokens semánticos success/warning junto a --destructive. */
+        --success: 142 69% 50%;
+        --success-foreground: 0 0% 100%;
+        --warning: 38 92% 50%;
+        --warning-foreground: 28 80% 15%;
         --popover: 222 47% 9%;
         --popover-foreground: 210 40% 98%;
         --border: 217.2 32.6% 16%;
@@ -62,7 +75,8 @@
         @apply bg-background text-foreground;
         -webkit-font-smoothing: antialiased;
         overflow: hidden;
-        font-family: "Outfit", "Inter", system-ui, sans-serif;
+        /* #7: font-family honesto, sin fuentes no cargadas. */
+        font-family: system-ui, sans-serif;
     }
     /* focus-visible visible en todo elemento focusable (AC-14). */
     :focus-visible {
@@ -71,37 +85,7 @@
     }
 }
 
-/* Glassmorphism & Cyber Glow utilities */
-.glass-panel {
-    background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-.dark .glass-panel {
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.hover-glow {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-glow:hover {
-    transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
-    border-color: rgba(56, 189, 248, 0.3);
-}
-
-.dark .hover-glow:hover {
-    box-shadow: 0 10px 30px -15px rgba(56, 189, 248, 0.15);
-    border-color: rgba(56, 189, 248, 0.2);
-}
-
-/* Sonar/Radar scan animation */
+/* Sonar/Radar scan animation: única señal visual de marca (scan/red activa). */
 @keyframes radar-pulse {
     0% {
         transform: scale(0.95);
@@ -138,5 +122,16 @@
     }
     100% {
         transform: translateX(250%);
+    }
+}
+
+/* #6: Respeta prefers-reduced-motion. Desactiva radar, ping e indeterminate. */
+@media (prefers-reduced-motion: reduce) {
+    .animate-radar-ring-1,
+    .animate-radar-ring-2,
+    .animate-radar-ring-3,
+    .animate-ping,
+    .progress-indeterminate {
+        animation: none;
     }
 }

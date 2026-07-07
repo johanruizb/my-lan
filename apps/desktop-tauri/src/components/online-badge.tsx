@@ -16,7 +16,8 @@ export function OnlineBadge({ isOnline, className }: OnlineBadgeProps) {
     const online = isOnline ?? false;
     const label = online ? "En línea" : "Fuera de línea";
     const variant = online ? "success" : "outline";
-    const dotClass = online ? "bg-green-500" : "bg-muted-foreground/50";
+    // #35: dot verde usa el token semántico `success` (no green-500 hardcodeado).
+    const dotClass = online ? "bg-success" : "bg-muted-foreground/50";
     return (
         <Badge
             variant={variant}

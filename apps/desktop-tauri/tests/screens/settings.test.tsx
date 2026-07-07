@@ -55,8 +55,10 @@ describe("Settings screen (AC-22)", () => {
         expect(
             screen.getByLabelText("Selector de tema"),
         ).toBeInTheDocument();
+        // Censura ahora es un switch accesible (#33) con nombre vía
+        // aria-labelledby sobre el span "Censura".
         expect(
-            screen.getByLabelText("Selector de censura"),
+            screen.getByRole("switch", { name: /censura/i }),
         ).toBeInTheDocument();
     });
 

@@ -108,14 +108,20 @@ export interface ScanOutcomeDto {
 }
 
 // Resumen de un escaneo para el historial (AC-17 IPC `list_scans`).
+// `scan_type` ("discovery" | "ports") distingue el camino; `target_ip` es la IP
+// sondeada en un scan de puertos (null en descubrimiento); `open_ports` es el
+// conteo de puertos abiertos (0 para descubrimiento). ADR-0001 #23.
 export interface ScanSummaryDto {
     id: string;
+    scan_type: string;
+    target_ip: string | null;
     profile: string;
     status: string;
     started_at: string;
     finished_at: string | null;
     hosts_alive: number;
     hosts_new: number;
+    open_ports: number;
 }
 
 export interface ServiceFiltersDto {
@@ -208,6 +214,14 @@ export const scanPorts = (ip: string, profile: string, scanId: string) =>
 
 export const cancelScan = (scanId: string) =>
     invoke<boolean>("cancel_scan_cmd", { scanId });
+
+// Notificación OS nativa al terminar un escaneo de puertos cuando la ventana
+// NO está enfocada (AC-4/#24). El frontend comprueba `document.hidden` antes
+// de invocar; el comando Rust emite la notificación vía
+// `tauri-plugin-notification`. Errores silenciosos: el caller hace fallback al
+// toast existente sin mostrar error al usuario.
+export const notifyScanFinished = (title: string, body: string) =>
+    invoke<void>("notify_scan_finished_cmd", { title, body });
 
 export const listServices = (filters: ServiceFiltersDto = {}) =>
     invoke<ServiceExportRow[]>("list_services_cmd", { filters });

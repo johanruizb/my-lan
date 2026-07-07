@@ -158,6 +158,9 @@ async fn scans(State(state): State<AppState>) -> Result<Json<Vec<Value>>, ApiErr
                 "finished_at": r.finished_at,
                 "hosts_alive": r.hosts_alive,
                 "hosts_new": r.hosts_new,
+                "scan_type": r.scan_type,
+                "target_ip": r.target_ip,
+                "open_ports": r.open_ports,
             })
         })
         .collect::<Vec<_>>();

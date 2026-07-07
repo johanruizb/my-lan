@@ -7,13 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
-import {
-    deviceIcon,
-    deviceLabel,
-    isKnownDeviceType,
-} from "@/components/device-icons";
+import { deviceIcon } from "@/components/device-icons";
 import { OnlineBadge } from "@/components/online-badge";
 import { TrustBadge } from "@/components/trust-badge";
+import { Switch } from "@/components/ui/switch";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
     ArrowLeft,
     Loader2,
@@ -29,6 +34,8 @@ import {
     ShieldAlert,
     Cpu,
     Settings,
+    ChevronDown,
+    Pencil,
 } from "lucide-react";
 import {
     Table,
@@ -42,6 +49,7 @@ import {
     cancelScan,
     exportServices,
     getDevice,
+    notifyScanFinished,
     onScanCancelled,
     onScanFinished,
     onScanHeartbeat,
@@ -91,7 +99,10 @@ export function DeviceDetail() {
     const [scanTimeout, setScanTimeout] = useState(0);
     const [scanId, setScanId] = useState<string | null>(null);
 
-    // Estado local de edición (AC-8, AC-9).
+    // Estado local de edición (#19 edición híbrida): is_trusted se persiste al
+    // toggle (switch siempre visible, cambio inmediato); display_name + notes
+    // usan modo edición (lectura por defecto, "Editar" revela inputs +
+    // Guardar/Cancelar). Sin botón "Guardar cambios" global.
     const [displayName, setDisplayName] = useState(
         detail?.device.display_name ?? "",
     );
@@ -100,14 +111,12 @@ export function DeviceDetail() {
     );
     const [notes, setNotes] = useState(detail?.device.notes ?? "");
     const [saving, setSaving] = useState(false);
+    const [editing, setEditing] = useState(false);
 
-    // Preview del estado de confianza derivado (TrustBadge).
+    // TrustBadge solo consume is_trusted (ADR-0006 / T6: manual binario).
     const trustBadgeDevice = useMemo(
-        () => ({
-            is_trusted: isTrusted,
-            confidence: detail?.device.confidence ?? 0,
-        }),
-        [isTrusted, detail?.device.confidence],
+        () => ({ is_trusted: isTrusted }),
+        [isTrusted],
     );
 
     const scanRef = useRef<HTMLDivElement>(null);
@@ -168,6 +177,20 @@ export function DeviceDetail() {
                 setScanning(false);
                 setScanId(null);
                 toast("Escaneo de puertos completado.", "success");
+                // Notificación OS nativa si la ventana no está enfocada
+                // (AC-4/#24). Fallback silencioso al toast si falla (permiso
+                // denegado o daemon no disponible): el toast ya avisó.
+                if (document.hidden) {
+                    const dev = detail?.device;
+                    const label =
+                        dev?.display_name ??
+                        dev?.hostname ??
+                        decodeURIComponent(ip);
+                    notifyScanFinished(
+                        "MyLAN",
+                        `Escaneo de puertos completado en ${label}.`,
+                    ).catch(() => {});
+                }
                 getDevice(decodeURIComponent(ip))
                     .then(setDetail)
                     .catch(() => {});
@@ -200,6 +223,11 @@ export function DeviceDetail() {
         detail?.device.is_trusted,
         detail?.device.notes,
     ]);
+
+    // Al navegar a otro dispositivo (cambia id), salir del modo edición.
+    useEffect(() => {
+        setEditing(false);
+    }, [detail?.device.id]);
 
     async function handleScanPorts() {
         const id = newScanId();
@@ -235,20 +263,42 @@ export function DeviceDetail() {
         }
     }
 
+    // #19: is_trusted persiste al toggle (cambio inmediato, sin Guardar).
+    async function handleTrustToggle(nextTrusted: boolean) {
+        if (!detail) return;
+        const prev = isTrusted;
+        setIsTrusted(nextTrusted);
+        try {
+            await updateDevice(detail.device.id, { isTrusted: nextTrusted });
+            toast(
+                nextTrusted
+                    ? "Dispositivo marcado como confiable."
+                    : "Dispositivo desmarcado.",
+                "success",
+            );
+            getDevice(decodeURIComponent(ip))
+                .then(setDetail)
+                .catch(() => {});
+        } catch {
+            setIsTrusted(prev);
+            toast("No se pudo actualizar el dispositivo.", "error");
+        }
+    }
+
+    // #19: display_name + notes en modo edición (Guardar persiste ambos).
     async function handleSaveEdit() {
         if (!detail) return;
         const d = detail.device;
         const dirtyName = displayName !== (d.display_name ?? "");
-        const dirtyTrusted = isTrusted !== (d.is_trusted ?? false);
         const dirtyNotes = notes !== (d.notes ?? "");
         setSaving(true);
         try {
             await updateDevice(d.id, {
                 displayName: dirtyName ? displayName.trim() : undefined,
-                isTrusted: dirtyTrusted ? isTrusted : undefined,
                 notes: dirtyNotes ? notes.trim() : undefined,
             });
             toast("Dispositivo actualizado.", "success");
+            setEditing(false);
             try {
                 await getDevice(decodeURIComponent(ip)).then(setDetail);
             } catch {
@@ -259,6 +309,14 @@ export function DeviceDetail() {
         } finally {
             setSaving(false);
         }
+    }
+
+    function handleCancelEdit() {
+        if (!detail) return;
+        const dev = detail.device;
+        setDisplayName(dev.display_name ?? "");
+        setNotes(dev.notes ?? "");
+        setEditing(false);
     }
 
     const pct = progress?.percent_done ?? 0;
@@ -311,7 +369,8 @@ export function DeviceDetail() {
                 </Button>
 
                 {/* Cabecera Principal del Dispositivo */}
-                <div className="glass-panel p-6 rounded-xl border border-border/40 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                {/* #18: header sin glass-panel, bg-card sólido. */}
+                <div className="bg-card p-6 rounded-xl border border-border flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 min-w-0">
                         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
                             <Icon className="h-8 w-8" aria-hidden />
@@ -363,15 +422,9 @@ export function DeviceDetail() {
                             </div>
                         </div>
                     </div>
+                    {/* #18/#14: 2 badges (Online + Trust), sin Badge tipo texto
+                        (ícono 64px codifica tipo). */}
                     <div className="flex flex-wrap items-center gap-2">
-                        {isKnownDeviceType(d.device_type) && (
-                            <Badge
-                                variant="secondary"
-                                className="px-2.5 py-1 text-xs font-semibold"
-                            >
-                                {deviceLabel(d.device_type)}
-                            </Badge>
-                        )}
                         <OnlineBadge
                             isOnline={d.is_online}
                             className="px-2.5 py-1 text-xs"
@@ -389,8 +442,8 @@ export function DeviceDetail() {
                 {/* Columna Izquierda: Información y Gestión */}
                 <div className="flex flex-col gap-6 lg:col-span-1">
                     {/* Tarjeta: Detalles Técnicos */}
-                    <Card className="glass-panel border-border/40">
-                        <CardHeader className="pb-3 border-b border-border/10">
+                    <Card>
+                        <CardHeader className="p-3 border-b border-border/10">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                                 <Info
                                     className="h-4 w-4 text-primary"
@@ -406,13 +459,6 @@ export function DeviceDetail() {
                                 field="hostname"
                                 glossaryKey="hostname"
                             />
-                            {d.display_name && (
-                                <Field
-                                    label="Nombre personalizado"
-                                    value={d.display_name}
-                                    field="display_name"
-                                />
-                            )}
                             <Field
                                 label="Dirección MAC"
                                 value={d.primary_mac ?? "—"}
@@ -439,32 +485,28 @@ export function DeviceDetail() {
                                 title={formatRelative(d.last_seen_at)}
                             />
 
-                            {/* Confianza Score */}
+                            {/* #31: Certeza — ConfidenceBadge barra+número integrado
+                                (T7), reemplaza Badge+Progress separados. #25 rename
+                                Confianza→Certeza + glossaryKey certeza (T11). */}
                             <div className="flex flex-col gap-1.5 border-t border-border/10 pt-4">
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    Confianza
+                                    Certeza
                                     <InfoTooltip
-                                        term="Confianza"
-                                        glossaryKey="confianza"
+                                        term="Certeza"
+                                        glossaryKey="certeza"
                                     />
                                 </span>
-                                <div className="flex items-center gap-3">
-                                    <ConfidenceBadge
-                                        value={d.confidence}
-                                        className="h-6 text-xs font-semibold px-2"
-                                    />
-                                    <Progress
-                                        value={d.confidence}
-                                        className="h-1.5 flex-1 bg-muted"
-                                    />
-                                </div>
+                                <ConfidenceBadge
+                                    value={d.confidence}
+                                    showLabel={false}
+                                />
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* Tarjeta: Gestión */}
-                    <Card className="glass-panel border-border/40">
-                        <CardHeader className="pb-3 border-b border-border/10">
+                    <Card>
+                        <CardHeader className="p-3 border-b border-border/10">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                                 <Settings
                                     className="h-4 w-4 text-primary"
@@ -474,74 +516,116 @@ export function DeviceDetail() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 flex flex-col gap-4">
-                            <FormField
-                                label="Nombre personalizado"
-                                htmlFor="detail-display-name"
-                                helper="Etiqueta para identificar el equipo"
-                            >
-                                <Input
-                                    id="detail-display-name"
-                                    value={displayName}
-                                    onChange={(e) =>
-                                        setDisplayName(e.target.value)
-                                    }
-                                    placeholder={
-                                        d.hostname ?? d.primary_ip ?? ""
-                                    }
-                                    className="bg-background/50 border-border/30"
-                                />
-                            </FormField>
-
+                            {/* #19: is_trusted — switch siempre visible, cambio inmediato
+                                (persiste al toggle, sin Guardar). */}
                             <FormField
                                 label="Confiable"
                                 htmlFor="detail-is-trusted"
-                                helper="Marcar este dispositivo como seguro"
+                                helper="Etiqueta manual: marca el dispositivo como seguro"
                             >
-                                <Button
-                                    id="detail-is-trusted"
-                                    type="button"
-                                    variant={isTrusted ? "default" : "outline"}
-                                    onClick={() => setIsTrusted((v) => !v)}
-                                    aria-pressed={isTrusted}
-                                    className="w-full gap-1.5 justify-center font-medium"
-                                >
-                                    {isTrusted
-                                        ? "Dispositivo confiable"
-                                        : "Marcar como confiable"}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        id="detail-is-trusted"
+                                        checked={isTrusted}
+                                        onCheckedChange={handleTrustToggle}
+                                    />
+                                    <span className="text-xs text-muted-foreground">
+                                        {isTrusted
+                                            ? "Confiable"
+                                            : "No confiable"}
+                                    </span>
+                                </div>
                             </FormField>
 
-                            <FormField
-                                label="Notas internas"
-                                htmlFor="detail-notes"
-                                helper="Notas no compartidas en la red"
-                            >
-                                <Input
-                                    id="detail-notes"
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder="Notas de mantenimiento o ubicación..."
-                                    className="bg-background/50 border-border/30"
-                                />
-                            </FormField>
+                            {/* #19: display_name + notes — modo edición (lectura por
+                                defecto, botón "Editar" revela inputs + Guardar/Cancelar). */}
+                            {editing ? (
+                                <>
+                                    <FormField
+                                        label="Nombre personalizado"
+                                        htmlFor="detail-display-name"
+                                        helper="Etiqueta para identificar el equipo"
+                                    >
+                                        <Input
+                                            id="detail-display-name"
+                                            value={displayName}
+                                            onChange={(e) =>
+                                                setDisplayName(e.target.value)
+                                            }
+                                            placeholder={
+                                                d.hostname ?? d.primary_ip ?? ""
+                                            }
+                                        />
+                                    </FormField>
 
-                            <Button
-                                onClick={handleSaveEdit}
-                                disabled={saving}
-                                className="w-full mt-2 gap-1.5"
-                            >
-                                {saving ? (
-                                    <>
-                                        <Loader2
-                                            className="h-4 w-4 animate-spin"
+                                    <FormField
+                                        label="Notas internas"
+                                        htmlFor="detail-notes"
+                                        helper="Notas no compartidas en la red"
+                                    >
+                                        <Input
+                                            id="detail-notes"
+                                            value={notes}
+                                            onChange={(e) =>
+                                                setNotes(e.target.value)
+                                            }
+                                            placeholder="Notas de mantenimiento o ubicación..."
+                                        />
+                                    </FormField>
+
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={handleSaveEdit}
+                                            disabled={saving}
+                                            className="gap-1.5"
+                                        >
+                                            {saving ? (
+                                                <>
+                                                    <Loader2
+                                                        className="h-4 w-4 animate-spin"
+                                                        aria-hidden
+                                                    />
+                                                    Guardando…
+                                                </>
+                                            ) : (
+                                                "Guardar"
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={handleCancelEdit}
+                                            disabled={saving}
+                                            className="gap-1.5"
+                                        >
+                                            Cancelar
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <Field
+                                        label="Nombre personalizado"
+                                        value={d.display_name ?? "—"}
+                                        field="display_name"
+                                    />
+                                    <Field
+                                        label="Notas internas"
+                                        value={d.notes ?? "—"}
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setEditing(true)}
+                                        className="gap-1.5 w-fit"
+                                    >
+                                        <Pencil
+                                            className="h-3.5 w-3.5"
                                             aria-hidden
                                         />
-                                        Guardando…
-                                    </>
-                                ) : (
-                                    "Guardar cambios"
-                                )}
-                            </Button>
+                                        Editar
+                                    </Button>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -550,8 +634,8 @@ export function DeviceDetail() {
                 <div className="flex flex-col gap-6 lg:col-span-2">
                     {/* Tarjeta: Escaneo de Puertos */}
                     <div ref={scanRef}>
-                        <Card className="glass-panel border-border/40">
-                            <CardHeader className="pb-3 border-b border-border/10">
+                        <Card>
+                            <CardHeader className="p-3 border-b border-border/10">
                                 <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                                     <Radar
                                         className="h-4 w-4 text-primary"
@@ -624,11 +708,12 @@ export function DeviceDetail() {
                                     >
                                         <div className="flex flex-col md:flex-row items-center gap-6 justify-center bg-muted/20 p-4 rounded-lg border border-border/10">
                                             {/* Animación Radar Sonar */}
+                                            {/* #22: sin animate-ping/pulse overlays. Radar icon spin
+                                                (3s) + Progress + contador + timer. motion-safe
+                                                respeta prefers-reduced-motion. */}
                                             <div className="relative flex items-center justify-center h-16 w-16 shrink-0">
-                                                <div className="absolute h-14 w-14 rounded-full border border-primary/20 animate-ping" />
-                                                <div className="absolute h-10 w-10 rounded-full border border-primary/40 animate-pulse" />
                                                 <Radar
-                                                    className="h-6 w-6 text-primary animate-spin"
+                                                    className="h-6 w-6 text-primary motion-safe:animate-spin"
                                                     style={{
                                                         animationDuration: "3s",
                                                     }}
@@ -669,7 +754,7 @@ export function DeviceDetail() {
                     </div>
 
                     {/* Tarjeta: Servicios */}
-                    <Card className="glass-panel border-border/40">
+                    <Card>
                         <CardHeader className="pb-3 border-b border-border/10 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                                 <Server
@@ -678,33 +763,46 @@ export function DeviceDetail() {
                                 />
                                 Servicios activos ({detail.services.length})
                             </CardTitle>
+                            {/* #27: 1 botón Exportar + dropdown CSV/JSON (mismo
+                                patrón que Devices). */}
                             {detail.services.length > 0 && (
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleExport("csv")}
-                                        className="h-7 gap-1 px-2.5 text-xs"
-                                    >
-                                        <Download
-                                            className="h-3 w-3"
-                                            aria-hidden
-                                        />
-                                        CSV
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleExport("json")}
-                                        className="h-7 gap-1 px-2.5 text-xs"
-                                    >
-                                        <Download
-                                            className="h-3 w-3"
-                                            aria-hidden
-                                        />
-                                        JSON
-                                    </Button>
-                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-1.5"
+                                        >
+                                            <Download
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden
+                                            />
+                                            Exportar
+                                            <ChevronDown
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden
+                                            />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>
+                                            Formato de exportación
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onSelect={() => handleExport("csv")}
+                                        >
+                                            CSV
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onSelect={() =>
+                                                handleExport("json")
+                                            }
+                                        >
+                                            JSON
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             )}
                         </CardHeader>
                         <CardContent className="pt-4">
@@ -734,19 +832,19 @@ export function DeviceDetail() {
                                             <TableRow className="hover:bg-transparent">
                                                 <TableHead>
                                                     <span className="inline-flex items-center gap-1">
-                                                        Protocolo
+                                                        Puerto
                                                         <InfoTooltip
-                                                            term="Protocolo"
-                                                            glossaryKey="protocolo"
+                                                            term="Puerto"
+                                                            glossaryKey="puerto"
                                                         />
                                                     </span>
                                                 </TableHead>
                                                 <TableHead>
                                                     <span className="inline-flex items-center gap-1">
-                                                        Puerto
+                                                        Protocolo
                                                         <InfoTooltip
-                                                            term="Puerto"
-                                                            glossaryKey="puerto"
+                                                            term="Protocolo"
+                                                            glossaryKey="protocolo"
                                                         />
                                                     </span>
                                                 </TableHead>
@@ -759,8 +857,8 @@ export function DeviceDetail() {
                                                         />
                                                     </span>
                                                 </TableHead>
-                                                <TableHead>Versión</TableHead>
                                                 <TableHead>Estado</TableHead>
+                                                <TableHead>Versión</TableHead>
                                                 <TableHead>
                                                     <span className="inline-flex items-center gap-1">
                                                         Banner
@@ -781,18 +879,15 @@ export function DeviceDetail() {
                                                         key={s.id}
                                                         className="hover:bg-muted/30"
                                                     >
-                                                        <TableCell className="uppercase font-semibold text-xs text-foreground/80">
-                                                            {s.protocol}
-                                                        </TableCell>
                                                         <TableCell className="font-mono text-xs font-semibold">
                                                             {s.port}
+                                                        </TableCell>
+                                                        <TableCell className="uppercase font-semibold text-xs text-foreground/80">
+                                                            {s.protocol}
                                                         </TableCell>
                                                         <TableCell className="text-xs">
                                                             {s.service_name ??
                                                                 "—"}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground">
-                                                            {s.version ?? "—"}
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge
@@ -812,6 +907,9 @@ export function DeviceDetail() {
                                                                     s.state,
                                                                 )}
                                                             </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground">
+                                                            {s.version ?? "—"}
                                                         </TableCell>
                                                         <TableCell
                                                             className="font-mono text-xs text-muted-foreground/80 truncate max-w-[150px]"

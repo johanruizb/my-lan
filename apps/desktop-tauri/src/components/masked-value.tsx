@@ -10,9 +10,12 @@ import { isMacField, isSensitive, maskMac, maskValue } from "@/lib/censor";
 // Comportamiento:
 //   - censorship OFF o value == null -> valor crudo (o "—"), sin cambios.
 //   - Campo MAC-family -> placeholder constante "••••", NO hover-revelable
-//     (AC-5: la MAC nunca se revela en la UI).
+//     (AC-5: la MAC nunca se revela en la UI). aria-label "MAC oculta" para
+//     que el lector de pantalla no anuncie los puntos.
 //   - Otro campo sensible -> blur-sm + select-none sobre el valor real;
 //     onMouseEnter/onFocus revela (quita el blur); onMouseLeave/onBlur re-enmascara.
+//     aria-label fija al valor enmascarado (maskValue) para que el lector de
+//     pantalla anuncie la versión censurada incluso cuando se revela visualmente.
 //   - Campo no sensible -> pass-through (seguro envolver cualquier campo).
 
 interface MaskedValueProps {
@@ -37,13 +40,22 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
     // MAC-family: placeholder constante, nunca hover-revelable (AC-5).
     if (isMacField(field)) {
         return (
-            <span className={cn(mono && "font-mono text-sm")}>{maskMac()}</span>
+            <span
+                className={cn(mono && "font-mono text-sm")}
+                aria-label="MAC oculta"
+            >
+                {maskMac()}
+            </span>
         );
     }
 
     // Otro campo sensible: blur + reveal-on-hover/focus.
     // Mientras esta blurred, select-none evita copia casual del DOM; al revelar
     // se permite seleccion (transitorio).
+    // aria-label fija al valor enmascarado: el lector de pantalla anuncia la
+    // versión censurada (maskValue) siempre, incluso cuando el valor real se
+    // muestra visualmente al revelar.
+    const masked = maskValue(field, value);
     return (
         <span
             className={cn(
@@ -56,8 +68,9 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
             onFocus={() => setRevealed(true)}
             onBlur={() => setRevealed(false)}
             tabIndex={0}
+            aria-label={masked}
         >
-            {revealed ? value : maskValue(field, value)}
+            {revealed ? value : masked}
         </span>
     );
 }

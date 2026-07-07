@@ -49,7 +49,7 @@ import { Devices } from "@/screens/Devices";
 import { DeviceDetail } from "@/screens/DeviceDetail";
 import { Scans } from "@/screens/Scans";
 import { Settings } from "@/screens/Settings";
-import { About } from "@/screens/About";
+import { AboutDialog } from "@/screens/About";
 
 // Contexto ligero para compartir el resumen del último scan entre el Dashboard
 // (que lanza run_discovery) y el header (que lo muestra, AC-1).
@@ -138,13 +138,6 @@ const navItems = [
         end: false,
         desc: "Configuración",
     },
-    {
-        to: "/about",
-        label: "Acerca de",
-        icon: Info,
-        end: false,
-        desc: "Información de la app",
-    },
 ];
 
 function ThemeToggle() {
@@ -201,10 +194,10 @@ function Sidebar() {
                         end={n.end}
                         className={({ isActive }) =>
                             cn(
-                                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                "flex items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                 isActive
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                    ? "border-primary bg-accent text-foreground"
+                                    : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
                             )
                         }
                     >
@@ -229,7 +222,7 @@ function Sidebar() {
 // inline que persiste una etiqueta de usuario, más la versión corta de la app.
 // El tag "auto"/"editado" indica el origen del nombre para que el usuario
 // entienda que un re-escaneo no pisa su etiqueta (AC-3).
-function SidebarFooter() {
+function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
     const { name, source, cidr, editName } = useNetworkName();
     const [version, setVersion] = useState("");
     const [editing, setEditing] = useState(false);
@@ -319,12 +312,27 @@ function SidebarFooter() {
                     </>
                 )}
             </div>
-            <p className="text-[10px] opacity-70">MyLAN v{version || "…"}</p>
+            <p className="text-[10px] text-muted-foreground">
+                MyLAN v{version || "…"}
+            </p>
+            <button
+                type="button"
+                onClick={onOpenAbout}
+                className="inline-flex w-fit items-center gap-1.5 rounded text-[11px] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                <Info className="h-3 w-3" aria-hidden />
+                Acerca de
+            </button>
         </div>
     );
 }
 
 function AppShell() {
+    // T18/#11: estado local del dialog "Acerca de" (abierto desde SidebarFooter
+    // en desktop y desde el 5º item del top-nav móvil).
+    const [aboutOpen, setAboutOpen] = useState(false);
+    const openAbout = () => setAboutOpen(true);
+
     return (
         <div className="flex h-screen overflow-hidden bg-background text-foreground">
             {/* Sidebar fija en desktop; en móvil se colapsa arriba (AC-1). */}
@@ -336,13 +344,14 @@ function AppShell() {
                     </span>
                 </div>
                 <Sidebar />
-                <SidebarFooter />
+                <SidebarFooter onOpenAbout={openAbout} />
             </aside>
 
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <header className="z-30 flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
                     <div className="flex items-center gap-3">
-                        <h1 className="text-lg font-semibold tracking-tight">
+                        {/* #37: "MyLAN" solo en móvil (desktop tiene el brand en la sidebar). */}
+                        <h1 className="text-lg font-semibold tracking-tight md:hidden">
                             MyLAN
                         </h1>
                         <LastScanBadge />
@@ -363,10 +372,10 @@ function AppShell() {
                                 end={n.end}
                                 className={({ isActive }) =>
                                     cn(
-                                        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "flex items-center gap-1.5 rounded-md border-l-2 px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         isActive
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                            ? "border-primary bg-accent text-foreground"
+                                            : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
                                     )
                                 }
                             >
@@ -382,6 +391,20 @@ function AppShell() {
                             </NavLink>
                         );
                     })}
+                    {/* #21: 5º item "Acerca de" abre dialog (no es ruta). */}
+                    <button
+                        type="button"
+                        onClick={openAbout}
+                        className="flex items-center gap-1.5 rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <Info className="h-3.5 w-3.5" aria-hidden />
+                        <span className="flex flex-col">
+                            <span>Acerca de</span>
+                            <span className="text-[10px] font-normal">
+                                Información de la app
+                            </span>
+                        </span>
+                    </button>
                 </nav>
                 <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
                     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -394,11 +417,11 @@ function AppShell() {
                             />
                             <Route path="/scans" element={<Scans />} />
                             <Route path="/settings" element={<Settings />} />
-                            <Route path="/about" element={<About />} />
                         </Routes>
                     </div>
                 </main>
             </div>
+            <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
         </div>
     );
 }

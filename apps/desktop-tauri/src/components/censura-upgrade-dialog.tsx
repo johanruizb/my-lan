@@ -1,4 +1,10 @@
 import { useEffect, useState } from "react";
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import { useCensorship } from "@/components/censorship-provider";
 import { onCensorshipFresh } from "@/lib/tauri";
 import { Button } from "@/components/ui/button";
@@ -20,13 +26,18 @@ import { Eye, EyeOff } from "lucide-react";
 // se asume upgrade. El edge case (install nuevo donde el evento se pierde)
 // muestra el dialog una vez, pero la opción recomendada coincide con el
 // default ON, así que el resultado final es el mismo.
+//
+// Usa ui/dialog.tsx (Radix Dialog con focus trap/restore/Escape/scroll lock +
+// DialogTitle/DialogDescription/close aria-label). Si el usuario cierra con X
+// o Escape sin elegir, se persiste el flag (no re-aparece) pero NO se cambia
+// el estado de censura: se respeta la configuración existente del upgrade.
 
 const SHOWN_KEY = "censorship_dialog_shown";
 const FRESH_WAIT_MS = 2000;
 
 export function CensuraUpgradeDialog() {
     const { setCensorshipEnabled } = useCensorship();
-    const [show, setShow] = useState(false);
+    const [open, setOpen] = useState(false);
 
     useEffect(() => {
         // Ya se mostró/decidió en una ejecución anterior: no repetir.
@@ -47,7 +58,7 @@ export function CensuraUpgradeDialog() {
                 localStorage.setItem(SHOWN_KEY, "1");
             } else {
                 // Upgrade: mostrar dialog una sola vez.
-                setShow(true);
+                setOpen(true);
             }
         };
 
@@ -72,37 +83,38 @@ export function CensuraUpgradeDialog() {
         };
     }, []);
 
+    function dismiss() {
+        // Cierre sin elegir (X/Escape): persiste el flag para no re-aparecer,
+        // pero NO cambia el estado de censura (respeta la configuración
+        // existente del upgrade).
+        localStorage.setItem(SHOWN_KEY, "1");
+        setOpen(false);
+    }
+
     function choose(activate: boolean) {
         setCensorshipEnabled(activate);
         localStorage.setItem(SHOWN_KEY, "1");
-        setShow(false);
+        setOpen(false);
     }
 
-    if (!show) return null;
-
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="censura-upgrade-title"
+        <Dialog
+            open={open}
+            onOpenChange={(o) => {
+                if (!o) dismiss();
+            }}
         >
-            <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
-                <div className="mb-3 flex items-center gap-2">
+            <DialogContent className="max-w-md">
+                <div className="flex items-center gap-2">
                     <EyeOff className="h-5 w-5 text-primary" aria-hidden />
-                    <h2
-                        id="censura-upgrade-title"
-                        className="text-lg font-semibold"
-                    >
-                        Modo censura
-                    </h2>
+                    <DialogTitle>Modo censura</DialogTitle>
                 </div>
-                <p className="mb-5 text-sm text-muted-foreground">
+                <DialogDescription>
                     MyLAN puede enmascarar identificadores sensibles (IP, MAC,
                     hostname, gateway, DNS) en la interfaz y los exports para
                     evitar que se compartan por error en capturas de pantalla o
                     archivos. Puedes cambiarlo cuando quieras desde Ajustes.
-                </p>
+                </DialogDescription>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <Button
                         variant="outline"
@@ -122,7 +134,7 @@ export function CensuraUpgradeDialog() {
                         Activar (recomendado)
                     </Button>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

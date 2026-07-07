@@ -6,7 +6,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Wifi, Radar } from "lucide-react";
+import { Wifi, Radar, EyeOff } from "lucide-react";
 
 // Onboarding primera ejecución (AC-4): tour sobre qué hace la app y la
 // diferencia entre descubrimiento (Dashboard) y escaneo de puertos (Scans /
@@ -14,8 +14,30 @@ import { Wifi, Radar } from "lucide-react";
 // Consume ui/dialog.tsx (Radix Dialog con focus trap/restore/Escape/scroll
 // lock + DialogTitle/DialogDescription/close aria-label). NO copia el patrón
 // custom div de censura-upgrade-dialog.tsx.
+//
+// Tres cards: Descubrimiento, Escaneo de puertos y Modo censura.
+//
+// Re-abrible desde Ajustes: `reopenOnboarding()` limpia `onboarding_shown` y
+// vuelve a abrir el dialog. Mecanismo con setter a nivel de módulo (no
+// requiere context provider ni envolver App). OnboardingDialog debe estar
+// montado (lo está, en App.tsx raíz) para que el setter esté registrado.
 
 const SHOWN_KEY = "onboarding_shown";
+
+// Setter registrado por el componente mientras está montado. Si el componente
+// no está montado, reopenOnboarding() es no-op (devuelve false).
+let reopenFn: (() => void) | null = null;
+
+/**
+ * Re-abre el dialog de onboarding desde Ajustes. Limpia el flag de
+ * persistencia y abre el dialog. Devuelve true si se pudo invocar (el
+ * componente está montado), false en caso contrario.
+ */
+export function reopenOnboarding(): boolean {
+    if (!reopenFn) return false;
+    reopenFn();
+    return true;
+}
 
 export function OnboardingDialog() {
     const [open, setOpen] = useState(false);
@@ -26,6 +48,21 @@ export function OnboardingDialog() {
         } catch {
             setOpen(true);
         }
+    }, []);
+
+    // Registrar el handler de re-apertura mientras el componente está montado.
+    useEffect(() => {
+        reopenFn = () => {
+            try {
+                localStorage.removeItem(SHOWN_KEY);
+            } catch {
+                // ignore: si localStorage falla, igual abrimos el dialog.
+            }
+            setOpen(true);
+        };
+        return () => {
+            reopenFn = null;
+        };
     }, []);
 
     function dismiss() {
@@ -79,6 +116,21 @@ export function OnboardingDialog() {
                                 Analiza un dispositivo concreto para ver qué
                                 puertos tiene abiertos y qué servicios ofrece
                                 (web, SSH, impresora…).
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                            <EyeOff className="h-4 w-4" aria-hidden />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            <p className="text-sm font-medium">Modo censura</p>
+                            <p className="text-xs text-muted-foreground">
+                                Enmascara identificadores sensibles (IP, MAC,
+                                hostname) en la interfaz y los exports. Pasa el
+                                cursor o enfoca con el teclado un valor para
+                                revelarlo temporalmente. Actívalo o desactívalo
+                                cuando quieras desde Ajustes.
                             </p>
                         </div>
                     </div>
