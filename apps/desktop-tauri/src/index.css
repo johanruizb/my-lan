@@ -51,7 +51,8 @@
         --destructive-foreground: 210 40% 98%;
         /* #39: Tokens semánticos success/warning junto a --destructive. */
         --success: 142 69% 50%;
-        --success-foreground: 0 0% 100%;
+        /* foreground oscuro en dark para contraste WCAG AA sobre verde vívido. */
+        --success-foreground: 222.2 47.4% 11.2%;
         --warning: 38 92% 50%;
         --warning-foreground: 28 80% 15%;
         --popover: 222 47% 9%;
