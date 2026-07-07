@@ -106,11 +106,7 @@ pub fn list_scans(conn: &Connection) -> DbResult<Vec<ScanRow>> {
         let (hosts_alive, hosts_new, open_ports) = match summary_raw.as_deref() {
             Some(s) if !s.is_empty() => {
                 let summary: ScanSummary = serde_json::from_str(s).unwrap_or_default();
-                (
-                    summary.hosts_alive,
-                    summary.hosts_new,
-                    summary.open_ports,
-                )
+                (summary.hosts_alive, summary.hosts_new, summary.open_ports)
             }
             _ => (0, 0, 0),
         };
