@@ -200,11 +200,10 @@ mod tests {
 
     #[test]
     fn fill_service_generates_fresh_uuid_id() {
-        // El id del template se ignora; se genera un UUID v4 nuevo.
         let svc = sample_service();
         let filled = fill_service(&svc, "dev-1", "now");
         assert_ne!(filled.id, "template-id");
-        assert_eq!(filled.id.len(), 36, "UUID canónico de 36 chars");
+        assert_eq!(filled.id.len(), 36);
         uuid::Uuid::parse_str(&filled.id).expect("id debe ser UUID válido");
     }
 
@@ -226,7 +225,6 @@ mod tests {
 
     #[tokio::test]
     async fn run_errors_when_no_inventory() {
-        // DB vacía (sin scans) → bail antes de escanear puertos.
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = ctx_in(tmp.path());
         let result = run(&ctx, "192.168.1.1", 100, ScanProfile::Quick).await;

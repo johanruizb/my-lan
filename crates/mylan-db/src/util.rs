@@ -29,7 +29,6 @@ mod tests {
     #[test]
     fn now_rfc3339_is_utc() {
         let ts = now_rfc3339().expect("now_rfc3339");
-        // RFC3339 UTC termina en 'Z' (offset +00:00).
         assert!(
             ts.ends_with('Z'),
             "esperaba sufijo 'Z' (UTC); obtenido: {ts}"
@@ -39,7 +38,6 @@ mod tests {
     #[test]
     fn now_rfc3339_has_rfc3339_separators() {
         let ts = now_rfc3339().expect("now_rfc3339");
-        // Fecha 'YYYY-MM-DD' separada de la hora 'THH:MM:SS' por la 'T'.
         assert!(ts.contains('T'), "falta separador 'T': {ts}");
         assert!(ts.contains('-'), "falta guion de fecha: {ts}");
         assert!(ts.contains(':'), "falta dos puntos de hora: {ts}");
@@ -56,9 +54,7 @@ mod tests {
             "longitud RFC3339 inesperada ({len}): {ts}",
             len = ts.len()
         );
-        // Los 4 primeros caracteres son el año (dígitos).
         assert!(ts[..4].chars().all(char::is_numeric), "año numérico: {ts}");
-        // Patrón 'YYYY-MM-DDTHH:' en los primeros 17 caracteres.
         assert_eq!(&ts[4..5], "-", "separador de fecha: {ts}");
         assert_eq!(&ts[7..8], "-", "separador de fecha: {ts}");
         assert_eq!(&ts[10..11], "T", "separador T: {ts}");
@@ -101,7 +97,6 @@ mod tests {
     #[test]
     fn new_id_is_36_chars_dashed_format() {
         let id = new_id();
-        // Formato canónico 8-4-4-4-12 con guiones = 36 caracteres.
         assert_eq!(id.len(), 36, "longitud canónica UUID: {id}");
         assert_eq!(id.matches('-').count(), 4, "4 guiones: {id}");
     }

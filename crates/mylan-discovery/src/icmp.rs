@@ -57,7 +57,6 @@ pub async fn icmp_sweep(
     };
     let id = (std::process::id() as u16).wrapping_add(1);
     let hosts = enumerate_hosts(iface.ip, iface.prefix_len);
-    // Envía eco a cada host (no bloquea: send_to es async).
     let mut seq = 1u16;
     for host in &hosts {
         if cancel.is_cancelled() {

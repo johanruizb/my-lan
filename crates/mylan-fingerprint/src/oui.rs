@@ -19,7 +19,6 @@ pub struct OuiDatabase {
 }
 
 impl OuiDatabase {
-    /// Crea una base vacía.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -50,13 +49,11 @@ impl OuiDatabase {
         Ok(Self { vendors })
     }
 
-    /// Número de prefijos cargados.
     #[must_use]
     pub fn len(&self) -> usize {
         self.vendors.len()
     }
 
-    /// `true` si no hay prefijos cargados.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.vendors.is_empty()

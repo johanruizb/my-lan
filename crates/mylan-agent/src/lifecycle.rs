@@ -50,7 +50,6 @@ pub fn install_shutdown_handlers(token: CancellationToken) -> Result<()> {
 
     #[cfg(not(unix))]
     {
-        // En no-Unix, ctrl_c es el único handler; SIGTERM no aplica.
         let _ = token;
     }
 

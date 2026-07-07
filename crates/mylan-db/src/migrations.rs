@@ -185,7 +185,6 @@ SET is_online = (
 /// `Option::<String>::None`. Sólo corre si `user_version < 5` (idempotente).
 const MIGRATION_V5: &str = "ALTER TABLE scans ADD COLUMN target_ip TEXT;";
 
-/// Lee el `user_version` actual de la base de datos.
 fn current_version(conn: &Connection) -> DbResult<u32> {
     let v: i64 = conn
         .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -212,7 +211,6 @@ pub fn run_migrations(conn: &Connection) -> DbResult<()> {
     Ok(())
 }
 
-/// Última versión de esquema soportada por este crate.
 #[must_use]
 pub fn latest_schema_version() -> u32 {
     MIGRATIONS.last().map_or(0, |(v, _)| *v)

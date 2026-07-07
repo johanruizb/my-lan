@@ -1456,7 +1456,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-agent"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "anyhow",
  "mylan-api",
@@ -1475,7 +1475,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-api"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "anyhow",
  "axum",
@@ -1498,7 +1498,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-cli"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -1524,7 +1524,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-core"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -1532,7 +1532,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-db"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "anyhow",
  "mylan-core",
@@ -1547,7 +1547,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-discovery"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "hickory-resolver",
  "mdns-sd",
@@ -1565,7 +1565,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-fingerprint"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "csv",
  "hickory-resolver",
@@ -1578,7 +1578,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-integration-tests"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "csv",
  "mylan-agent",
@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-scanner"
-version = "0.5.4"
+version = "0.5.6"
 dependencies = [
  "mylan-core",
  "serde",

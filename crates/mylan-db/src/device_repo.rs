@@ -13,16 +13,12 @@ use mylan_core::{Confidence, Device, DeviceAddress, DeviceType};
 use crate::codec::{enum_from_db, enum_to_db, ip_from_db, ip_to_db, mac_from_db, mac_to_db};
 use crate::error::{map_sqlite, DbResult};
 
-/// Resultado de un upsert de dispositivo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpsertOutcome {
-    /// Se insertó un nuevo dispositivo.
     Inserted,
-    /// Se actualizó un dispositivo existente (misma identidad).
     Updated,
 }
 
-/// Fila bruta leída de la DB, antes de decodificar tipos complejos.
 struct DeviceRow {
     id: String,
     network_id: String,
@@ -119,15 +115,13 @@ fn query_opt_id(
 fn find_existing_id(conn: &Connection, device: &Device) -> DbResult<Option<String>> {
     let mac_ok = device.primary_mac.is_some_and(|m| !m.is_zero());
     if mac_ok {
-        let mac = device.primary_mac.map(|m| m.to_string());
-        if let Some(mac) = mac {
-            if let Some(id) = query_opt_id(
-                conn,
-                "SELECT id FROM devices WHERE network_id = ?1 AND primary_mac = ?2",
-                rusqlite::params![device.network_id, mac],
-            )? {
-                return Ok(Some(id));
-            }
+        let mac = device.primary_mac.unwrap().to_string();
+        if let Some(id) = query_opt_id(
+            conn,
+            "SELECT id FROM devices WHERE network_id = ?1 AND primary_mac = ?2",
+            rusqlite::params![device.network_id, mac],
+        )? {
+            return Ok(Some(id));
         }
         // Sin fila por MAC: promueve una fila solo-IP de la misma IP (si la hay).
         if let Some(ip) = ip_to_db(device.primary_ip) {
@@ -150,7 +144,6 @@ fn find_existing_id(conn: &Connection, device: &Device) -> DbResult<Option<Strin
     }
 }
 
-/// Lee un dispositivo por su `id` interno.
 fn get_device_by_id(conn: &Connection, id: &str) -> DbResult<Option<Device>> {
     let sql = format!("SELECT {SELECT_COLS} FROM devices WHERE id = ?1 LIMIT 1");
     match conn.query_row(&sql, [id], DeviceRow::from_row) {
@@ -348,7 +341,6 @@ pub fn update_device_fields(
     Ok(())
 }
 
-/// Lista todos los dispositivos de una red, ordenados por `last_seen_at` desc.
 pub fn list_devices(conn: &Connection, network_id: &str) -> DbResult<Vec<Device>> {
     let sql = format!(
         "SELECT {SELECT_COLS} FROM devices WHERE network_id = ?1 ORDER BY last_seen_at DESC"
@@ -364,7 +356,6 @@ pub fn list_devices(conn: &Connection, network_id: &str) -> DbResult<Vec<Device>
     Ok(out)
 }
 
-/// Obtiene un dispositivo por su IP primaria dentro de una red.
 pub fn get_device_by_ip(
     conn: &Connection,
     network_id: &str,
@@ -385,7 +376,6 @@ pub fn get_device_by_ip(
     }
 }
 
-/// Inserta una dirección histórica de un dispositivo.
 pub fn insert_device_address(conn: &Connection, addr: &DeviceAddress) -> DbResult<()> {
     conn.execute(
         "INSERT INTO device_addresses (
@@ -450,7 +440,6 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let conn = fixture_conn(dir.path(), "dup");
         let m = mac("aa:bb:cc:dd:ee:ff");
-        // First insert.
         let mut d = device(
             "dev-1",
             Some(m),
@@ -474,10 +463,10 @@ mod tests {
 
         let all = list_devices(&conn, "net-1").unwrap();
         assert_eq!(all.len(), 1, "no duplicate device");
-        assert_eq!(all[0].id, "dev-1"); // original id preserved
+        assert_eq!(all[0].id, "dev-1");
         assert_eq!(all[0].primary_ip, Some(ip("192.168.1.42")));
         assert_eq!(all[0].hostname.as_deref(), Some("nas.local"));
-        assert_eq!(all[0].first_seen_at, "2026-06-27T00:00:00Z"); // preserved
+        assert_eq!(all[0].first_seen_at, "2026-06-27T00:00:00Z");
         assert_eq!(all[0].last_seen_at, "2026-06-27T02:00:00Z");
     }
 

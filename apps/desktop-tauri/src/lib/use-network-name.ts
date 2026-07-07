@@ -53,7 +53,6 @@ export function NetworkNameProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    // Carga inicial al montar.
     useEffect(() => {
         refresh();
     }, [refresh]);

@@ -6,7 +6,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import { getSettings, setSettings, type Settings } from "@/lib/tauri";
+import { getSettings, setSettings } from "@/lib/tauri";
 
 // CensorshipProvider (AC-3): modo censura enmascara identificadores estrictos
 // (IP/MAC/hostname/display_name/gateway/dns/cidr) en la UI y los exports.
@@ -24,13 +24,13 @@ const CensorshipContext = createContext<CensorshipContextValue | null>(null);
 
 export function CensorshipProvider({ children }: { children: ReactNode }) {
     // Default true hasta que se cargue `Settings` (AC-1: ON por defecto).
-    const [censorshipEnabled, setCensorshipState] = useState<boolean>(true);
+    const [censorshipEnabled, setCensorshipState] = useState(true);
 
     // Carga inicial: lee `Settings.censorship_enabled`, default true si falta
     // (backward-compat con `mylan-desktop.json` antiguos, AC-6).
     useEffect(() => {
         getSettings()
-            .then((s: Settings) => {
+            .then((s) => {
                 setCensorshipState(s.censorship_enabled ?? true);
             })
             .catch(() => {

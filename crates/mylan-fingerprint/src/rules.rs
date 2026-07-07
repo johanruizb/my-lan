@@ -74,8 +74,6 @@ impl Match {
     pub fn matches(&self, observations: &[Observation]) -> bool {
         let any_ok = self.any.is_empty() || self.any.iter().any(|m| m.matches(observations));
         let all_ok = self.all.is_empty() || self.all.iter().all(|m| m.matches(observations));
-        // Si ambos vacíos -> sin match. Si solo `any` -> any_ok. Si solo `all` -> all_ok.
-        // Si ambos presentes -> any_ok && all_ok.
         if self.any.is_empty() && self.all.is_empty() {
             false
         } else if self.all.is_empty() {
@@ -199,8 +197,6 @@ impl RuleSet {
             .max_by_key(|(_, c)| c.score())
     }
 }
-
-// --- Deserialización YAML -------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 struct RuleYaml {

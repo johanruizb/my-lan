@@ -64,8 +64,6 @@ mod tests {
     fn run_returns_ok_with_tempfile_db_when_interface_present() {
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = ctx_in(tmp.path());
-        // DB tempfile vacía: latest_network_id → None → count 0 (sin error).
-        // detect_interface(None) requiere una interfaz real en el host.
         let result = run(&ctx);
         assert!(
             result.is_ok(),

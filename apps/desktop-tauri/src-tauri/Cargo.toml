@@ -1,6 +1,6 @@
 [package]
 name = "mylan-desktop"
-version = "0.5.4"
+version = "0.5.6"
 edition = "2021"
 
 # This package has its own Cargo.lock and is intentionally NOT a member of the
