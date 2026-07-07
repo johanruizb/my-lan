@@ -26,7 +26,7 @@ export interface Device {
     model: string | null;
     device_type: string;
     os_family: string | null;
-    confidence: string;
+    confidence: number;
     first_seen_at: string;
     last_seen_at: string;
     is_trusted: boolean;

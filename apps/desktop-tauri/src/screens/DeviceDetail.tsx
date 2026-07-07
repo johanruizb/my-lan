@@ -4,11 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { EmptyState } from "@/components/empty-state";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
@@ -25,7 +20,6 @@ import {
     Play,
     Square,
     Download,
-    ChevronDown,
     Info,
     Server,
     Radar,
@@ -34,6 +28,7 @@ import {
     CircleSlash,
     ShieldAlert,
     Cpu,
+    Settings,
 } from "lucide-react";
 import {
     Table,
@@ -95,13 +90,8 @@ export function DeviceDetail() {
     const [elapsed, setElapsed] = useState(0);
     const [scanTimeout, setScanTimeout] = useState(0);
     const [scanId, setScanId] = useState<string | null>(null);
-    const [openInfo, setOpenInfo] = useState(true);
-    const [openScan, setOpenScan] = useState(true);
-    const [openServices, setOpenServices] = useState(true);
 
-    // Estado local de edición (AC-8, AC-9). Debe declararse antes de los
-    // early-returns para respetar las reglas de hooks. Se resetea cuando
-    // `detail` cambia (re-fetch tras guardar) vía el effect más abajo.
+    // Estado local de edición (AC-8, AC-9).
     const [displayName, setDisplayName] = useState(
         detail?.device.display_name ?? "",
     );
@@ -111,14 +101,11 @@ export function DeviceDetail() {
     const [notes, setNotes] = useState(detail?.device.notes ?? "");
     const [saving, setSaving] = useState(false);
 
-    // Preview del estado de confianza derivado (TrustBadge). Memoizado para
-    // mantener referencia estable y no derrotar React.memo en re-renders por
-    // edits no relacionados (fix review #5). Declarado antes de los early-returns
-    // para respetar el orden de hooks (igual que los useState de edición).
+    // Preview del estado de confianza derivado (TrustBadge).
     const trustBadgeDevice = useMemo(
         () => ({
             is_trusted: isTrusted,
-            confidence: detail?.device.confidence ?? "0",
+            confidence: detail?.device.confidence ?? 0,
         }),
         [isTrusted, detail?.device.confidence],
     );
@@ -126,12 +113,10 @@ export function DeviceDetail() {
     const scanRef = useRef<HTMLDivElement>(null);
 
     function scanPortsCta() {
-        setOpenScan(true);
         scanRef.current?.scrollIntoView({
             behavior: "smooth",
             block: "start",
         });
-        // Enfoca el primer control del formulario tras la animación de apertura.
         setTimeout(
             () => document.getElementById("detail-profile")?.focus(),
             100,
@@ -155,7 +140,7 @@ export function DeviceDetail() {
         };
     }, [ip]);
 
-    // Listeners de progreso/heartbeat/cancel/finish sólo mientras escanea.
+    // Listeners de progreso/heartbeat/cancel/finish
     useEffect(() => {
         if (!scanning || !scanId) return;
         const unlisteners: UnlistenFn[] = [];
@@ -192,26 +177,29 @@ export function DeviceDetail() {
         return () => {
             unlisteners.forEach((u) => u());
         };
-    }, [scanning, scanId]);
+    }, [scanning, scanId, ip]);
 
-    // Resetea el estado de edición solo cuando cambia la identidad del device
-    // (no en cada refresh de `detail`, p.ej. online-status), con guards para
-    // no descartar edits en progreso ni disparar re-renders redundantes. El
-    // fallback `?? false` en is_trusted iguala el inicializador de useState
-    // (fix review #3/#6).
+    // Resetea el estado de edición solo cuando cambia el dispositivo o sus campos clave
     useEffect(() => {
         if (!detail) return;
         const dev = detail.device;
         setDisplayName((prev) =>
-            prev === (dev.display_name ?? "") ? prev : dev.display_name ?? "",
+            prev === (dev.display_name ?? "") ? prev : (dev.display_name ?? ""),
         );
         setIsTrusted((prev) =>
-            prev === (dev.is_trusted ?? false) ? prev : dev.is_trusted ?? false,
+            prev === (dev.is_trusted ?? false)
+                ? prev
+                : (dev.is_trusted ?? false),
         );
         setNotes((prev) =>
-            prev === (dev.notes ?? "") ? prev : dev.notes ?? "",
+            prev === (dev.notes ?? "") ? prev : (dev.notes ?? ""),
         );
-    }, [detail?.device.id]);
+    }, [
+        detail?.device.id,
+        detail?.device.display_name,
+        detail?.device.is_trusted,
+        detail?.device.notes,
+    ]);
 
     async function handleScanPorts() {
         const id = newScanId();
@@ -247,12 +235,6 @@ export function DeviceDetail() {
         }
     }
 
-    // Edición por `d.id` (UUID), no por hostname/IP (AC-9): un dispositivo
-    // sin hostname es editable. Se trackea dirty-state por campo (vs valor
-    // inicial del device): un campo modificado se envía siempre (incluso
-    // vacío → backend `Some("")` limpia); un campo sin tocar se envía
-    // `undefined` (backend `None` = no sobrescribe). Así el usuario puede
-    // revertir un nombre personalizado a vacío (fix review MEDIUM).
     async function handleSaveEdit() {
         if (!detail) return;
         const d = detail.device;
@@ -313,64 +295,130 @@ export function DeviceDetail() {
     const Icon = deviceIcon(d.device_type);
 
     return (
-        <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={scanning}>
-            <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/devices")}
-                className="w-fit gap-1.5"
-            >
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Volver a dispositivos
-            </Button>
+        <div
+            className={cn("flex flex-col gap-6", SECTION_GAP)}
+            aria-busy={scanning}
+        >
+            <div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/devices")}
+                    className="w-fit gap-1.5 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground mb-4"
+                >
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Volver a dispositivos
+                </Button>
 
-            {/* Sección colapsable: info del dispositivo (AC-10). */}
-            <Collapsible open={openInfo} onOpenChange={setOpenInfo}>
-                <Card>
-                    <CollapsibleTrigger asChild>
-                        <CardHeader>
-                            <CardTitle className="flex w-full items-center gap-2">
-                                <Info
-                                    className="h-5 w-5 text-primary"
-                                    aria-hidden
+                {/* Cabecera Principal del Dispositivo */}
+                <div className="glass-panel p-6 rounded-xl border border-border/40 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                            <Icon className="h-8 w-8" aria-hidden />
+                        </div>
+                        <div className="flex flex-col min-w-0 gap-1">
+                            <h1 className="text-xl font-bold text-foreground truncate">
+                                <MaskedValue
+                                    field={
+                                        d.display_name
+                                            ? "display_name"
+                                            : d.hostname
+                                              ? "hostname"
+                                              : d.primary_ip
+                                                ? "primary_ip"
+                                                : "id"
+                                    }
+                                    value={
+                                        d.display_name ??
+                                        d.hostname ??
+                                        d.primary_ip ??
+                                        d.id
+                                    }
                                 />
-                                <span className="flex items-center gap-2">
-                                    <Icon className="h-4 w-4" aria-hidden />
+                            </h1>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] font-semibold">
                                     <MaskedValue
                                         field="primary_ip"
-                                        value={d.primary_ip ?? d.id}
+                                        value={d.primary_ip ?? "—"}
                                     />
                                 </span>
-                                {isKnownDeviceType(d.device_type) && (
-                                    <Badge variant="secondary" className="ml-1">
-                                        {deviceLabel(d.device_type)}
-                                    </Badge>
+                                {d.primary_mac && (
+                                    <span className="font-mono uppercase text-[11px]">
+                                        <MaskedValue
+                                            field="primary_mac"
+                                            value={d.primary_mac}
+                                            mono
+                                        />
+                                    </span>
                                 )}
-                                <OnlineBadge
-                                    isOnline={d.is_online}
-                                    className="ml-1"
-                                />
-                                <ChevronDown
-                                    className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
+                                {d.vendor && (
+                                    <span
+                                        className="truncate max-w-[150px]"
+                                        title={d.vendor}
+                                    >
+                                        {d.vendor}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {isKnownDeviceType(d.device_type) && (
+                            <Badge
+                                variant="secondary"
+                                className="px-2.5 py-1 text-xs font-semibold"
+                            >
+                                {deviceLabel(d.device_type)}
+                            </Badge>
+                        )}
+                        <OnlineBadge
+                            isOnline={d.is_online}
+                            className="px-2.5 py-1 text-xs"
+                        />
+                        <TrustBadge
+                            device={trustBadgeDevice}
+                            className="px-2.5 py-1 text-xs"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Layout en Grid Principal */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                {/* Columna Izquierda: Información y Gestión */}
+                <div className="flex flex-col gap-6 lg:col-span-1">
+                    {/* Tarjeta: Detalles Técnicos */}
+                    <Card className="glass-panel border-border/40">
+                        <CardHeader className="pb-3 border-b border-border/10">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                                <Info
+                                    className="h-4 w-4 text-primary"
                                     aria-hidden
                                 />
+                                Información técnica
                             </CardTitle>
                         </CardHeader>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <CardContent className="grid gap-3 sm:grid-cols-2">
+                        <CardContent className="pt-4 flex flex-col gap-4">
                             <Field
-                                label="MAC"
+                                label="Nombre de red (hostname)"
+                                value={d.hostname ?? "—"}
+                                field="hostname"
+                                glossaryKey="hostname"
+                            />
+                            {d.display_name && (
+                                <Field
+                                    label="Nombre personalizado"
+                                    value={d.display_name}
+                                    field="display_name"
+                                />
+                            )}
+                            <Field
+                                label="Dirección MAC"
                                 value={d.primary_mac ?? "—"}
                                 mono
                                 field="primary_mac"
                                 glossaryKey="mac"
-                            />
-                            <Field
-                                label="Nombre del equipo"
-                                value={d.hostname ?? d.display_name ?? "—"}
-                                field="hostname"
-                                glossaryKey="hostname"
                             />
                             <Field
                                 label="Fabricante"
@@ -378,10 +426,21 @@ export function DeviceDetail() {
                                 glossaryKey="vendor"
                             />
                             <Field
-                                label="Tipo"
-                                value={deviceLabel(d.device_type)}
+                                label="Familia S.O."
+                                value={d.os_family ?? "—"}
                             />
-                            <div className="flex flex-col gap-1">
+                            <Field
+                                label="Primera detección"
+                                value={formatTimestamp(d.first_seen_at)}
+                            />
+                            <Field
+                                label="Última detección"
+                                value={formatTimestamp(d.last_seen_at)}
+                                title={formatRelative(d.last_seen_at)}
+                            />
+
+                            {/* Confianza Score */}
+                            <div className="flex flex-col gap-1.5 border-t border-border/10 pt-4">
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                     Confianza
                                     <InfoTooltip
@@ -389,150 +448,135 @@ export function DeviceDetail() {
                                         glossaryKey="confianza"
                                     />
                                 </span>
-                                <ConfidenceBadge value={d.confidence} />
-                            </div>
-                            <Field
-                                label="Último visto"
-                                value={formatRelative(d.last_seen_at)}
-                                title={formatTimestamp(d.last_seen_at)}
-                            />
-                            {/* Formulario de edición (AC-8, AC-9). Edición por
-                                d.id (UUID), no por hostname/IP — un dispositivo
-                                sin hostname es editable. */}
-                            <div className="mt-2 border-t pt-4 sm:col-span-2">
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    <FormField
-                                        label="Nombre personalizado"
-                                        htmlFor="detail-display-name"
-                                    >
-                                        {/* El input de edición muestra el valor
-                                            real; la censura aplica al
-                                            exportar/compartir, no a la edición
-                                            local del propietario (AC-17). */}
-                                        <Input
-                                            id="detail-display-name"
-                                            value={displayName}
-                                            onChange={(e) =>
-                                                setDisplayName(e.target.value)
-                                            }
-                                            placeholder={
-                                                d.hostname ?? d.primary_ip ?? ""
-                                            }
-                                        />
-                                    </FormField>
-                                    <FormField
-                                        label="Confiable"
-                                        htmlFor="detail-is-trusted"
-                                        helper="Marca el dispositivo como confiable"
-                                    >
-                                        <Button
-                                            id="detail-is-trusted"
-                                            type="button"
-                                            variant={
-                                                isTrusted
-                                                    ? "default"
-                                                    : "outline"
-                                            }
-                                            onClick={() =>
-                                                setIsTrusted((v) => !v)
-                                            }
-                                            aria-pressed={isTrusted}
-                                            className="w-fit gap-1.5"
-                                        >
-                                            {isTrusted ? "Sí" : "No"}
-                                        </Button>
-                                    </FormField>
-                                    <FormField
-                                        label="Notas"
-                                        htmlFor="detail-notes"
-                                        helper="Notas internas (no se comparten)"
-                                    >
-                                        {/* notes NO es sensible (censor.ts:17),
-                                            visible directo. */}
-                                        <Input
-                                            id="detail-notes"
-                                            value={notes}
-                                            onChange={(e) =>
-                                                setNotes(e.target.value)
-                                            }
-                                            placeholder="Notas sobre este dispositivo"
-                                        />
-                                    </FormField>
-                                    <FormField
-                                        label="Tipo"
-                                        helper="Auto-detectado"
-                                    >
-                                        <div className="flex h-9 items-center gap-2 text-sm">
-                                            <Icon
-                                                className="h-4 w-4 text-muted-foreground"
-                                                aria-hidden
-                                            />
-                                            <span>
-                                                {deviceLabel(d.device_type)}
-                                            </span>
-                                        </div>
-                                    </FormField>
-                                </div>
-                                <div className="mt-3 flex items-center gap-3">
-                                    <Button
-                                        onClick={handleSaveEdit}
-                                        disabled={saving}
-                                        className="gap-1.5"
-                                    >
-                                        {saving ? (
-                                            <>
-                                                <Loader2
-                                                    className="h-4 w-4 animate-spin"
-                                                    aria-hidden
-                                                />
-                                                Guardando…
-                                            </>
-                                        ) : (
-                                            "Guardar"
-                                        )}
-                                    </Button>
-                                    <TrustBadge device={trustBadgeDevice} />
+                                <div className="flex items-center gap-3">
+                                    <ConfidenceBadge
+                                        value={d.confidence}
+                                        className="h-6 text-xs font-semibold px-2"
+                                    />
+                                    <Progress
+                                        value={d.confidence}
+                                        className="h-1.5 flex-1 bg-muted"
+                                    />
                                 </div>
                             </div>
                         </CardContent>
-                    </CollapsibleContent>
-                </Card>
-            </Collapsible>
+                    </Card>
 
-            {/* Sección colapsable: escaneo de puertos (AC-10). */}
-            <div ref={scanRef}>
-                <Collapsible open={openScan} onOpenChange={setOpenScan}>
-                    <Card>
-                        <CollapsibleTrigger asChild>
-                            <CardHeader>
-                                <CardTitle className="flex w-full items-center gap-2">
+                    {/* Tarjeta: Gestión */}
+                    <Card className="glass-panel border-border/40">
+                        <CardHeader className="pb-3 border-b border-border/10">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                                <Settings
+                                    className="h-4 w-4 text-primary"
+                                    aria-hidden
+                                />
+                                Gestión y etiquetas
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4 flex flex-col gap-4">
+                            <FormField
+                                label="Nombre personalizado"
+                                htmlFor="detail-display-name"
+                                helper="Etiqueta para identificar el equipo"
+                            >
+                                <Input
+                                    id="detail-display-name"
+                                    value={displayName}
+                                    onChange={(e) =>
+                                        setDisplayName(e.target.value)
+                                    }
+                                    placeholder={
+                                        d.hostname ?? d.primary_ip ?? ""
+                                    }
+                                    className="bg-background/50 border-border/30"
+                                />
+                            </FormField>
+
+                            <FormField
+                                label="Confiable"
+                                htmlFor="detail-is-trusted"
+                                helper="Marcar este dispositivo como seguro"
+                            >
+                                <Button
+                                    id="detail-is-trusted"
+                                    type="button"
+                                    variant={isTrusted ? "default" : "outline"}
+                                    onClick={() => setIsTrusted((v) => !v)}
+                                    aria-pressed={isTrusted}
+                                    className="w-full gap-1.5 justify-center font-medium"
+                                >
+                                    {isTrusted
+                                        ? "Dispositivo confiable"
+                                        : "Marcar como confiable"}
+                                </Button>
+                            </FormField>
+
+                            <FormField
+                                label="Notas internas"
+                                htmlFor="detail-notes"
+                                helper="Notas no compartidas en la red"
+                            >
+                                <Input
+                                    id="detail-notes"
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    placeholder="Notas de mantenimiento o ubicación..."
+                                    className="bg-background/50 border-border/30"
+                                />
+                            </FormField>
+
+                            <Button
+                                onClick={handleSaveEdit}
+                                disabled={saving}
+                                className="w-full mt-2 gap-1.5"
+                            >
+                                {saving ? (
+                                    <>
+                                        <Loader2
+                                            className="h-4 w-4 animate-spin"
+                                            aria-hidden
+                                        />
+                                        Guardando…
+                                    </>
+                                ) : (
+                                    "Guardar cambios"
+                                )}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Columna Derecha: Escaneo y Servicios */}
+                <div className="flex flex-col gap-6 lg:col-span-2">
+                    {/* Tarjeta: Escaneo de Puertos */}
+                    <div ref={scanRef}>
+                        <Card className="glass-panel border-border/40">
+                            <CardHeader className="pb-3 border-b border-border/10">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                                     <Radar
-                                        className="h-5 w-5 text-primary"
+                                        className="h-4 w-4 text-primary"
                                         aria-hidden
                                     />
                                     Escaneo de puertos
-                                    <ChevronDown
-                                        className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
-                                        aria-hidden
-                                    />
                                 </CardTitle>
                             </CardHeader>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <CardContent className="flex flex-col gap-4">
-                                <FormField
-                                    label="Perfil"
-                                    htmlFor="detail-profile"
-                                    helper="Tipo de barrido de puertos"
-                                >
-                                    <div className="flex flex-wrap items-end gap-3">
+                            <CardContent className="pt-4 flex flex-col gap-4">
+                                <div className="flex flex-wrap items-end justify-between gap-4">
+                                    <FormField
+                                        label="Perfil de escaneo"
+                                        htmlFor="detail-profile"
+                                        helper="Intensidad del barrido"
+                                        className="flex-1 min-w-[200px]"
+                                    >
                                         <ProfileSelect
                                             value={profile}
                                             onChange={setProfile}
-                                            className="w-40"
+                                            className="w-full bg-background/50 border-border/30"
                                             id="detail-profile"
                                             disabled={scanning}
                                         />
+                                    </FormField>
+                                    <div className="flex gap-2 shrink-0">
                                         <Button
                                             onClick={handleScanPorts}
                                             disabled={scanning}
@@ -570,95 +614,105 @@ export function DeviceDetail() {
                                             </Button>
                                         )}
                                     </div>
-                                </FormField>
+                                </div>
 
                                 {scanning && (
-                                    // Live region para progreso/heartbeat/cancel (AC-15).
                                     <div
-                                        className="flex flex-col gap-2"
+                                        className="flex flex-col gap-4 border-t border-border/10 pt-4"
                                         aria-live="polite"
                                         aria-atomic="true"
                                     >
-                                        <Progress
-                                            value={pct}
-                                            indeterminate={pct === 0}
-                                        />
-                                        <div className="flex justify-between text-xs text-muted-foreground">
-                                            <span>
-                                                {progress
-                                                    ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
-                                                    : "en progreso…"}
-                                                {progress?.latest_open_port
-                                                    ? ` · último abierto: ${progress.latest_open_port}`
-                                                    : ""}
-                                            </span>
-                                            <span>
-                                                {Math.round(elapsed / 100) / 10}
-                                                s /{" "}
-                                                {Math.round(remainMs / 100) /
-                                                    10}
-                                                s
-                                            </span>
+                                        <div className="flex flex-col md:flex-row items-center gap-6 justify-center bg-muted/20 p-4 rounded-lg border border-border/10">
+                                            {/* Animación Radar Sonar */}
+                                            <div className="relative flex items-center justify-center h-16 w-16 shrink-0">
+                                                <div className="absolute h-14 w-14 rounded-full border border-primary/20 animate-ping" />
+                                                <div className="absolute h-10 w-10 rounded-full border border-primary/40 animate-pulse" />
+                                                <Radar
+                                                    className="h-6 w-6 text-primary animate-spin"
+                                                    style={{
+                                                        animationDuration: "3s",
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex-1 w-full flex flex-col gap-2">
+                                                <Progress
+                                                    value={pct}
+                                                    indeterminate={pct === 0}
+                                                    className="h-2"
+                                                />
+                                                <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                                                    <span>
+                                                        {progress
+                                                            ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
+                                                            : "Inicializando escaneo…"}
+                                                        {progress?.latest_open_port
+                                                            ? ` · último abierto: ${progress.latest_open_port}`
+                                                            : ""}
+                                                    </span>
+                                                    <span>
+                                                        {Math.round(
+                                                            elapsed / 100,
+                                                        ) / 10}
+                                                        s /{" "}
+                                                        {Math.round(
+                                                            remainMs / 100,
+                                                        ) / 10}
+                                                        s
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                             </CardContent>
-                        </CollapsibleContent>
-                    </Card>
-                </Collapsible>
-            </div>
+                        </Card>
+                    </div>
 
-            {/* Sección colapsable: servicios (AC-10). */}
-            <Collapsible open={openServices} onOpenChange={setOpenServices}>
-                <Card>
-                    <CollapsibleTrigger asChild>
-                        <CardHeader>
-                            <CardTitle className="flex w-full items-center gap-2">
+                    {/* Tarjeta: Servicios */}
+                    <Card className="glass-panel border-border/40">
+                        <CardHeader className="pb-3 border-b border-border/10 flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                                 <Server
-                                    className="h-5 w-5 text-primary"
+                                    className="h-4 w-4 text-primary"
                                     aria-hidden
                                 />
-                                Servicios ({detail.services.length})
-                                <ChevronDown
-                                    className="ml-auto h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
-                                    aria-hidden
-                                />
+                                Servicios activos ({detail.services.length})
                             </CardTitle>
+                            {detail.services.length > 0 && (
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExport("csv")}
+                                        className="h-7 gap-1 px-2.5 text-xs"
+                                    >
+                                        <Download
+                                            className="h-3 w-3"
+                                            aria-hidden
+                                        />
+                                        CSV
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExport("json")}
+                                        className="h-7 gap-1 px-2.5 text-xs"
+                                    >
+                                        <Download
+                                            className="h-3 w-3"
+                                            aria-hidden
+                                        />
+                                        JSON
+                                    </Button>
+                                </div>
+                            )}
                         </CardHeader>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <CardContent>
-                            <div className="mb-4 flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleExport("csv")}
-                                    className="gap-1.5"
-                                >
-                                    <Download
-                                        className="h-3.5 w-3.5"
-                                        aria-hidden
-                                    />
-                                    CSV
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleExport("json")}
-                                    className="gap-1.5"
-                                >
-                                    <Download
-                                        className="h-3.5 w-3.5"
-                                        aria-hidden
-                                    />
-                                    JSON
-                                </Button>
-                            </div>
+                        <CardContent className="pt-4">
                             {detail.services.length === 0 ? (
                                 <EmptyState
                                     icon={Cpu}
                                     title="Sin servicios"
-                                    description="Aún no hay servicios detectados. Escanea los puertos de este dispositivo."
+                                    description="Aún no hay servicios detectados. Realiza un escaneo de puertos en este dispositivo para descubrir servicios activos."
                                     action={
                                         <Button
                                             size="sm"
@@ -669,15 +723,15 @@ export function DeviceDetail() {
                                                 className="h-3.5 w-3.5"
                                                 aria-hidden
                                             />
-                                            Escanear puertos
+                                            Escanear puertos ahora
                                         </Button>
                                     }
                                 />
                             ) : (
-                                <div className="overflow-x-auto rounded-md border border-border">
+                                <div className="overflow-x-auto rounded-md border border-border/40">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow>
+                                            <TableRow className="hover:bg-transparent">
                                                 <TableHead>
                                                     <span className="inline-flex items-center gap-1">
                                                         Protocolo
@@ -705,7 +759,6 @@ export function DeviceDetail() {
                                                         />
                                                     </span>
                                                 </TableHead>
-                                                <TableHead>Producto</TableHead>
                                                 <TableHead>Versión</TableHead>
                                                 <TableHead>Estado</TableHead>
                                                 <TableHead>
@@ -724,21 +777,21 @@ export function DeviceDetail() {
                                                 const StateIcon =
                                                     serviceStateIcon(s.state);
                                                 return (
-                                                    <TableRow key={s.id}>
-                                                        <TableCell className="uppercase">
+                                                    <TableRow
+                                                        key={s.id}
+                                                        className="hover:bg-muted/30"
+                                                    >
+                                                        <TableCell className="uppercase font-semibold text-xs text-foreground/80">
                                                             {s.protocol}
                                                         </TableCell>
-                                                        <TableCell className="font-mono">
+                                                        <TableCell className="font-mono text-xs font-semibold">
                                                             {s.port}
                                                         </TableCell>
-                                                        <TableCell>
+                                                        <TableCell className="text-xs">
                                                             {s.service_name ??
                                                                 "—"}
                                                         </TableCell>
-                                                        <TableCell>
-                                                            {s.product ?? "—"}
-                                                        </TableCell>
-                                                        <TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground">
                                                             {s.version ?? "—"}
                                                         </TableCell>
                                                         <TableCell>
@@ -749,10 +802,10 @@ export function DeviceDetail() {
                                                                         ? "success"
                                                                         : "outline"
                                                                 }
-                                                                className="gap-1"
+                                                                className="gap-1 h-5 px-2 text-[10px] font-semibold"
                                                             >
                                                                 <StateIcon
-                                                                    className="h-3 w-3"
+                                                                    className="h-2.5 w-2.5"
                                                                     aria-hidden
                                                                 />
                                                                 {serviceStateLabel(
@@ -760,7 +813,12 @@ export function DeviceDetail() {
                                                                 )}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="font-mono text-xs">
+                                                        <TableCell
+                                                            className="font-mono text-xs text-muted-foreground/80 truncate max-w-[150px]"
+                                                            title={
+                                                                s.banner ?? ""
+                                                            }
+                                                        >
                                                             {s.banner ?? "—"}
                                                         </TableCell>
                                                     </TableRow>
@@ -771,9 +829,9 @@ export function DeviceDetail() {
                                 </div>
                             )}
                         </CardContent>
-                    </CollapsibleContent>
-                </Card>
-            </Collapsible>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }

@@ -13,7 +13,6 @@ import {
     isKnownDeviceType,
 } from "@/components/device-icons";
 import { useToast } from "@/components/ui/toast";
-import { formatRelative, formatTimestamp } from "@/lib/format";
 import { RelativeTime } from "@/components/relative-time";
 import {
     LayoutGrid,
@@ -22,11 +21,11 @@ import {
     Download,
     Loader2,
     Network as NetworkIcon,
-    ArrowRight,
     ShieldAlert,
     Play,
     X,
     ChevronDown,
+    ChevronRight,
     RefreshCw,
 } from "lucide-react";
 import {
@@ -73,7 +72,7 @@ export function Devices() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<View>("cards");
-    const [openFilters, setOpenFilters] = useState(true);
+    const [openFilters, setOpenFilters] = useState(false);
     // Filtros de la lista (AC-14): tipo, estado online y confianza derivada.
     // Por defecto "all" → se ven todos (offline incluidos, AC-15).
     const [filterType, setFilterType] = useState<string>("all");
@@ -163,7 +162,7 @@ export function Devices() {
 
     return (
         <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={loading}>
-            <Card>
+            <Card className="glass-panel border border-border/40 shadow-sm overflow-hidden">
                 <CardHeader variant="toolbar">
                     <CardTitle className="flex items-center gap-2">
                         <NetworkIcon
@@ -260,11 +259,14 @@ export function Devices() {
                         onOpenChange={setOpenFilters}
                         className="mb-4"
                     >
-                        <CollapsibleTrigger className="flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground">
-                            <Search className="h-4 w-4" aria-hidden />
-                            Buscar y filtrar
+                        <CollapsibleTrigger className="flex w-fit items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors py-1 px-2.5 rounded-md hover:bg-muted/50 border border-border/30">
+                            <Search className="h-3.5 w-3.5" aria-hidden />
+                            <span>Buscar y filtrar</span>
                             <ChevronDown
-                                className="h-4 w-4 transition-transform data-[state=closed]:-rotate-90"
+                                className={cn(
+                                    "h-3.5 w-3.5 transition-transform duration-300",
+                                    openFilters && "transform rotate-180",
+                                )}
                                 aria-hidden
                             />
                         </CollapsibleTrigger>
@@ -433,7 +435,7 @@ export function Devices() {
                         filtered.length > 0 &&
                         view === "cards" && (
                             <div
-                                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
                                 role="list"
                                 aria-label="Lista de dispositivos"
                             >
@@ -443,7 +445,7 @@ export function Devices() {
                                         <Card
                                             key={d.id}
                                             role="listitem"
-                                            className="cursor-pointer transition-colors hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring"
+                                            className="group relative cursor-pointer glass-panel border border-border/40 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring overflow-hidden shadow-sm"
                                             onClick={() => go(d)}
                                             onKeyDown={(e) => {
                                                 if (
@@ -457,17 +459,17 @@ export function Devices() {
                                             tabIndex={0}
                                             aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
                                         >
-                                            <CardContent className="flex flex-col gap-3 p-4">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="flex min-w-0 items-center gap-2.5">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                                            <CardContent className="flex flex-col gap-4 p-5">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                                                             <Icon
-                                                                className="h-5 w-5"
+                                                                className="h-5 w-5 text-primary"
                                                                 aria-hidden
                                                             />
                                                         </div>
                                                         <div className="flex min-w-0 flex-col">
-                                                            <span className="truncate font-medium">
+                                                            <span className="truncate font-bold text-foreground text-sm">
                                                                 <MaskedValue
                                                                     field={
                                                                         d.display_name
@@ -486,6 +488,18 @@ export function Devices() {
                                                                     }
                                                                 />
                                                             </span>
+                                                            {(d.display_name ||
+                                                                d.hostname) &&
+                                                                d.primary_ip && (
+                                                                    <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                                                                        <MaskedValue
+                                                                            field="primary_ip"
+                                                                            value={
+                                                                                d.primary_ip
+                                                                            }
+                                                                        />
+                                                                    </span>
+                                                                )}
                                                             <DeviceIdentity
                                                                 hostname={
                                                                     d.hostname ??
@@ -497,18 +511,18 @@ export function Devices() {
                                                             />
                                                         </div>
                                                     </div>
-                                                    <ArrowRight
-                                                        className="h-4 w-4 text-muted-foreground"
-                                                        aria-hidden
-                                                    />
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-all duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                        <ChevronRight className="h-4 w-4" />
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-1.5">
+
+                                                <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 pt-3">
                                                     {isKnownDeviceType(
                                                         d.device_type,
                                                     ) && (
                                                         <Badge
                                                             variant="secondary"
-                                                            className="gap-1"
+                                                            className="gap-1 h-5 px-2 text-[10px] font-semibold"
                                                         >
                                                             <Icon
                                                                 className="h-3 w-3"
@@ -522,34 +536,36 @@ export function Devices() {
                                                     <OnlineBadge
                                                         isOnline={d.is_online}
                                                     />
-                                                    {/* AC-13: TrustBadge es el
-                                                        único badge de confianza
-                                                        visible en la lista; el
-                                                        score va en su
-                                                        title/aria-label. */}
                                                     <TrustBadge device={d} />
                                                 </div>
-                                                <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                                                    <Meta
-                                                        label="Fabricante"
-                                                        value={d.vendor ?? "—"}
-                                                        glossaryKey="vendor"
-                                                    />
-                                                    <Meta
-                                                        label="Visto"
-                                                        value={formatRelative(
-                                                            d.last_seen_at,
-                                                        )}
-                                                        title={formatTimestamp(
-                                                            d.last_seen_at,
-                                                        )}
-                                                    />
-                                                    <Meta
-                                                        label="Confianza"
-                                                        value={d.confidence}
-                                                        glossaryKey="confianza"
-                                                    />
-                                                </dl>
+
+                                                <div className="flex flex-col gap-1 border-t border-border/10 pt-3 text-[11px]">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-muted-foreground">
+                                                            Fabricante
+                                                        </span>
+                                                        <span
+                                                            className="font-semibold text-foreground/80 truncate max-w-[150px]"
+                                                            title={
+                                                                d.vendor ??
+                                                                "Genérico"
+                                                            }
+                                                        >
+                                                            {d.vendor ??
+                                                                "Fabricante genérico"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-muted-foreground/70">
+                                                        <span>Visto</span>
+                                                        <span className="font-medium text-foreground/75">
+                                                            <RelativeTime
+                                                                value={
+                                                                    d.last_seen_at
+                                                                }
+                                                            />
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </CardContent>
                                         </Card>
                                     );
@@ -566,25 +582,16 @@ export function Devices() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>IP</TableHead>
                                             <TableHead>
                                                 <span className="inline-flex items-center gap-1">
-                                                    MAC
+                                                    Dispositivo
                                                     <InfoTooltip
-                                                        term="MAC"
-                                                        glossaryKey="mac"
-                                                    />
-                                                </span>
-                                            </TableHead>
-                                            <TableHead>
-                                                <span className="inline-flex items-center gap-1">
-                                                    Nombre del equipo
-                                                    <InfoTooltip
-                                                        term="Nombre del equipo"
+                                                        term="Dispositivo"
                                                         glossaryKey="hostname"
                                                     />
                                                 </span>
                                             </TableHead>
+                                            <TableHead>IP</TableHead>
                                             <TableHead>
                                                 <span className="inline-flex items-center gap-1">
                                                     Fabricante
@@ -594,7 +601,6 @@ export function Devices() {
                                                     />
                                                 </span>
                                             </TableHead>
-                                            <TableHead>Tipo</TableHead>
                                             <TableHead>Estado</TableHead>
                                             <TableHead>
                                                 <span className="inline-flex items-center gap-1">
@@ -606,76 +612,104 @@ export function Devices() {
                                                 </span>
                                             </TableHead>
                                             <TableHead>Último visto</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filtered.map((d) => (
-                                            <TableRow
-                                                key={d.id}
-                                                className="cursor-pointer"
-                                                onClick={() => go(d)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter")
-                                                        go(d);
-                                                }}
-                                                tabIndex={0}
-                                            >
-                                                <TableCell>
-                                                    <MaskedValue
-                                                        field="primary_ip"
-                                                        value={
-                                                            d.primary_ip ?? "—"
-                                                        }
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="font-mono text-xs">
-                                                    <MaskedValue
-                                                        field="primary_mac"
-                                                        value={
-                                                            d.primary_mac ?? "—"
-                                                        }
-                                                        mono
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <MaskedValue
-                                                        field="hostname"
-                                                        value={
-                                                            d.hostname ??
-                                                            d.display_name ??
-                                                            "—"
-                                                        }
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    {d.vendor ?? "—"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {isKnownDeviceType(
-                                                        d.device_type,
-                                                    ) && (
-                                                        <Badge variant="secondary">
-                                                            {deviceLabel(
-                                                                d.device_type,
-                                                            )}
-                                                        </Badge>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <OnlineBadge
-                                                        isOnline={d.is_online}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TrustBadge device={d} />
-                                                </TableCell>
-                                                <TableCell className="text-xs text-muted-foreground">
-                                                    <RelativeTime
-                                                        value={d.last_seen_at}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {filtered.map((d) => {
+                                            const Icon = deviceIcon(
+                                                d.device_type,
+                                            );
+                                            return (
+                                                <TableRow
+                                                    key={d.id}
+                                                    className="cursor-pointer group"
+                                                    onClick={() => go(d)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter")
+                                                            go(d);
+                                                    }}
+                                                    tabIndex={0}
+                                                >
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground shrink-0">
+                                                                <Icon
+                                                                    className="h-4 w-4"
+                                                                    aria-hidden
+                                                                />
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="font-semibold text-foreground truncate">
+                                                                    <MaskedValue
+                                                                        field={
+                                                                            d.display_name
+                                                                                ? "display_name"
+                                                                                : d.hostname
+                                                                                  ? "hostname"
+                                                                                  : "id"
+                                                                        }
+                                                                        value={
+                                                                            d.display_name ??
+                                                                            d.hostname ??
+                                                                            d.id
+                                                                        }
+                                                                    />
+                                                                </span>
+                                                                <span className="font-mono text-[10px] text-muted-foreground truncate uppercase">
+                                                                    <MaskedValue
+                                                                        field="primary_mac"
+                                                                        value={
+                                                                            d.primary_mac ??
+                                                                            "—"
+                                                                        }
+                                                                        mono
+                                                                    />
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs">
+                                                        <MaskedValue
+                                                            field="primary_ip"
+                                                            value={
+                                                                d.primary_ip ??
+                                                                "—"
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-xs">
+                                                        {d.vendor ?? "—"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <OnlineBadge
+                                                            isOnline={
+                                                                d.is_online
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <TrustBadge
+                                                            device={d}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        <RelativeTime
+                                                            value={
+                                                                d.last_seen_at
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end">
+                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-all duration-200 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                                <ChevronRight className="h-3.5 w-3.5" />
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </div>
@@ -743,37 +777,6 @@ function FilterToggle<T extends string>({
     );
 }
 
-function Meta({
-    label,
-    value,
-    mono,
-    glossaryKey,
-    title,
-}: {
-    label: string;
-    value: string;
-    mono?: boolean;
-    glossaryKey?: string;
-    title?: string;
-}) {
-    return (
-        <div className="flex flex-col">
-            <dt className="flex items-center gap-1 text-muted-foreground">
-                {label}
-                {glossaryKey && (
-                    <InfoTooltip term={label} glossaryKey={glossaryKey} />
-                )}
-            </dt>
-            <dd
-                className={`font-medium ${mono ? "font-mono" : ""}`}
-                title={title}
-            >
-                {value}
-            </dd>
-        </div>
-    );
-}
-
 function DeviceIdentity({
     hostname,
     primaryMac,
@@ -784,48 +787,37 @@ function DeviceIdentity({
     const { censorshipEnabled } = useCensorship();
     const displayHostname = hostname?.trim();
     const displayMac = primaryMac?.trim();
-    const hasHostname = Boolean(displayHostname);
 
     // Cuando censura está ON, el árbol de accesibilidad (title/aria-label) no
     // debe filtrar el valor real — se enmascara con maskValue.
-    const hostnameTitle = censorshipEnabled
-        ? displayHostname
+    const hostnameTitle =
+        censorshipEnabled && displayHostname
             ? maskValue("hostname", displayHostname)
-            : "Sin hostname"
-        : displayHostname || "Sin hostname";
-    const macTitle = censorshipEnabled
-        ? displayMac
+            : displayHostname || "";
+    const macTitle =
+        censorshipEnabled && displayMac
             ? maskValue("primary_mac", displayMac)
-            : "Sin MAC"
-        : displayMac || "Sin MAC";
+            : displayMac || "";
 
     return (
         <div className="mt-0.5 flex min-w-0 flex-col gap-0.5 text-xs">
-            <span
-                className={`truncate ${
-                    hasHostname
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground/70"
-                }`}
-                title={hostnameTitle}
-            >
-                {displayHostname ? (
+            {displayHostname && (
+                <span
+                    className="truncate text-muted-foreground"
+                    title={hostnameTitle}
+                >
                     <MaskedValue field="hostname" value={displayHostname} />
-                ) : (
-                    "Sin hostname"
-                )}
-            </span>
-            <span
-                className="truncate font-mono text-[11px] uppercase tracking-normal text-muted-foreground/80"
-                title={macTitle}
-                aria-label={`MAC ${macTitle}`}
-            >
-                {displayMac ? (
+                </span>
+            )}
+            {displayMac && (
+                <span
+                    className="truncate font-mono text-[11px] uppercase tracking-normal text-muted-foreground/80"
+                    title={macTitle}
+                    aria-label={`MAC ${macTitle}`}
+                >
                     <MaskedValue field="primary_mac" value={displayMac} mono />
-                ) : (
-                    "Sin MAC"
-                )}
-            </span>
+                </span>
+            )}
         </div>
     );
 }

@@ -83,6 +83,9 @@ describe("Devices screen (AC-22)", () => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
 
+        // Abrir panel de búsqueda y filtros
+        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
+
         const input = screen.getByLabelText("Buscar dispositivos");
         fireEvent.change(input, { target: { value: "router" } });
 
@@ -139,6 +142,9 @@ describe("Devices screen (AC-22)", () => {
         // AC-15: sin filtro activo se ven todos (offline incluidos).
         expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
 
+        // Abrir panel de búsqueda y filtros
+        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
+
         // Toggle "En línea" → solo online (dev-1, dev-2) → 2 visibles.
         fireEvent.click(screen.getByRole("button", { name: "En línea" }));
         await waitFor(() => {
@@ -163,6 +169,9 @@ describe("Devices screen (AC-22)", () => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
 
+        // Abrir panel de búsqueda y filtros
+        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
+
         fireEvent.click(screen.getByRole("button", { name: "Confiables" }));
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
@@ -176,6 +185,9 @@ describe("Devices screen (AC-22)", () => {
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
+
+        // Abrir panel de búsqueda y filtros
+        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
 
         // Radix Select: userEvent.click dispara la secuencia pointer+mouse
         // completa (jsdom no soporta `hasPointerCapture` con fireEvent solo).
@@ -200,7 +212,7 @@ describe("Devices screen (AC-22)", () => {
         const cards = screen.getAllByRole("listitem");
         // dev-1 tiene display_name="Router principal" → título de la tarjeta.
         expect(within(cards[0]).getByText("Router principal")).toBeInTheDocument();
-        // La IP no se renderiza como texto visible en la tarjeta (sólo en aria-label).
-        expect(within(cards[0]).queryByText("192.168.1.1")).not.toBeInTheDocument();
+        // La IP se renderiza como texto secundario en la tarjeta.
+        expect(within(cards[0]).getByText("192.168.1.1")).toBeInTheDocument();
     });
 });
