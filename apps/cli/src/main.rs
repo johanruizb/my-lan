@@ -65,7 +65,6 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-/// Inicializa `tracing-subscriber`. Sin `--verbose` solo muestra errores.
 fn init_tracing(verbose: bool) {
     let level = if verbose { "info" } else { "warn" };
     let _ = tracing_subscriber::fmt()

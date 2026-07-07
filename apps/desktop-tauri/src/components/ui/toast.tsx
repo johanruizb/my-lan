@@ -77,18 +77,14 @@ export const Toast = React.forwardRef<
 ));
 Toast.displayName = "Toast";
 
-// --- API basada en contexto (compatible con el hook useToast existente) -------
-
-type ToastVariantName = ToastVariant;
-
 interface ToastItem {
     id: string;
     message: string;
-    variant: ToastVariantName;
+    variant: ToastVariant;
 }
 
 interface ToastContextValue {
-    toast: (message: string, variant?: ToastVariantName) => void;
+    toast: (message: string, variant?: ToastVariant) => void;
 }
 
 const ToastContext = React.createContext<ToastContextValue | null>(null);
@@ -97,7 +93,7 @@ export function ToastProviderApp({ children }: { children: React.ReactNode }) {
     const [items, setItems] = React.useState<ToastItem[]>([]);
 
     const toast = React.useCallback(
-        (message: string, variant: ToastVariantName = "default") => {
+        (message: string, variant: ToastVariant = "default") => {
             const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             setItems((prev) => [...prev, { id, message, variant }]);
         },

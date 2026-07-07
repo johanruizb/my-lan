@@ -14,7 +14,7 @@ export function formatTimestamp(
     value: string | number | Date | null | undefined,
     opts: FormatTimestampOpts = {},
 ): string {
-    if (value === null || value === undefined || value === "") return "—";
+    if (value === null || value === undefined) return "—";
     const d = dayjs(value);
     if (!d.isValid()) return "—";
     return opts.relative ? d.fromNow() : d.format("YYYY-MM-DD HH:mm");

@@ -29,7 +29,6 @@ fn try_main() -> Result<()> {
         api_port,
     } = match parsed {
         Some(p) => p,
-        // --help/-h: ya se imprimió el uso; salir limpio.
         None => return Ok(()),
     };
     let config_path = config_path.ok_or_else(|| anyhow!("--config es requerido"))?;
@@ -65,7 +64,7 @@ fn parse_args(args: &[String]) -> Result<Option<ParsedArgs>> {
     let mut serve_api = false;
     let mut config_path: Option<PathBuf> = None;
     let mut api_port: Option<u16> = None;
-    let mut i = 1; // args[0] es el nombre del binario
+    let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
             "--serve-api" => serve_api = true,
@@ -211,7 +210,6 @@ mod tests {
 
     #[test]
     fn parse_args_no_args_yields_empty_parsed() {
-        // Solo el nombre del binario → todo por defecto (vacío).
         let parsed = parse_args(&args(&[])).expect("ok").expect("some");
         assert!(!parsed.serve_api);
         assert!(parsed.config_path.is_none());

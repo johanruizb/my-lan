@@ -151,7 +151,6 @@ mod tests {
         let path = dir.path().join("api-token");
         let t1 = load_or_create_token(&path).unwrap();
         assert!(path.exists());
-        // Recargar devuelve el mismo token.
         let t2 = load_or_create_token(&path).unwrap();
         assert_eq!(t1, t2);
     }
@@ -163,7 +162,6 @@ mod tests {
         let t1 = load_or_create_token(&path).unwrap();
         let t2 = rotate_token(&path).unwrap();
         assert_ne!(t1, t2, "rotación cambia el token");
-        // Recargar devuelve el nuevo.
         let t3 = load_or_create_token(&path).unwrap();
         assert_eq!(t2, t3);
     }

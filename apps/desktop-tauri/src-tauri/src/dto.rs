@@ -60,7 +60,6 @@ pub struct NetworkNameDto {
     pub source: String,
 }
 
-/// Detalle de un dispositivo + sus servicios (comando `get_device`).
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct DeviceDetailDto {
     pub device: Device,
@@ -119,13 +118,11 @@ pub struct ScanCancelled {
     pub scan_id: String,
 }
 
-/// Payload del evento `scan:finished`.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ScanFinished {
     pub scan_id: String,
 }
 
-/// Payload del evento `scan:started`.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ScanStarted {
     pub scan_id: String,

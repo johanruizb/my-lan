@@ -24,10 +24,6 @@ pub fn install_service() -> anyhow::Result<()> {
 mod tests {
     use super::*;
 
-    // En plataformas no-Windows, `install_service` es un stub determinista que
-    // siempre devuelve Err con un mensaje fijo. En Windows, la implementación
-    // real (Step 5) también devuelve Err (stub pendiente); test cfg-gated.
-
     #[cfg(not(windows))]
     #[test]
     fn install_service_errors_on_non_windows() {
@@ -43,7 +39,6 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn install_service_stub_errors_on_windows() {
-        // Hasta Step 5, el stub Windows también devuelve Err (pendiente).
         let result = install_service();
         assert!(result.is_err(), "stub Windows debe errar (pendiente)");
         let msg = format!("{}", result.unwrap_err());

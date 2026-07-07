@@ -203,7 +203,6 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_target_ipv4_literal_skips_dns() {
-        // Una IP literal parsea directamente; no hay llamada DNS.
         let addr = resolve_target("192.168.1.1", false, false)
             .await
             .expect("ipv4 literal");
@@ -228,7 +227,6 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_target_ignores_family_filters_for_literal() {
-        // Los flags ipv4/ipv6 no aplican a literales: la IP se usa tal cual.
         let addr = resolve_target("10.0.0.1", true, false)
             .await
             .expect("literal con ipv4=true");

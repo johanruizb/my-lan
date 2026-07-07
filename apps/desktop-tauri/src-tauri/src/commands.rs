@@ -29,8 +29,6 @@ use crate::dto::{
 };
 use crate::state::DesktopState;
 
-// --- DB helpers ------------------------------------------------------------
-
 /// Replica la query `latest_network_id` del CLI (`apps/cli/src/commands/mod.rs`):
 /// el `network_id` del escaneo más reciente. `None` si el inventario está vacío.
 fn latest_network_id(conn: &rusqlite::Connection) -> Result<Option<String>, String> {
@@ -98,8 +96,6 @@ fn fill_service(svc: &Service, device_id: &str, now: &str) -> Service {
         last_seen_at: now.to_string(),
     }
 }
-
-// --- Comandos: interfaz / lectura ------------------------------------------
 
 #[tauri::command]
 pub fn detect_interface_cmd(interface: Option<String>) -> Result<LanInterfaceDto, String> {
@@ -232,8 +228,6 @@ pub fn list_scans_cmd(state: State<'_, DesktopState>) -> Result<Vec<ScanSummaryD
         })
         .collect())
 }
-
-// --- Comando: run_discovery (streaming, per-host enrich + upsert) ----------
 
 /// Funde una observación cruda en el mapa online (identidad -> observación
 /// acumulada), aplicando la regla IP↔MAC de `aggregate()` en vivo: una observación
@@ -489,8 +483,6 @@ pub async fn run_discovery_cmd(
     Ok(dto)
 }
 
-// --- Comando: scan_ports (async + heartbeat + cancel) ----------------------
-
 #[tauri::command]
 pub async fn scan_ports_cmd(
     ip: String,
@@ -693,8 +685,6 @@ pub fn cancel_scan_cmd(
     Ok(found)
 }
 
-// --- Comandos: settings + db_path ------------------------------------------
-
 #[tauri::command]
 pub fn db_path_cmd(state: State<'_, DesktopState>) -> Result<String, String> {
     Ok(state.db_path.clone())
@@ -735,8 +725,6 @@ pub fn load_settings(app: &AppHandle) -> Settings {
         Err(_) => Settings::default(),
     }
 }
-
-// --- Comandos: export (Paso 6, AC-10) --------------------------------------
 
 /// Resuelve el `output_path` por defecto: `app_data_dir/exports/<name>.<ext>`.
 fn default_export_path(app: &AppHandle, name: &str, ext: &str) -> PathBuf {
@@ -984,8 +972,6 @@ pub async fn export_services_cmd(
     outcome?;
     Ok(path.to_string_lossy().to_string())
 }
-
-// --- Notificaciones OS -----------------------------------------------------
 
 /// `notify_scan_finished_cmd` (AC-4/#24): emite una notificación nativa del SO
 /// cuando termina un escaneo de puertos y la ventana NO está enfocada. El

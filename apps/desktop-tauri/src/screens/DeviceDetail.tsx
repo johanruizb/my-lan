@@ -70,7 +70,6 @@ import { Input } from "@/components/ui/input";
 import { formatRelative, formatTimestamp } from "@/lib/format";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 
-// Iconos de estado de servicio (open/closed/filtered — AC-5).
 function serviceStateIcon(state: string) {
     const s = state.toLowerCase();
     if (s === "open") return CircleCheck;
@@ -149,7 +148,6 @@ export function DeviceDetail() {
         };
     }, [ip]);
 
-    // Listeners de progreso/heartbeat/cancel/finish
     useEffect(() => {
         if (!scanning || !scanId) return;
         const unlisteners: UnlistenFn[] = [];
@@ -202,7 +200,6 @@ export function DeviceDetail() {
         };
     }, [scanning, scanId, ip]);
 
-    // Resetea el estado de edición solo cuando cambia el dispositivo o sus campos clave
     useEffect(() => {
         if (!detail) return;
         const dev = detail.device;
@@ -224,7 +221,6 @@ export function DeviceDetail() {
         detail?.device.notes,
     ]);
 
-    // Al navegar a otro dispositivo (cambia id), salir del modo edición.
     useEffect(() => {
         setEditing(false);
     }, [detail?.device.id]);
@@ -263,7 +259,6 @@ export function DeviceDetail() {
         }
     }
 
-    // #19: is_trusted persiste al toggle (cambio inmediato, sin Guardar).
     async function handleTrustToggle(nextTrusted: boolean) {
         if (!detail) return;
         const prev = isTrusted;
@@ -285,7 +280,6 @@ export function DeviceDetail() {
         }
     }
 
-    // #19: display_name + notes en modo edición (Guardar persiste ambos).
     async function handleSaveEdit() {
         if (!detail) return;
         const d = detail.device;
@@ -368,7 +362,6 @@ export function DeviceDetail() {
                     Volver a dispositivos
                 </Button>
 
-                {/* Cabecera Principal del Dispositivo */}
                 {/* #18: header sin glass-panel, bg-card sólido. */}
                 <div className="bg-card p-6 rounded-xl border border-border flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 min-w-0">
@@ -422,8 +415,6 @@ export function DeviceDetail() {
                             </div>
                         </div>
                     </div>
-                    {/* #18/#14: 2 badges (Online + Trust), sin Badge tipo texto
-                        (ícono 64px codifica tipo). */}
                     <div className="flex flex-wrap items-center gap-2">
                         <OnlineBadge
                             isOnline={d.is_online}
@@ -437,11 +428,8 @@ export function DeviceDetail() {
                 </div>
             </div>
 
-            {/* Layout en Grid Principal */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                {/* Columna Izquierda: Información y Gestión */}
                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    {/* Tarjeta: Detalles Técnicos */}
                     <Card>
                         <CardHeader className="p-3 border-b border-border/10">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
@@ -504,7 +492,7 @@ export function DeviceDetail() {
                         </CardContent>
                     </Card>
 
-                    {/* Tarjeta: Gestión */}
+                    
                     <Card>
                         <CardHeader className="p-3 border-b border-border/10">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
@@ -630,9 +618,7 @@ export function DeviceDetail() {
                     </Card>
                 </div>
 
-                {/* Columna Derecha: Escaneo y Servicios */}
                 <div className="flex flex-col gap-6 lg:col-span-2">
-                    {/* Tarjeta: Escaneo de Puertos */}
                     <div ref={scanRef}>
                         <Card>
                             <CardHeader className="p-3 border-b border-border/10">
@@ -707,7 +693,6 @@ export function DeviceDetail() {
                                         aria-atomic="true"
                                     >
                                         <div className="flex flex-col md:flex-row items-center gap-6 justify-center bg-muted/20 p-4 rounded-lg border border-border/10">
-                                            {/* Animación Radar Sonar */}
                                             {/* #22: sin animate-ping/pulse overlays. Radar icon spin
                                                 (3s) + Progress + contador + timer. motion-safe
                                                 respeta prefers-reduced-motion. */}
@@ -753,7 +738,7 @@ export function DeviceDetail() {
                         </Card>
                     </div>
 
-                    {/* Tarjeta: Servicios */}
+                    
                     <Card>
                         <CardHeader className="pb-3 border-b border-border/10 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">

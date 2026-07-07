@@ -102,7 +102,7 @@ export function Settings() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-5">
-                    {/* Sub-sección Escaneo (#20): perfil de scan por defecto. */}
+                    {/* #20 */}
                     <section className="flex flex-col gap-3">
                         <h3 className="text-sm font-medium">Escaneo</h3>
                         <div className="flex flex-col gap-1.5">
@@ -129,9 +129,7 @@ export function Settings() {
 
                     <div className="h-px bg-border" role="separator" />
 
-                    {/* Sub-sección Apariencia (#20): tema + re-abrir onboarding
-                        (#16). Sin Badge "Activo": aria-pressed ya indica el
-                        estado (#20). */}
+                    {/* #20 #16 */}
                     <section className="flex flex-col gap-3">
                         <h3 className="text-sm font-medium">Apariencia</h3>
                         <div className="flex flex-col gap-1.5">
@@ -191,10 +189,7 @@ export function Settings() {
 
                     <div className="h-px bg-border" role="separator" />
 
-                    {/* Sub-sección Privacidad (#20): censura (switch #33) +
-                        db_path (Avanzado AC-17). Switch accesible consistente
-                        con el toggle confiable de DeviceDetail. Cambio
-                        inmediato vía provider; handleSave persiste. */}
+                    {/* #20 #33 AC-17 */}
                     <section className="flex flex-col gap-3">
                         <h3 className="text-sm font-medium">Privacidad</h3>
                         <div className="flex flex-col gap-1.5">
@@ -237,8 +232,7 @@ export function Settings() {
                             </p>
                         </div>
 
-                        {/* db_path oculto por defecto (AC-17), sin jerga
-                            técnica visible. */}
+                        {/* AC-17 */}
                         <Collapsible>
                             <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
                                 <SettingsIcon

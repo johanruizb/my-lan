@@ -38,7 +38,6 @@ pub fn parse_arp_table(text: &str) -> Vec<ArpEntry> {
         if trimmed.is_empty() {
             continue;
         }
-        // Cabecera: contiene la marca literal "HW address".
         if trimmed.to_ascii_lowercase().contains("hw address") {
             continue;
         }

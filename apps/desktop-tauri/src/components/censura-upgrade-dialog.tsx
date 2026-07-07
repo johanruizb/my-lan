@@ -40,7 +40,6 @@ export function CensuraUpgradeDialog() {
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
-        // Ya se mostró/decidió en una ejecución anterior: no repetir.
         if (localStorage.getItem(SHOWN_KEY) === "1") return;
 
         let resolved = false;
@@ -62,7 +61,6 @@ export function CensuraUpgradeDialog() {
             }
         };
 
-        // Escucha una sola vez el evento de install nuevo emitido por lib.rs.
         onCensorshipFresh(() => finish(true))
             .then((fn) => {
                 if (resolved) {
@@ -74,7 +72,6 @@ export function CensuraUpgradeDialog() {
             })
             .catch(() => {});
 
-        // Si el evento no llega a tiempo, asumir upgrade y mostrar dialog.
         const timer = setTimeout(() => finish(false), FRESH_WAIT_MS);
 
         return () => {

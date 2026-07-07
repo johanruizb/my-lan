@@ -116,8 +116,6 @@ mod tests {
             first_seen_at: "2024-01-01T00:00:00Z".to_string(),
             last_seen_at: "2024-01-01T00:00:00Z".to_string(),
         };
-        // Llamar al enricher no debe entrar en pánico; con noop el device queda
-        // inalterado (no hay reglas que clasifiquen).
         enricher(&mut device, &[]);
         assert_eq!(device.id, "dev-1");
         assert_eq!(device.device_type, mylan_core::DeviceType::Unknown);
@@ -125,7 +123,6 @@ mod tests {
 
     #[test]
     fn build_enricher_with_empty_signatures_dir_degrades() {
-        // Un dir vacío (sin oui.csv ni rules YAML) → load falla → noop.
         let tmp = tempfile::tempdir().expect("tmp");
         let enricher = build_enricher(tmp.path(), None);
         let mut device = mylan_core::Device {
