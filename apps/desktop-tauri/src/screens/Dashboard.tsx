@@ -87,10 +87,10 @@ export function Dashboard() {
         <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={scanning}>
             {/* active network section */}
             <section aria-label="Red activa">
-                <Card className="glass-panel border border-border/40 overflow-hidden shadow-sm">
+                <Card className="overflow-hidden shadow-sm">
                     <Collapsible open={openNet} onOpenChange={setOpenNet}>
                         <CollapsibleTrigger asChild>
-                            <button className="flex w-full items-center justify-between p-6 text-left hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <button className="flex w-full items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                 <div className="flex flex-col gap-1 min-w-0">
                                     <div className="flex items-center gap-2 text-base md:text-lg font-bold tracking-tight">
                                         <div className="relative flex h-2 w-2">
@@ -120,7 +120,7 @@ export function Dashboard() {
                             </button>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="border-t border-border/20">
-                            <CardContent className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3 bg-muted/10">
+                            <CardContent className="grid gap-6 p-5 sm:grid-cols-2 lg:grid-cols-3 bg-muted/10">
                                 <Info
                                     label="Interfaz"
                                     value={iface?.name ?? "—"}
@@ -180,26 +180,26 @@ export function Dashboard() {
                         label="Dispositivos detectados"
                         value={devices.length}
                         icon={NetworkIcon}
-                        gradient="bg-gradient-to-br from-indigo-500 to-blue-600 dark:from-indigo-600 dark:to-blue-700"
+                        tone="primary"
                     />
                     <Stat
                         label="Activos en último scan"
                         value={lastScan?.hosts_alive ?? 0}
                         icon={Activity}
-                        gradient="bg-gradient-to-br from-emerald-400 to-teal-600 dark:from-emerald-500 dark:to-teal-700"
+                        tone="success"
                     />
                     <Stat
                         label="Nuevos dispositivos"
                         value={lastScan?.hosts_new ?? 0}
                         icon={Shield}
-                        gradient="bg-gradient-to-br from-amber-400 to-orange-600 dark:from-amber-500 dark:to-orange-700"
+                        tone="warning"
                     />
                 </div>
             </section>
 
             <section aria-label="Descubrir dispositivos">
-                <Card className="glass-panel border border-border/40 shadow-sm overflow-hidden">
-                    <CardHeader className="p-6">
+                <Card className="shadow-sm overflow-hidden">
+                    <CardHeader className="p-4">
                         <CardTitle className="flex items-center gap-2 text-base md:text-lg font-bold">
                             <Radio
                                 className="h-5 w-5 text-primary"
@@ -211,7 +211,7 @@ export function Dashboard() {
                             Explora y encuentra los dispositivos en tu red local
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex flex-col gap-6 p-6 pt-0">
+                    <CardContent className="flex flex-col gap-6 p-4 pt-0">
                         {/* Radar visual sweeping animation when scanning */}
                         {scanning ? (
                             <div className="flex flex-col items-center justify-center py-6 gap-4 border border-dashed border-primary/20 bg-primary/5 rounded-lg">
@@ -352,21 +352,26 @@ function Stat({
     label,
     value,
     icon: Icon,
-    gradient,
+    tone = "primary",
 }: {
     label: string;
     value: number;
     icon: typeof Wifi;
-    gradient?: string;
+    tone?: "primary" | "success" | "warning";
 }) {
+    // #3: chip con fondo tonal derivado del token semántico (sin gradientes).
+    const toneClasses = {
+        primary: "bg-primary/10 text-primary",
+        success: "bg-success/10 text-success",
+        warning: "bg-warning/10 text-warning",
+    } as const;
     return (
-        <Card className="glass-panel border border-border/40 shadow-sm">
-            <CardContent className="flex items-center gap-4 p-5">
+        <Card className="shadow-sm">
+            <CardContent className="flex items-center gap-4 p-4">
                 <div
                     className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-lg text-white shadow-md",
-                        gradient ||
-                            "bg-gradient-to-br from-blue-500 to-indigo-600",
+                        "flex h-11 w-11 items-center justify-center rounded-lg",
+                        toneClasses[tone],
                     )}
                 >
                     <Icon className="h-5 w-5" aria-hidden />

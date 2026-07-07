@@ -67,6 +67,7 @@ fn import_brownfield(app_data_db: &Path) -> bool {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;
             let _ = std::fs::create_dir_all(&app_data_dir);
@@ -125,6 +126,7 @@ pub fn run() {
             commands::db_path_cmd,
             commands::get_settings_cmd,
             commands::set_settings_cmd,
+            commands::notify_scan_finished_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

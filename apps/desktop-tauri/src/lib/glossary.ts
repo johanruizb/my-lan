@@ -52,10 +52,15 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
         tooltip:
             "Texto que un servicio abierto devuelve al conectarse. Suele incluir nombre y versión del software.",
     },
-    confianza: {
-        term: "Confianza",
+    certeza: {
+        term: "Certeza",
         tooltip:
-            "Qué tan seguro estamos de la clasificación del tipo de dispositivo. Más alto = más seguro.",
+            "Score 0-100 que mide qué tan segura es la clasificación del tipo de dispositivo. Lo calcula la app; más alto = más segura.",
+    },
+    confiable: {
+        term: "Confiable",
+        tooltip:
+            "Etiqueta manual del usuario que marca un dispositivo como seguro. Binaria, no la calcula la app.",
     },
     prefix_len: {
         term: "prefix_len",

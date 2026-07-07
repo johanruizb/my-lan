@@ -1,12 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,28 +19,43 @@ import {
     ExternalLink,
 } from "lucide-react";
 import { getAppVersion } from "@/lib/tauri";
-import { SECTION_GAP } from "@/lib/design-tokens";
 
 // Acerca de (AC-5/AC-6): versión unificada (leída en runtime con getVersion,
 // misma fuente que el pie de la sidebar), repo, licencia, autor y enlaces a
 // Issues/releases. Los enlaces externos se abren en el navegador del sistema
 // vía `tauri-plugin-opener` (NUNCA con <a target="_blank">, que el webview no
 // abre de forma fiable).
+//
+// T18: migrado de pantalla propia a Dialog Radix (ui/dialog.tsx) con focus
+// trap/restore/Escape/scroll lock. Se monta una sola vez en App.tsx como
+// <AboutDialog open onOpenChange />, y se abre desde el botón "Acerca de" del
+// SidebarFooter y el 5º item del top-nav móvil. La pantalla /about legacy se
+// elimina en T12.
 
 const REPO_URL = "https://github.com/johanruizb/my-lan";
 const ISSUES_URL = `${REPO_URL}/issues`;
 const RELEASES_URL = `${REPO_URL}/releases`;
 
-export function About() {
+function useAppVersion() {
     const [version, setVersion] = useState("");
-
     useEffect(() => {
         getAppVersion()
             .then(setVersion)
             .catch(() => {});
     }, []);
+    return version;
+}
 
-    async function open(url: string) {
+export function AboutDialog({
+    open,
+    onOpenChange,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const version = useAppVersion();
+
+    async function openLink(url: string) {
         try {
             await openUrl(url);
         } catch {
@@ -50,18 +64,16 @@ export function About() {
     }
 
     return (
-        <div className={`flex flex-col ${SECTION_GAP}`}>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Info className="h-5 w-5 text-primary" aria-hidden />
-                        Acerca de MyLAN
-                    </CardTitle>
-                    <CardDescription>
-                        Escáner de red local de escritorio.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md">
+                <div className="flex items-center gap-2">
+                    <Info className="h-5 w-5 text-primary" aria-hidden />
+                    <DialogTitle>Acerca de MyLAN</DialogTitle>
+                </div>
+                <DialogDescription>
+                    Escáner de red local de escritorio.
+                </DialogDescription>
+                <div className="flex flex-col gap-4">
                     <MetaRow label="Versión" icon={Tag}>
                         <Badge variant="secondary">v{version || "…"}</Badge>
                     </MetaRow>
@@ -75,23 +87,26 @@ export function About() {
                     <div className="flex flex-wrap gap-2 pt-1">
                         <LinkButton
                             icon={Github}
-                            onClick={() => open(REPO_URL)}
+                            onClick={() => openLink(REPO_URL)}
                         >
                             Repositorio
                         </LinkButton>
-                        <LinkButton icon={Bug} onClick={() => open(ISSUES_URL)}>
+                        <LinkButton
+                            icon={Bug}
+                            onClick={() => openLink(ISSUES_URL)}
+                        >
                             Issues
                         </LinkButton>
                         <LinkButton
                             icon={Package}
-                            onClick={() => open(RELEASES_URL)}
+                            onClick={() => openLink(RELEASES_URL)}
                         >
                             Releases
                         </LinkButton>
                     </div>
-                </CardContent>
-            </Card>
-        </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -137,3 +152,8 @@ function LinkButton({
         </Button>
     );
 }
+
+// Default export (decisión #11 / T18): App.tsx (T12) lo importa como
+// `import AboutDialog from "@/screens/About"`. Se mantiene además el named
+// export para compatibilidad con el estilo del resto de dialogs del proyecto.
+export default AboutDialog;

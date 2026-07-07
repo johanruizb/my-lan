@@ -209,6 +209,14 @@ export const scanPorts = (ip: string, profile: string, scanId: string) =>
 export const cancelScan = (scanId: string) =>
     invoke<boolean>("cancel_scan_cmd", { scanId });
 
+// Notificación OS nativa al terminar un escaneo de puertos cuando la ventana
+// NO está enfocada (AC-4/#24). El frontend comprueba `document.hidden` antes
+// de invocar; el comando Rust emite la notificación vía
+// `tauri-plugin-notification`. Errores silenciosos: el caller hace fallback al
+// toast existente sin mostrar error al usuario.
+export const notifyScanFinished = (title: string, body: string) =>
+    invoke<void>("notify_scan_finished_cmd", { title, body });
+
 export const listServices = (filters: ServiceFiltersDto = {}) =>
     invoke<ServiceExportRow[]>("list_services_cmd", { filters });
 

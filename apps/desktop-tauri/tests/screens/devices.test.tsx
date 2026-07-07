@@ -83,9 +83,8 @@ describe("Devices screen (AC-22)", () => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
 
-        // Abrir panel de búsqueda y filtros
-        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
-
+        // #26: Filtros siempre visibles (sin Collapsible): el input es accesible
+        // directamente sin abrir un panel.
         const input = screen.getByLabelText("Buscar dispositivos");
         fireEvent.change(input, { target: { value: "router" } });
 
@@ -94,13 +93,17 @@ describe("Devices screen (AC-22)", () => {
         });
     });
 
-    it("muestra el botón Escanear cuando no hay scan en curso", async () => {
+    // #15: El descubrimiento se lanza desde el Dashboard; Devices solo Refrescar.
+    it("muestra el botón Refrescar y omite el botón Escanear", async () => {
         renderWithProviders(<Devices />);
         await waitFor(() => {
             expect(
-                screen.getByRole("button", { name: /Escanear/ }),
+                screen.getByRole("button", { name: /Refrescar/ }),
             ).toBeInTheDocument();
         });
+        expect(
+            screen.queryByRole("button", { name: /Escanear/ }),
+        ).not.toBeInTheDocument();
     });
 
     // AC-18: OnlineBadge renderiza "En línea" (online) / "Fuera de línea" (offline).
@@ -117,19 +120,20 @@ describe("Devices screen (AC-22)", () => {
         expect(within(cards[2]).getByText("Fuera de línea")).toBeInTheDocument();
     });
 
-    // AC-18: TrustBadge renderiza los 3 estados derivados de deriveTrustState.
-    it("TrustBadge renderiza Confiable/Reconocido/Desconocido según deriveTrustState", async () => {
+    // ADR-0006/T6: TrustBadge es manual binario (is_trusted) → Confiable / No
+    // confiable. Sin estado "Reconocido" ni derivación de confidence.
+    it("TrustBadge renderiza Confiable/No confiable según is_trusted", async () => {
         renderWithProviders(<Devices />);
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
 
         const cards = screen.getAllByRole("listitem");
-        // dev-1 trusted → "Confiable"; dev-2 recognized → "Reconocido";
-        // dev-3 unknown → "Desconocido".
+        // dev-1 is_trusted=true → "Confiable"; dev-2/dev-3 is_trusted=false →
+        // "No confiable".
         expect(within(cards[0]).getByText("Confiable")).toBeInTheDocument();
-        expect(within(cards[1]).getByText("Reconocido")).toBeInTheDocument();
-        expect(within(cards[2]).getByText("Desconocido")).toBeInTheDocument();
+        expect(within(cards[1]).getByText("No confiable")).toBeInTheDocument();
+        expect(within(cards[2]).getByText("No confiable")).toBeInTheDocument();
     });
 
     // AC-15/AC-18: filtro Estado "En línea" oculta offline; "Todos" los restaura.
@@ -142,9 +146,7 @@ describe("Devices screen (AC-22)", () => {
         // AC-15: sin filtro activo se ven todos (offline incluidos).
         expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
 
-        // Abrir panel de búsqueda y filtros
-        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
-
+        // #26: Filtros siempre visibles (sin Collapsible).
         // Toggle "En línea" → solo online (dev-1, dev-2) → 2 visibles.
         fireEvent.click(screen.getByRole("button", { name: "En línea" }));
         await waitFor(() => {
@@ -162,16 +164,15 @@ describe("Devices screen (AC-22)", () => {
         });
     });
 
-    // AC-14/AC-18: filtro Confianza "Confiables" muestra solo el trusted.
-    it("filtro Confianza Confiables muestra solo dispositivos confiables", async () => {
+    // ADR-0006/T14: filtro Confiable (binario is_trusted) "Confiables" muestra
+    // solo el dispositivo con is_trusted=true (dev-1).
+    it("filtro Confiable Confiables muestra solo dispositivos confiables", async () => {
         renderWithProviders(<Devices />);
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
 
-        // Abrir panel de búsqueda y filtros
-        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
-
+        // #26: Filtros siempre visibles (sin Collapsible).
         fireEvent.click(screen.getByRole("button", { name: "Confiables" }));
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
@@ -186,9 +187,7 @@ describe("Devices screen (AC-22)", () => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
 
-        // Abrir panel de búsqueda y filtros
-        fireEvent.click(screen.getByRole("button", { name: /Buscar y filtrar/ }));
-
+        // #26: Filtros siempre visibles (sin Collapsible).
         // Radix Select: userEvent.click dispara la secuencia pointer+mouse
         // completa (jsdom no soporta `hasPointerCapture` con fireEvent solo).
         const trigger = screen.getByRole("combobox", { name: "Filtrar por tipo" });

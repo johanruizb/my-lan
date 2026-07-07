@@ -20,6 +20,7 @@ use mylan_db::device_repo::UpsertOutcome;
 use mylan_db::service_repo::ServiceFilters;
 use mylan_discovery::{detect_interface, discover_stream, DiscoverOptions, DiscoveryEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_notification::NotificationExt;
 
 use crate::dto::{
     parse_ip, parse_profile, DeviceDetailDto, DiscoveryProgress, LanInterfaceDto, NetworkNameDto,
@@ -907,4 +908,28 @@ pub async fn export_services_cmd(
     .map_err(|e| format!("export join: {e}"))?;
     outcome?;
     Ok(path.to_string_lossy().to_string())
+}
+
+// --- Notificaciones OS -----------------------------------------------------
+
+/// `notify_scan_finished_cmd` (AC-4/#24): emite una notificación nativa del SO
+/// cuando termina un escaneo de puertos y la ventana NO está enfocada. El
+/// frontend comprueba `document.hidden` antes de invocar; aquí solo se
+/// construye y muestra la notificación vía `tauri-plugin-notification`.
+///
+/// Errores silenciosos: si el permiso está denegado o el daemon de
+/// notificaciones no está disponible, se devuelve `Err` y el frontend hace
+/// fallback al toast existente (sin error visible al usuario).
+#[tauri::command]
+pub fn notify_scan_finished_cmd(
+    app: AppHandle,
+    title: String,
+    body: String,
+) -> Result<(), String> {
+    app.notification()
+        .builder()
+        .title(&title)
+        .body(&body)
+        .show()
+        .map_err(|e| format!("notificación OS: {e}"))
 }

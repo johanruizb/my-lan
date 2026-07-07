@@ -1,6 +1,6 @@
-// AC-18: Test del formulario de edición de `DeviceDetail`.
-// Verifica que al rellenar `display_name` y pulsar "Guardar" se llama a
-// `updateDevice` con el `id` del device y el field `displayName`.
+// AC-18: Test del formulario de edición de `DeviceDetail` (#19 edición híbrida).
+// Verifica que al pulsar "Editar", rellenar `display_name` y pulsar "Guardar"
+// se llama a `updateDevice` con el `id` del device y el field `displayName`.
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
@@ -77,15 +77,18 @@ describe("DeviceDetail screen (AC-18)", () => {
             ["/devices/192.168.1.1"],
         );
 
-        // Espera a que cargue el formulario (botón "Guardar" visible).
-        const saveButton = await screen.findByRole("button", { name: /^Guardar$/ });
-        expect(saveButton).toBeInTheDocument();
+        // #19 edición híbrida: por defecto modo lectura (botón "Editar").
+        const editButton = await screen.findByRole("button", {
+            name: /^Editar$/,
+        });
+        fireEvent.click(editButton);
 
-        // Rellena el input de display_name.
-        const input = screen.getByLabelText("Nombre personalizado");
+        // Rellena el input de display_name (revelado al entrar en edición).
+        const input = await screen.findByLabelText("Nombre personalizado");
         fireEvent.change(input, { target: { value: "Nombre nuevo" } });
 
         // Click botón "Guardar".
+        const saveButton = screen.getByRole("button", { name: /^Guardar$/ });
         fireEvent.click(saveButton);
 
         // Verifica updateDevice fue llamado con el id del device y displayName.

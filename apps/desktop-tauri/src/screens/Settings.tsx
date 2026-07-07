@@ -8,12 +8,13 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { ProfileSelect } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/theme-provider";
 import { useCensorship } from "@/components/censorship-provider";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { reopenOnboarding } from "@/components/onboarding-dialog";
 import {
     Collapsible,
     CollapsibleContent,
@@ -25,10 +26,10 @@ import {
     Database,
     Gauge,
     Palette,
-    Eye,
     EyeOff,
     Loader2,
     ChevronDown,
+    RotateCcw,
     Settings as SettingsIcon,
 } from "lucide-react";
 import {
@@ -100,186 +101,181 @@ export function Settings() {
                         Configuración de MyLAN Desktop.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1.5">
-                        <label
-                            htmlFor="default-profile"
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                        >
-                            <Gauge className="h-3.5 w-3.5" aria-hidden />
-                            Perfil de scan por defecto
-                        </label>
-                        <ProfileSelect
-                            value={settings.default_profile}
-                            onChange={(v) =>
-                                setSettingsState({
-                                    ...settings,
-                                    default_profile: v,
-                                })
-                            }
-                            className="w-40"
-                            id="default-profile"
-                        />
-                    </div>
-
-                    {/* Toggle de tema (AC-3). */}
-                    <div className="flex flex-col gap-1.5">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Palette className="h-3.5 w-3.5" aria-hidden />
-                            Tema
-                        </span>
-                        <div
-                            className="flex gap-2"
-                            role="group"
-                            aria-label="Selector de tema"
-                        >
-                            <Button
-                                variant={
-                                    theme === "light" ? "secondary" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setTheme("light")}
-                                aria-pressed={theme === "light"}
-                                className="gap-1.5"
+                <CardContent className="flex flex-col gap-5">
+                    {/* Sub-sección Escaneo (#20): perfil de scan por defecto. */}
+                    <section className="flex flex-col gap-3">
+                        <h3 className="text-sm font-medium">Escaneo</h3>
+                        <div className="flex flex-col gap-1.5">
+                            <label
+                                htmlFor="default-profile"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground"
                             >
-                                <Sun className="h-4 w-4" aria-hidden />
-                                Claro
-                                {theme === "light" && (
-                                    <Badge variant="success" className="ml-1">
-                                        Activo
-                                    </Badge>
-                                )}
-                            </Button>
-                            <Button
-                                variant={
-                                    theme === "dark" ? "secondary" : "outline"
+                                <Gauge className="h-3.5 w-3.5" aria-hidden />
+                                Perfil de scan por defecto
+                            </label>
+                            <ProfileSelect
+                                value={settings.default_profile}
+                                onChange={(v) =>
+                                    setSettingsState({
+                                        ...settings,
+                                        default_profile: v,
+                                    })
                                 }
-                                size="sm"
-                                onClick={() => setTheme("dark")}
-                                aria-pressed={theme === "dark"}
-                                className="gap-1.5"
-                            >
-                                <Moon className="h-4 w-4" aria-hidden />
-                                Oscuro
-                                {theme === "dark" && (
-                                    <Badge variant="success" className="ml-1">
-                                        Activo
-                                    </Badge>
-                                )}
-                            </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            El tema se aplica inmediatamente y se persiste en
-                            los ajustes.
-                        </p>
-                    </div>
-
-                    {/* Toggle de censura (AC-3): enmascara identificadores en la
-                        UI y los exports. ON por defecto para installs nuevos. */}
-                    <div className="flex flex-col gap-1.5">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            {censorshipEnabled ? (
-                                <EyeOff className="h-3.5 w-3.5" aria-hidden />
-                            ) : (
-                                <Eye className="h-3.5 w-3.5" aria-hidden />
-                            )}
-                            Censura
-                        </span>
-                        <div
-                            className="flex gap-2"
-                            role="group"
-                            aria-label="Selector de censura"
-                        >
-                            <Button
-                                variant={
-                                    censorshipEnabled ? "secondary" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setCensorshipEnabled(true)}
-                                aria-pressed={censorshipEnabled}
-                                className="gap-1.5"
-                            >
-                                <EyeOff className="h-4 w-4" aria-hidden />
-                                Activada
-                                {censorshipEnabled && (
-                                    <Badge variant="success" className="ml-1">
-                                        Activo
-                                    </Badge>
-                                )}
-                            </Button>
-                            <Button
-                                variant={
-                                    !censorshipEnabled ? "secondary" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setCensorshipEnabled(false)}
-                                aria-pressed={!censorshipEnabled}
-                                className="gap-1.5"
-                            >
-                                <Eye className="h-4 w-4" aria-hidden />
-                                Visible
-                                {!censorshipEnabled && (
-                                    <Badge variant="success" className="ml-1">
-                                        Activo
-                                    </Badge>
-                                )}
-                            </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            El modo censura enmascara identificadores (IP
-                            <InfoTooltip term="IP" glossaryKey="ip" />, MAC
-                            <InfoTooltip term="MAC" glossaryKey="mac" />,
-                            hostname
-                            <InfoTooltip
-                                term="Hostname"
-                                glossaryKey="hostname"
+                                className="w-40"
+                                id="default-profile"
                             />
-                            , gateway
-                            <InfoTooltip term="Gateway" glossaryKey="gateway" />
-                            , DNS
-                            <InfoTooltip term="DNS" glossaryKey="dns" />) en la
-                            UI y los exports para evitar compartirlos por error
-                            en capturas o archivos. Se aplica inmediatamente y
-                            se persiste en los ajustes.
-                        </p>
-                    </div>
+                        </div>
+                    </section>
 
-                    {/* Sección Avanzado (AC-17): db_path oculto por defecto,
-                        sin jerga técnica visible. Preserva secciones
-                        censura/tema/perfil intactas. */}
-                    <Collapsible>
-                        <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
-                            <SettingsIcon className="h-3.5 w-3.5" aria-hidden />
-                            Avanzado
-                            <ChevronDown
-                                className="h-3.5 w-3.5 transition-transform data-[state=closed]:-rotate-90"
-                                aria-hidden
-                            />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <div className="mt-2 flex flex-col gap-1.5">
-                                <label
-                                    htmlFor="db-path"
-                                    className="text-xs text-muted-foreground"
-                                >
-                                    Ruta de la base de datos
-                                </label>
-                                <Input
-                                    id="db-path"
-                                    value={dbPathValue}
-                                    onChange={(e) =>
-                                        setDbPathValue(e.target.value)
+                    <div className="h-px bg-border" role="separator" />
+
+                    {/* Sub-sección Apariencia (#20): tema + re-abrir onboarding
+                        (#16). Sin Badge "Activo": aria-pressed ya indica el
+                        estado (#20). */}
+                    <section className="flex flex-col gap-3">
+                        <h3 className="text-sm font-medium">Apariencia</h3>
+                        <div className="flex flex-col gap-1.5">
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Palette className="h-3.5 w-3.5" aria-hidden />
+                                Tema
+                            </span>
+                            <div
+                                className="flex gap-2"
+                                role="group"
+                                aria-label="Selector de tema"
+                            >
+                                <Button
+                                    variant={
+                                        theme === "light"
+                                            ? "secondary"
+                                            : "outline"
                                     }
-                                    className="max-w-xl"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Ubicación donde la app guarda sus datos.
-                                    Solo necesaria si quieres usar una ruta
-                                    personalizada.
-                                </p>
+                                    size="sm"
+                                    onClick={() => setTheme("light")}
+                                    aria-pressed={theme === "light"}
+                                    className="gap-1.5"
+                                >
+                                    <Sun className="h-4 w-4" aria-hidden />
+                                    Claro
+                                </Button>
+                                <Button
+                                    variant={
+                                        theme === "dark"
+                                            ? "secondary"
+                                            : "outline"
+                                    }
+                                    size="sm"
+                                    onClick={() => setTheme("dark")}
+                                    aria-pressed={theme === "dark"}
+                                    className="gap-1.5"
+                                >
+                                    <Moon className="h-4 w-4" aria-hidden />
+                                    Oscuro
+                                </Button>
                             </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+                            <p className="text-xs text-muted-foreground">
+                                El tema se aplica inmediatamente y se persiste
+                                en los ajustes.
+                            </p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => reopenOnboarding()}
+                            className="h-8 w-fit gap-1.5 text-xs text-muted-foreground"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                            Ver de nuevo el tour de bienvenida
+                        </Button>
+                    </section>
+
+                    <div className="h-px bg-border" role="separator" />
+
+                    {/* Sub-sección Privacidad (#20): censura (switch #33) +
+                        db_path (Avanzado AC-17). Switch accesible consistente
+                        con el toggle confiable de DeviceDetail. Cambio
+                        inmediato vía provider; handleSave persiste. */}
+                    <section className="flex flex-col gap-3">
+                        <h3 className="text-sm font-medium">Privacidad</h3>
+                        <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                                <span
+                                    id="censura-label"
+                                    className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                                >
+                                    <EyeOff
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                    Censura
+                                </span>
+                                <Switch
+                                    checked={censorshipEnabled}
+                                    onCheckedChange={setCensorshipEnabled}
+                                    aria-labelledby="censura-label"
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                El modo censura enmascara identificadores (IP
+                                <InfoTooltip term="IP" glossaryKey="ip" />, MAC
+                                <InfoTooltip term="MAC" glossaryKey="mac" />,
+                                hostname
+                                <InfoTooltip
+                                    term="Hostname"
+                                    glossaryKey="hostname"
+                                />
+                                , gateway
+                                <InfoTooltip
+                                    term="Gateway"
+                                    glossaryKey="gateway"
+                                />
+                                , DNS
+                                <InfoTooltip term="DNS" glossaryKey="dns" />) en
+                                la UI y los exports para evitar compartirlos por
+                                error en capturas o archivos. Se aplica
+                                inmediatamente y se persiste en los ajustes.
+                            </p>
+                        </div>
+
+                        {/* db_path oculto por defecto (AC-17), sin jerga
+                            técnica visible. */}
+                        <Collapsible>
+                            <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                                <SettingsIcon
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden
+                                />
+                                Avanzado
+                                <ChevronDown
+                                    className="h-3.5 w-3.5 transition-transform data-[state=closed]:-rotate-90"
+                                    aria-hidden
+                                />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <div className="mt-2 flex flex-col gap-1.5">
+                                    <label
+                                        htmlFor="db-path"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        Ruta de la base de datos
+                                    </label>
+                                    <Input
+                                        id="db-path"
+                                        value={dbPathValue}
+                                        onChange={(e) =>
+                                            setDbPathValue(e.target.value)
+                                        }
+                                        className="max-w-xl"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Ubicación donde la app guarda sus datos.
+                                        Solo necesaria si quieres usar una ruta
+                                        personalizada.
+                                    </p>
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </section>
 
                     <Button
                         onClick={handleSave}

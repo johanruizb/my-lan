@@ -5,6 +5,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/screens/Dashboard";
 import { renderWithProviders } from "./helpers";
+import { NetworkNameProvider } from "@/lib/use-network-name";
 import { deviceFixtures, defaultSettings } from "../fixtures";
 
 const detectInterfaceMock = vi.fn();
@@ -64,7 +65,11 @@ describe("Dashboard screen (AC-22)", () => {
     });
 
     it("renderiza la sección 'Red activa' y 'Descubrir dispositivos'", async () => {
-        renderWithProviders(<Dashboard />);
+        renderWithProviders(
+            <NetworkNameProvider>
+                <Dashboard />
+            </NetworkNameProvider>,
+        );
         await waitFor(() => {
             expect(
                 screen.getByRole("region", { name: "Red activa" }),
@@ -75,17 +80,25 @@ describe("Dashboard screen (AC-22)", () => {
         ).toBeInTheDocument();
     });
 
-    it("muestra el botón 'Descubrir dispositivos' cuando no hay scan en curso", async () => {
-        renderWithProviders(<Dashboard />);
+    it("muestra el botón 'Iniciar descubrimiento' cuando no hay scan en curso", async () => {
+        renderWithProviders(
+            <NetworkNameProvider>
+                <Dashboard />
+            </NetworkNameProvider>,
+        );
         await waitFor(() => {
             expect(
-                screen.getByRole("button", { name: /Descubrir dispositivos/ }),
+                screen.getByRole("button", { name: /Iniciar descubrimiento/ }),
             ).toBeInTheDocument();
         });
     });
 
     it("expone el conteo de dispositivos en el resumen", async () => {
-        renderWithProviders(<Dashboard />);
+        renderWithProviders(
+            <NetworkNameProvider>
+                <Dashboard />
+            </NetworkNameProvider>,
+        );
         // El resumen lista el número de dispositivos de los fixtures.
         await waitFor(() => {
             expect(
