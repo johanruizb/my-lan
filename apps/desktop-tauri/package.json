@@ -4,15 +4,28 @@
   "version": "0.5.7",
   "type": "module",
   "scripts": {
+    "//version": "sync = sincroniza la versión con la raíz del workspace (escribe archivos) | check = solo verifica, falla si hay desync",
     "version:sync": "node ../../scripts/sync-version.mjs",
     "version:check": "node ../../scripts/sync-version.mjs --check",
+
+    "//dev": "vite con HMR — servidor de desarrollo del frontend (rápido, para iterar UI en navegador)",
     "dev": "vite",
+
+    "//build": "3 pasos: prettier (formatea src/ con tab-width 4) → tsc (type-check de TypeScript) → vite build (genera dist/)",
     "build": "npx prettier --write ./src/ --tab-width 4 --log-level silent && tsc && vite build",
+
+    "//preview": "sirve el dist/ ya construido para previsualizar el build localmente",
     "preview": "vite preview",
+
+    "//lint": "lint = eslint sobre todo el proyecto | lint:a11y = auditoría de accesibilidad con axe-core vía scripts/a11y-audit.mjs",
     "lint": "eslint .",
     "lint:a11y": "node scripts/a11y-audit.mjs",
+
+    "//test": "test = vitest run (una sola pasada, cierra al terminar) | test:watch = vitest en modo watch (re-corre al guardar archivos)",
     "test": "vitest run",
     "test:watch": "vitest",
+
+    "//tauri": "expone la CLI de tauri — se usa como 'npm run tauri -- dev' o 'npm run tauri -- build', no hace nada por sí solo",
     "tauri": "tauri"
   },
   "dependencies": {
