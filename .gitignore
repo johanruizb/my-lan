@@ -33,3 +33,5 @@ apps/desktop-tauri/src-tauri/gen/
 **/.kilo
 
 **/.sisyphus
+**/.commandcode/
+**/.hermes/
