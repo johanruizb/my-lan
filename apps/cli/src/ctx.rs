@@ -24,22 +24,8 @@ impl AppContext {
             mylan_db::connection::default_db_path().unwrap_or_else(|| PathBuf::from("mylan.db"));
         Self {
             db_path,
-            signatures_dir: default_signatures_dir(),
+            signatures_dir: mylan_fingerprint::default_signatures_dir(),
             verbose,
         }
     }
-}
-
-/// Directorio de signatures: relativo al directorio de trabajo actual.
-///
-/// Al ejecutar `cargo run` o el binario desde la raíz del repo, resuelve
-/// `./signatures`. En una instalación empaquetada podría reubicarse vía env
-/// `MYLAN_SIGNATURES_DIR`.
-fn default_signatures_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("MYLAN_SIGNATURES_DIR") {
-        if !dir.is_empty() {
-            return PathBuf::from(dir);
-        }
-    }
-    PathBuf::from("signatures")
 }

@@ -32,12 +32,6 @@ impl TokenMiddleware {
     fn matches(&self, provided: &str) -> bool {
         provided == self.token.as_str()
     }
-
-    /// Acceso al token esperado (para tests/diagnóstico).
-    #[must_use]
-    pub fn expected(&self) -> &str {
-        self.token.as_str()
-    }
 }
 
 /// Middleware (tower layer vía `from_fn_with_state`) que valida el header

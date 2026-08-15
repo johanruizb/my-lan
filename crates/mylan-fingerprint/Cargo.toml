@@ -7,10 +7,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-csv = "1.4.0"
-hickory-resolver.workspace = true
+csv.workspace = true
 mylan-core = { workspace = true }
 serde.workspace = true
 serde_yaml_ng = "0.10.0"
 thiserror.workspace = true
 tokio = { version = "1.52.3", features = ["rt", "net"] }
+tracing.workspace = true

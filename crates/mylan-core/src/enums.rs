@@ -51,8 +51,25 @@ pub enum ScanProfile {
     Deep,
     /// Perfil IoT: catálogo fijo (RTSP/ONVIF, MQTT, CoAP, UPnP, TR-069).
     Iot,
-    /// Perfil router: catálogo fijo (admin/SSH/Telnet/DNS/DHCP/UPnP/TR-069).
+    /// Perfil de router: catálogo fijo (admin/SSH/Telnet/DNS/DHCP/UPnP/TR-069).
     Router,
+}
+
+impl ScanProfile {
+    /// Parsea desde nombre `snake_case` (p.ej. "quick", "iot").
+    /// Devuelve `Err(String)` si el nombre no coincide con ninguna variante.
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s.to_ascii_lowercase().as_str() {
+            "quick" => Ok(Self::Quick),
+            "normal" => Ok(Self::Normal),
+            "deep" => Ok(Self::Deep),
+            "iot" => Ok(Self::Iot),
+            "router" => Ok(Self::Router),
+            other => Err(format!(
+                "perfil no soportado: '{other}' (usar quick|normal|deep|iot|router)"
+            )),
+        }
+    }
 }
 
 /// Naturaleza de un escaneo: descubrimiento de hosts vs. escaneo de puertos.

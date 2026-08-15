@@ -19,8 +19,5 @@ toml = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
 
-[target.'cfg(windows)'.dependencies]
-windows-service = { workspace = true }
-
 [dev-dependencies]
 tempfile = "3"

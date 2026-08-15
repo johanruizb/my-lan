@@ -15,32 +15,36 @@
 //! sondas pasivas (ARP cache, TCP-connect, eco ICMP, multicast mDNS/SSDP); cero
 //! deauth/ARP-spoof/MITM.
 
+#![deny(unsafe_code)]
 #![allow(clippy::module_name_repetitions)]
 
-pub mod arp;
+// Unsafe permitido solo en los módulos que interactúan con APIs de OS:
+// traceroute (Linux, cola de errores ICMP vía libc) y ssid (Windows, WLAN API nativa).
+
+pub(crate) mod arp;
 pub mod dns;
-pub mod error;
-pub mod icmp;
+pub(crate) mod error;
+pub(crate) mod icmp;
 pub mod iface;
-pub mod mdns;
-pub mod netutil;
+pub(crate) mod mdns;
+pub(crate) mod netutil;
 pub mod ping;
-pub mod ssdp;
-pub mod ssid;
-pub mod sudo;
-pub mod tcp_ping;
+pub(crate) mod ssdp;
+pub(crate) mod ssid;
+pub(crate) mod sudo;
+pub(crate) mod tcp_ping;
 // `traceroute` usa `std::os::unix::io` + `nix` (cola de errores `IP_RECVERR`):
 // Linux-only. En otras plataformas se expone el stub `traceroute_host` de abajo.
 #[cfg(target_os = "linux")]
 pub mod traceroute;
 
-pub use arp::{arp_entries_to_observations, parse_arp_table, read_arp_cache, ArpEntry};
-pub use dns::{dns_lookup_host, resolve_host, reverse_lookup, system_resolver};
+pub use arp::{arp_entries_to_observations, read_arp_cache};
+pub use dns::{dns_lookup_host, resolve_host};
 pub use error::DiscoveryError;
-pub use iface::{detect_interface, gateway_observations, resolve_gateway_mac, LanInterface};
+pub use iface::{detect_interface, gateway_observations, LanInterface};
 pub use netutil::enumerate_hosts;
 pub use ping::ping_host;
-pub use ssid::{detect_ssid, SsidDetector};
+pub use ssid::detect_ssid;
 #[cfg(target_os = "linux")]
 pub use traceroute::traceroute_host;
 

@@ -3,10 +3,7 @@
 //! NO escanea puertos de toda la /24 (presupuesto AC-12); el port scan es
 //! bajo demanda vía `mylan ports <ip>`.
 
-use std::net::IpAddr;
-use std::path::Path;
-
-use mylan_core::{Enricher, Network, ScanProfile};
+use mylan_core::{Network, ScanProfile};
 use mylan_db::connection::connect;
 use mylan_discovery::{detect_interface, discover, DiscoverOptions};
 
@@ -49,7 +46,7 @@ pub async fn run(
     );
 
     let conn = connect(&ctx.db_path)?;
-    let enricher = build_enricher(&ctx.signatures_dir, iface.gateway_ip);
+    let enricher = mylan_fingerprint::build_enricher(&ctx.signatures_dir, iface.gateway_ip);
 
     let outcome = run_scan_pipeline(&conn, &network, &observations, &enricher, profile)?;
 
@@ -59,17 +56,6 @@ pub async fn run(
     println!("  Duración    : {} ms", outcome.duration_ms);
     println!("  Red         : {}", outcome.network_id);
     Ok(())
-}
-
-/// Construye el `Enricher` de fingerprint, degradando a no-op si falla la carga.
-fn build_enricher(signatures_dir: &Path, gateway_ip: Option<IpAddr>) -> Enricher {
-    match mylan_fingerprint::Fingerprint::load(signatures_dir, gateway_ip) {
-        Ok(fp) => fp.enricher(),
-        Err(e) => {
-            tracing::warn!(error = %e, "fingerprint no cargado; enrichment no-op");
-            mylan_core::noop_enricher()
-        }
-    }
 }
 
 #[cfg(test)]
@@ -95,7 +81,10 @@ mod tests {
         // Un directorio de signatures inexistente → Fingerprint::load falla →
         // noop_enricher. El Enricher resultante no debe entrar en pánico al
         // aplicarse a un Device con observaciones vacías.
-        let enricher = build_enricher(std::path::Path::new("/nonexistent-signatures"), None);
+        let enricher = mylan_fingerprint::build_enricher(
+            std::path::Path::new("/nonexistent-signatures"),
+            None,
+        );
         let mut device = mylan_core::Device {
             id: "dev-1".to_string(),
             network_id: "net-1".to_string(),
@@ -127,7 +116,7 @@ mod tests {
     fn build_enricher_with_empty_signatures_dir_degrades() {
         // Un dir vacío (sin oui.csv ni rules YAML) → load falla → noop.
         let tmp = tempfile::tempdir().expect("tmp");
-        let enricher = build_enricher(tmp.path(), None);
+        let enricher = mylan_fingerprint::build_enricher(tmp.path(), None);
         let mut device = mylan_core::Device {
             id: "dev-2".to_string(),
             network_id: "net-1".to_string(),

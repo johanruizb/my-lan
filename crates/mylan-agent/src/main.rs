@@ -59,8 +59,8 @@ struct ParsedArgs {
 ///
 /// Devuelve `Ok(None)` si se solicitó `--help`/`-h` (uso ya impreso), o
 /// `Ok(Some(ParsedArgs))` con los flags parseados. Los argumentos desconocidos
-/// se ignoran con un warning a stderr (comportamiento tolerante). El flag
-/// `--config` es obligatorio; la validación la hace el llamador (`try_main`).
+/// producen error (evita que un typo silencioso cause comportamiento inesperado).
+/// El flag `--config` es obligatorio; la validación la hace el llamador (`try_main`).
 fn parse_args(args: &[String]) -> Result<Option<ParsedArgs>> {
     let mut serve_api = false;
     let mut config_path: Option<PathBuf> = None;
@@ -88,7 +88,7 @@ fn parse_args(args: &[String]) -> Result<Option<ParsedArgs>> {
                 return Ok(None);
             }
             other => {
-                eprintln!("mylan-agent: arg desconocido: {other}");
+                anyhow::bail!("mylan-agent: argumento desconocido: {other}");
             }
         }
         i += 1;
@@ -197,16 +197,10 @@ mod tests {
     }
 
     #[test]
-    fn parse_args_unknown_arg_ignored() {
-        // Los args desconocidos no rompen el parseo (warning a stderr).
-        let parsed = parse_args(&args(&["--config", "x.toml", "--bogus", "--serve-api"]))
-            .expect("ok")
-            .expect("some");
-        assert!(parsed.serve_api);
-        assert_eq!(
-            parsed.config_path.as_deref(),
-            Some(std::path::Path::new("x.toml"))
-        );
+    fn parse_args_unknown_arg_returns_error() {
+        // Los args desconocidos producen un error (no se ignoran silenciosamente).
+        let result = parse_args(&args(&["--config", "x.toml", "--bogus"]));
+        assert!(result.is_err(), "arg desconocido debe ser error");
     }
 
     #[test]

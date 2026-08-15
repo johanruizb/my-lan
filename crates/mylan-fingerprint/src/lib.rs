@@ -29,11 +29,32 @@
 mod error;
 mod fingerprint;
 mod oui;
-mod reverse;
 mod rules;
 
-pub use error::FingerprintError;
 pub use fingerprint::Fingerprint;
-pub use oui::OuiDatabase;
-pub use reverse::reverse_dns;
-pub use rules::{Match, Matcher, Rule, RuleSet};
+
+use std::path::PathBuf;
+
+/// Directorio de signatures: env `MYLAN_SIGNATURES_DIR` o `./signatures`.
+pub fn default_signatures_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("MYLAN_SIGNATURES_DIR") {
+        if !dir.is_empty() {
+            return PathBuf::from(dir);
+        }
+    }
+    PathBuf::from("signatures")
+}
+
+/// Construye el `Enricher`, degradando a no-op si falla la carga de signatures.
+pub fn build_enricher(
+    signatures_dir: &std::path::Path,
+    gateway_ip: Option<std::net::IpAddr>,
+) -> mylan_core::Enricher {
+    match Fingerprint::load(signatures_dir, gateway_ip) {
+        Ok(fp) => fp.enricher(),
+        Err(e) => {
+            tracing::warn!(error = %e, "fingerprint no cargado; enrichment no-op");
+            mylan_core::noop_enricher()
+        }
+    }
+}

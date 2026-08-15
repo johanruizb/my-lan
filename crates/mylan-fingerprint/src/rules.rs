@@ -41,9 +41,13 @@ pub struct RuleSet {
 /// Una regla de fingerprinting.
 #[derive(Debug, Clone)]
 pub struct Rule {
+    #[allow(dead_code)]
     pub id: String,
+    #[allow(dead_code)]
     pub matcher: Match,
+    #[allow(dead_code)]
     pub device_type: DeviceType,
+    #[allow(dead_code)]
     pub confidence: Confidence,
 }
 
@@ -66,7 +70,8 @@ pub struct Matcher {
 
 impl Match {
     /// `true` si no tiene matchers definidos.
-    pub fn is_empty(&self) -> bool {
+    #[allow(dead_code)]
+    pub(crate) fn is_empty(&self) -> bool {
         self.any.is_empty() && self.all.is_empty()
     }
 
@@ -141,12 +146,6 @@ impl Rule {
 }
 
 impl RuleSet {
-    /// Crea un conjunto vacío.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Carga todas las reglas `*.yaml` de un directorio (no recursivo).
     pub fn load_dir(dir: &Path) -> Result<Self, FingerprintError> {
         let mut rules = Vec::new();
@@ -170,21 +169,15 @@ impl RuleSet {
         Ok(Self { rules })
     }
 
-    /// Número de reglas cargadas.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.rules.len()
-    }
-
     /// `true` si no hay reglas.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
+    #[allow(dead_code)]
+    pub(crate) fn is_empty(&self) -> bool {
         self.rules.is_empty()
     }
 
     /// Reglas cargadas (orden de carga, determinista).
-    #[must_use]
-    pub fn rules(&self) -> &[Rule] {
+    #[allow(dead_code)]
+    pub(crate) fn rules(&self) -> &[Rule] {
         &self.rules
     }
 
@@ -218,7 +211,7 @@ impl RuleYaml {
                 any: self.r#match.any.into_iter().map(Into::into).collect(),
                 all: self.r#match.all.into_iter().map(Into::into).collect(),
             },
-            device_type: self.score.device_type.into(),
+            device_type: self.score.device_type,
             confidence: Confidence::new(self.score.confidence),
         }
     }
@@ -260,60 +253,8 @@ impl From<MatcherYaml> for Matcher {
 
 #[derive(Debug, Deserialize)]
 struct ScoreYaml {
-    device_type: DeviceTypeSerde,
+    device_type: DeviceType,
     confidence: u8,
-}
-
-/// Wrapper para deserializar `DeviceType` desde snake_case (ya serializa así).
-/// serde_yaml_ng necesita que el enum derive Deserialize; reutilizamos el de
-/// mylan-core vía su serialización, pero como YAML usa las mismas variantes
-/// snake_case, parseamos a través de un enum espejo para evitar acoplar la
-/// representación interna de mylan-core.
-#[derive(Debug, Clone, Copy, Deserialize)]
-enum DeviceTypeSerde {
-    #[serde(rename = "router")]
-    Router,
-    #[serde(rename = "phone")]
-    Phone,
-    #[serde(rename = "laptop")]
-    Laptop,
-    #[serde(rename = "desktop")]
-    Desktop,
-    #[serde(rename = "tv")]
-    Tv,
-    #[serde(rename = "printer")]
-    Printer,
-    #[serde(rename = "camera")]
-    Camera,
-    #[serde(rename = "nas")]
-    Nas,
-    #[serde(rename = "console")]
-    Console,
-    #[serde(rename = "iot")]
-    Iot,
-    #[serde(rename = "tablet")]
-    Tablet,
-    #[serde(rename = "unknown")]
-    Unknown,
-}
-
-impl From<DeviceTypeSerde> for DeviceType {
-    fn from(s: DeviceTypeSerde) -> Self {
-        match s {
-            DeviceTypeSerde::Router => DeviceType::Router,
-            DeviceTypeSerde::Phone => DeviceType::Phone,
-            DeviceTypeSerde::Laptop => DeviceType::Laptop,
-            DeviceTypeSerde::Desktop => DeviceType::Desktop,
-            DeviceTypeSerde::Tv => DeviceType::Tv,
-            DeviceTypeSerde::Printer => DeviceType::Printer,
-            DeviceTypeSerde::Camera => DeviceType::Camera,
-            DeviceTypeSerde::Nas => DeviceType::Nas,
-            DeviceTypeSerde::Console => DeviceType::Console,
-            DeviceTypeSerde::Iot => DeviceType::Iot,
-            DeviceTypeSerde::Tablet => DeviceType::Tablet,
-            DeviceTypeSerde::Unknown => DeviceType::Unknown,
-        }
-    }
 }
 
 #[cfg(test)]

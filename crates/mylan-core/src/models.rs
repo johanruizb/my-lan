@@ -27,15 +27,6 @@ pub struct Network {
     pub updated_at: String,
 }
 
-/// Interfaz de red del host (origen de una [`Network`]).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Interface {
-    pub name: String,
-    pub ip: Option<IpAddr>,
-    pub mac: Option<MacAddr>,
-    pub is_default_route: bool,
-}
-
 /// Dispositivo del inventario.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Device {

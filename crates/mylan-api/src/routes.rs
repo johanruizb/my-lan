@@ -7,9 +7,6 @@
 //! (`mylan-discovery` + `mylan-fingerprint` → `run_scan_pipeline_with_diff`) y
 //! hace fan-out de los events al broadcast `event_tx` (clientes WS, ADR-4).
 
-use std::net::IpAddr;
-use std::path::PathBuf;
-
 use axum::extract::{Path, Query, State};
 use axum::routing::get;
 use axum::Json;
@@ -17,7 +14,7 @@ use axum::Router;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use mylan_core::{Device, Enricher, Event, Network, ScanProfile};
+use mylan_core::{Device, Event, Network, ScanProfile};
 use mylan_db::connection::connect;
 use mylan_db::pipeline::run_scan_pipeline_with_diff;
 use mylan_db::{device_repo, events_repo, network_repo, scan_repo, DbResult};
@@ -51,7 +48,6 @@ async fn status(State(state): State<AppState>) -> Result<Json<Value>, ApiError> 
         .map_err(|e| ApiError::Internal(format!("user_version: {e}")))?;
     Ok(Json(json!({
         "status": "ok",
-        "db_path": state.db_path.display().to_string(),
         "schema_version": version,
     })))
 }
@@ -215,7 +211,10 @@ async fn post_scan(
         }
     };
 
-    let enricher = build_enricher(iface.gateway_ip);
+    let enricher = mylan_fingerprint::build_enricher(
+        &mylan_fingerprint::default_signatures_dir(),
+        iface.gateway_ip,
+    );
     let (outcome, events) = run_scan_pipeline_with_diff(
         &conn,
         &network,
@@ -246,36 +245,5 @@ async fn post_scan(
 
 /// Parsea un `ScanProfile` desde su nombre `snake_case` (body de `POST /scans`).
 fn parse_profile(s: &str) -> Result<ScanProfile, ApiError> {
-    match s.to_lowercase().as_str() {
-        "quick" => Ok(ScanProfile::Quick),
-        "normal" => Ok(ScanProfile::Normal),
-        "deep" => Ok(ScanProfile::Deep),
-        "iot" => Ok(ScanProfile::Iot),
-        "router" => Ok(ScanProfile::Router),
-        other => Err(ApiError::BadRequest(format!("unknown profile: {other}"))),
-    }
-}
-
-/// Construye el `Enricher` de fingerprint, degradando a no-op si falla la carga
-/// de signatures (mismo patrón que `apps/cli`).
-fn build_enricher(gateway_ip: Option<IpAddr>) -> Enricher {
-    let signatures_dir = default_signatures_dir();
-    match mylan_fingerprint::Fingerprint::load(&signatures_dir, gateway_ip) {
-        Ok(fp) => fp.enricher(),
-        Err(e) => {
-            tracing::warn!(error = %e, "fingerprint no cargado; enrichment no-op");
-            mylan_core::noop_enricher()
-        }
-    }
-}
-
-/// Directorio de signatures: env `MYLAN_SIGNATURES_DIR` o `./signatures` (relativo
-/// al CWD). Igual que `apps/cli::ctx::default_signatures_dir`.
-fn default_signatures_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("MYLAN_SIGNATURES_DIR") {
-        if !dir.is_empty() {
-            return PathBuf::from(dir);
-        }
-    }
-    PathBuf::from("signatures")
+    ScanProfile::parse(s).map_err(ApiError::BadRequest)
 }

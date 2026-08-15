@@ -1,4 +1,6 @@
 //! `traceroute` por host — UDP con TTL incremental + cola de errores ICMP (AC-7).
+
+#![allow(unsafe_code)]
 //!
 //! En cada salto se envía un datagrama UDP a un puerto alto (probablemente
 //! cerrado) con `TTL = hop`, y se lee la **cola de errores** del socket

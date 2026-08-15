@@ -5,10 +5,6 @@
 //! API lo guarda en `axum::State` para que `/api/v1/events/live` (WS) pueda
 //! suscribirse. Sin estado mutable compartido salvo SQLite (file-locked).
 //!
-//! Skeleton (Task #6): [`serve`] arranca el servidor; `auth`/`token`/`broadcast`
-//! están implementados; `routes`/`ws` son stubs que worker-7 (Task #7) llenará
-//! con los 8 endpoints REST + el WS `/events/live`.
-//!
 //! Modelo de seguridad: localhost-only (`127.0.0.1`), bearer token (ADR-7), sin
 //! TLS ni auth remoto (no-goal v0.5).
 
@@ -54,10 +50,6 @@ pub struct AppState {
 /// variantes en Task #7).
 #[derive(Debug, Error)]
 pub enum ApiError {
-    /// El endpoint está implementado como stub en el skeleton (Task #6) y se
-    /// completará en Task #7.
-    #[error("not implemented: skeleton stub pending task #7")]
-    NotImplemented,
     /// Recurso no encontrado (p.ej. `GET /devices/:id` sin fila).
     #[error("not found: {0}")]
     NotFound(String),
@@ -73,12 +65,18 @@ impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
         use axum::http::StatusCode;
         let status = match &self {
-            ApiError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
             ApiError::NotFound(_) => StatusCode::NOT_FOUND,
             ApiError::BadRequest(_) => StatusCode::BAD_REQUEST,
-            ApiError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::Internal(ref msg) => {
+                tracing::error!(error = msg, "internal API error");
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         };
-        (status, self.to_string()).into_response()
+        let body = match &self {
+            ApiError::Internal(_) => "internal server error".to_string(),
+            other => other.to_string(),
+        };
+        (status, body).into_response()
     }
 }
 

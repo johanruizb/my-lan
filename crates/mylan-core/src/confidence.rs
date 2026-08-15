@@ -8,14 +8,10 @@ use serde::{Deserialize, Serialize};
 /// natural permite la precedencia de merge: gana la mayor confianza.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
+#[derive(Default)]
 pub struct Confidence(u8);
 
 impl Confidence {
-    /// Confianza mínima (sin evidencia).
-    pub const NONE: Self = Self(0);
-    /// Confianza máxima.
-    pub const MAX: Self = Self(100);
-
     /// Construye una confianza acotando el valor a `0..=100`.
     #[must_use]
     pub const fn new(score: u8) -> Self {
@@ -26,12 +22,6 @@ impl Confidence {
     #[must_use]
     pub const fn score(self) -> u8 {
         self.0
-    }
-}
-
-impl Default for Confidence {
-    fn default() -> Self {
-        Self::NONE
     }
 }
 
@@ -46,15 +36,15 @@ mod tests {
     }
 
     #[test]
-    fn defaults_to_none() {
-        assert_eq!(Confidence::default(), Confidence::NONE);
-        assert_eq!(Confidence::NONE.score(), 0);
+    fn defaults_to_zero() {
+        assert_eq!(Confidence::default(), Confidence::new(0));
+        assert_eq!(Confidence::default().score(), 0);
     }
 
     #[test]
     fn orders_by_score() {
         assert!(Confidence::new(75) > Confidence::new(40));
-        assert!(Confidence::MAX > Confidence::new(99));
+        assert!(Confidence::new(100) > Confidence::new(99));
     }
 
     #[test]

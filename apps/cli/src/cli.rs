@@ -182,14 +182,5 @@ fn parse_export_format(s: &str) -> Result<ExportFormatArg, String> {
 }
 
 fn parse_profile(s: &str) -> Result<ScanProfile, String> {
-    match s.to_ascii_lowercase().as_str() {
-        "quick" => Ok(ScanProfile::Quick),
-        "normal" => Ok(ScanProfile::Normal),
-        "deep" => Ok(ScanProfile::Deep),
-        "iot" => Ok(ScanProfile::Iot),
-        "router" => Ok(ScanProfile::Router),
-        other => Err(format!(
-            "perfil no soportado: '{other}' (usar quick|normal|deep|iot|router)"
-        )),
-    }
+    ScanProfile::parse(s)
 }

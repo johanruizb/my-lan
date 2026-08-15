@@ -16,6 +16,33 @@ use crate::commands::{latest_network_id, open_db};
 use crate::ctx::AppContext;
 use crate::util::print_redaction_note;
 
+/// Sanitiza y valida el path de salida para exportación.
+///
+/// Rechaza paths que contengan `..` (path traversal), verifica que la extensión
+/// coincida con el formato, y advierte si el fichero ya existe.
+fn sanitize_output_path(raw: &str, expected_ext: &str) -> anyhow::Result<PathBuf> {
+    let path = PathBuf::from(raw);
+
+    // Path traversal: rechazar cualquier componente ".." o paths absolutos fuera de CWD.
+    for component in path.components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            anyhow::bail!("path de salida no permitido (contiene '..'): {raw}");
+        }
+    }
+
+    // Validar extensión
+    if path.extension().map(|e| e != expected_ext).unwrap_or(true) {
+        anyhow::bail!("la extensión del fichero de salida debe ser .{expected_ext}: {raw}");
+    }
+
+    // Warning si el fichero ya existe
+    if path.exists() {
+        tracing::warn!("el fichero de salida ya existe y será sobrescrito: {raw}");
+    }
+
+    Ok(path)
+}
+
 /// Formato de exportación soportado.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportFormat {
@@ -56,9 +83,10 @@ pub fn run(ctx: &AppContext, format: ExportFormat, output: Option<&str>) -> anyh
         return Ok(());
     }
 
-    let path = output
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(format!("mylan-devices.{}", format.ext())));
+    let path = match output {
+        Some(raw) => sanitize_output_path(raw, format.ext())?,
+        None => PathBuf::from(format!("mylan-devices.{}", format.ext())),
+    };
 
     match format {
         ExportFormat::Json => write_json(&path, &devices)?,
@@ -128,9 +156,10 @@ pub fn export_services(
         return Ok(());
     }
 
-    let path = output
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(format!("mylan-services.{}", format.ext())));
+    let path = match output {
+        Some(raw) => sanitize_output_path(raw, format.ext())?,
+        None => PathBuf::from(format!("mylan-services.{}", format.ext())),
+    };
 
     match format {
         ExportFormat::Json => write_services_json(&path, &rows)?,

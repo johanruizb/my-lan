@@ -1,57 +1,33 @@
 //! Detección pura-Rust del SSID de la interfaz conectada (sin shell-out).
+
+#![allow(unsafe_code)]
 //!
-//! Detrás del trait [`SsidDetector`] con implementaciones cfg-gated por OS:
-//! - **Linux** (`#[cfg(target_os = "linux")]`): NetworkManager vía D-Bus con la
-//!   API bloqueante de `zbus` (`zbus::blocking`). Sin runtime async propagado al
-//!   crate y sin lanzar procesos externos (FFI puro vía D-Bus). Devuelve `None`
-//!   si NM no está, la interfaz no es Wi-Fi o no hay punto de acceso activo.
-//! - **Windows** (`#[cfg(target_os = "windows")]`): WLAN API (`wlanapi`) del
-//!   crate `windows` (`WlanEnumInterfaces` + `WlanQueryInterface`), FFI nativo
-//!   sin shell-out.
-//! - **Otras** (macOS incluido, diferido por la entitlement de Location): stub
-//!   que devuelve `None`, por lo que el nombre de red cae a la etiqueta/CIDR.
+//! - **Linux**: NetworkManager vía D-Bus con la API bloqueante de `zbus`.
+//! - **Windows**: WLAN API nativa (`wlanapi`) del crate `windows`.
+//! - **Otras** (macOS incluido): stub que devuelve `None`.
 
 use crate::iface::LanInterface;
 
 /// Detecta el SSID de la interfaz conectada (Wi-Fi). `None` si no es inalámbrica
-/// o no se pudo leer.
-pub trait SsidDetector {
-    /// SSID actual de `iface`, o `None`.
-    fn current_ssid(&self, iface: &LanInterface) -> Option<String>;
-}
-
-/// Detector de la plataforma de compilación (impl cfg-gated más abajo).
-struct PlatformSsidDetector;
-
-/// Resuelve el SSID de `iface` con el detector de la plataforma actual.
-///
-/// Punto de entrada usado por [`crate::iface::detect_interface`] para poblar
-/// `LanInterface.ssid`. Best-effort: cualquier fallo de plataforma degrada a
-/// `None` (el llamador cae a la etiqueta/CIDR).
+/// o no se pudo leer. Best-effort: cualquier fallo degrada a `None`.
 #[must_use]
 pub fn detect_ssid(iface: &LanInterface) -> Option<String> {
-    PlatformSsidDetector.current_ssid(iface)
+    detect_ssid_impl(&iface.name)
 }
 
 #[cfg(target_os = "linux")]
-impl SsidDetector for PlatformSsidDetector {
-    fn current_ssid(&self, iface: &LanInterface) -> Option<String> {
-        linux::current_ssid(&iface.name)
-    }
+fn detect_ssid_impl(iface_name: &str) -> Option<String> {
+    linux::current_ssid(iface_name)
 }
 
 #[cfg(target_os = "windows")]
-impl SsidDetector for PlatformSsidDetector {
-    fn current_ssid(&self, iface: &LanInterface) -> Option<String> {
-        windows_wlan::current_ssid(&iface.name)
-    }
+fn detect_ssid_impl(iface_name: &str) -> Option<String> {
+    windows_wlan::current_ssid(iface_name)
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-impl SsidDetector for PlatformSsidDetector {
-    fn current_ssid(&self, _iface: &LanInterface) -> Option<String> {
-        None
-    }
+fn detect_ssid_impl(_iface_name: &str) -> Option<String> {
+    None
 }
 
 /// Linux: SSID vía NetworkManager (D-Bus, API bloqueante de zbus).
@@ -198,10 +174,11 @@ mod windows_wlan {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     use std::net::Ipv4Addr;
 
     /// Crea una [`LanInterface`] mínima para tests (sin I/O, sin hardware).
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     fn fake_iface(name: &str) -> LanInterface {
         LanInterface {
             name: name.to_string(),
@@ -215,52 +192,9 @@ mod tests {
         }
     }
 
-    /// Detector mock que devuelve un SSID fijo (sin hardware/D-Bus/WLAN).
-    struct MockSsid {
-        ssid: Option<String>,
-    }
-
-    impl SsidDetector for MockSsid {
-        fn current_ssid(&self, _iface: &LanInterface) -> Option<String> {
-            self.ssid.clone()
-        }
-    }
-
-    #[test]
-    fn mock_detector_returns_configured_ssid() {
-        let iface = fake_iface("wlan0");
-        let detector = MockSsid {
-            ssid: Some("MyHomeNetwork".to_string()),
-        };
-        assert_eq!(
-            detector.current_ssid(&iface).as_deref(),
-            Some("MyHomeNetwork")
-        );
-    }
-
-    #[test]
-    fn mock_detector_returns_none_when_unconfigured() {
-        let iface = fake_iface("eth0");
-        let detector = MockSsid { ssid: None };
-        assert!(detector.current_ssid(&iface).is_none());
-    }
-
-    #[test]
-    fn ssid_detector_is_object_safe_as_dyn() {
-        // El trait debe poder usarse vía `dyn SsidDetector` (object-safe) para
-        // permitir inyección de mocks/detectores alternativos.
-        let iface = fake_iface("wlan0");
-        let detector: Box<dyn SsidDetector> = Box::new(MockSsid {
-            ssid: Some("ObjSafe".to_string()),
-        });
-        assert_eq!(detector.current_ssid(&iface).as_deref(), Some("ObjSafe"));
-    }
-
     #[test]
     #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     fn detect_ssid_returns_none_on_stub_platform() {
-        // En plataformas sin impl nativa (macOS y otras), `PlatformSsidDetector`
-        // devuelve `None` siempre. Test cfg-gated al stub.
         let iface = fake_iface("wlan0");
         assert!(detect_ssid(&iface).is_none());
     }
@@ -268,7 +202,6 @@ mod tests {
     #[test]
     #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     fn detect_ssid_returns_none_for_arbitrary_iface_on_stub() {
-        // Cualquier nombre de interfaz en la plataforma stub devuelve None.
         for name in ["eth0", "wlan0", "enp3s0", "", "lo"] {
             let iface = fake_iface(name);
             assert!(

@@ -51,14 +51,14 @@ impl OuiDatabase {
     }
 
     /// Número de prefijos cargados.
-    #[must_use]
-    pub fn len(&self) -> usize {
+    #[allow(dead_code)]
+    pub(crate) fn len(&self) -> usize {
         self.vendors.len()
     }
 
     /// `true` si no hay prefijos cargados.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
+    #[allow(dead_code)]
+    pub(crate) fn is_empty(&self) -> bool {
         self.vendors.is_empty()
     }
 

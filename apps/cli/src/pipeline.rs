@@ -6,4 +6,4 @@
 //! re-export `mylan_cli::{run_scan_pipeline, ScanOutcome}`) para no romper a los
 //! consumidores existentes de la CLI.
 
-pub use mylan_db::pipeline::{run_scan_pipeline, run_scan_pipeline_at, ScanOutcome};
+pub use mylan_db::pipeline::{run_scan_pipeline, ScanOutcome};

@@ -82,7 +82,6 @@ pub async fn run(
     })
     .await
     .map_err(|e| match e {
-        ScanError::Cancelled => anyhow::anyhow!("escaneo cancelado"),
         ScanError::Io(io) => anyhow::anyhow!("E/S de escaneo: {io}"),
     })?;
     tracing::info!(open = services.len(), "escaneo de puertos completado");

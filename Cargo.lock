@@ -1470,7 +1470,6 @@ dependencies = [
  "tokio-util",
  "toml",
  "tracing",
- "windows-service",
 ]
 
 [[package]]
@@ -1568,12 +1567,12 @@ name = "mylan-fingerprint"
 version = "0.5.4"
 dependencies = [
  "csv",
- "hickory-resolver",
  "mylan-core",
  "serde",
  "serde_yaml_ng",
  "thiserror 2.0.18",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3251,17 +3250,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
 dependencies = [
  "windows-link",
-]
-
-[[package]]
-name = "windows-service"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d24d6bcc7f734a4091ecf8d7a64c5f7d7066f45585c1861eba06449909609c8a"
-dependencies = [
- "bitflags",
- "widestring",
- "windows-sys 0.52.0",
 ]
 
 [[package]]

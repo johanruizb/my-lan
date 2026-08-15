@@ -68,12 +68,6 @@ impl MacAddr {
         a == 0 && b == 0 && c == 0 && d == 0 && e == 0 && f == 0
     }
 
-    /// Prefijo OUI de 24 bits (primeros 3 octetos) usado para lookup de vendor.
-    #[must_use]
-    pub const fn oui_prefix(&self) -> [u8; 3] {
-        [self.0[0], self.0[1], self.0[2]]
-    }
-
     /// Prefijo OUI como cadena hexadecimal en minúsculas sin separadores
     /// (`aabbcc`), apto como clave de búsqueda contra `signatures/oui`.
     #[must_use]
@@ -149,9 +143,8 @@ mod tests {
     }
 
     #[test]
-    fn exposes_oui_prefix() {
+    fn exposes_oui_hex() {
         let mac = MacAddr::parse("3c:5a:b4:11:22:33").expect("valid mac");
-        assert_eq!(mac.oui_prefix(), [0x3c, 0x5a, 0xb4]);
         assert_eq!(mac.oui_hex(), "3c5ab4");
     }
 

@@ -69,13 +69,8 @@ pub async fn run_agent_with_cancel(
 
     // Enricher de fingerprint (signatures). Si falla la carga, degradamos a
     // noop_enricher (el agent sigue funcionando sin clasificación).
-    let enricher: mylan_core::Enricher = match load_enricher() {
-        Ok(e) => e,
-        Err(e) => {
-            tracing::warn!(error = %e, "fingerprint signatures no cargadas; usando noop_enricher");
-            mylan_core::noop_enricher()
-        }
-    };
+    let enricher =
+        mylan_fingerprint::build_enricher(&mylan_fingerprint::default_signatures_dir(), None);
 
     // Scheduler loop: emite events al event_tx; retorna Ok(()) al cancelarse.
     let enricher_arc = std::sync::Arc::new(enricher);
@@ -86,11 +81,4 @@ pub async fn run_agent_with_cancel(
     // vía el handle; axum::serve termina al abortar el task).
     serve_handle.abort();
     sched_result
-}
-
-/// Carga el `Enricher` de `mylan-fingerprint` desde `signatures/`. En tests se
-/// usa `mylan_core::noop_enricher` directamente (sin pasar por aquí).
-fn load_enricher() -> Result<mylan_core::Enricher> {
-    let fp = mylan_fingerprint::Fingerprint::load(std::path::Path::new("signatures"), None)?;
-    Ok(fp.enricher())
 }

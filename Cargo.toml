@@ -58,7 +58,6 @@ tokio-util = "0.7"
 # Externos añadidos en v0.5 Watch: API REST+WS + agent config + token + packaging.
 axum = "0.8"
 tower = "0.5"
-tower-http = "0.6"
 getrandom = "0.2"
 base64 = "0.22"
 toml = "0.8"

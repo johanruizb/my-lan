@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn enricher_fills_vendor_from_oui() {
         let oui = oui_db();
-        let rules = RuleSet::new();
+        let rules = RuleSet::default();
         let enrich = Fingerprint {
             oui,
             rules,
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn enricher_fills_hostname_from_observations() {
         let oui = OuiDatabase::new();
-        let rules = RuleSet::new();
+        let rules = RuleSet::default();
         let enrich = Fingerprint {
             oui,
             rules,
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn enricher_classifies_router_when_ip_is_gateway() {
         let oui = OuiDatabase::new();
-        let rules = RuleSet::new();
+        let rules = RuleSet::default();
         let enrich = Fingerprint {
             oui,
             rules,
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn enricher_leaves_unknown_when_no_signals() {
         let oui = oui_db();
-        let rules = RuleSet::new();
+        let rules = RuleSet::default();
         let enrich = Fingerprint {
             oui,
             rules,
