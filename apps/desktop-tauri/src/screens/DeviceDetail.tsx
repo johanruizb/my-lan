@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, Link, useBlocker, useBeforeUnload } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
 import { deviceIcon } from "@/components/device-icons";
@@ -87,7 +93,6 @@ function serviceStateLabel(state: string) {
 
 export function DeviceDetail() {
     const { ip = "" } = useParams();
-    const navigate = useNavigate();
     const { toast } = useToast();
     const [detail, setDetail] = useState<DeviceDetailDto | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -112,6 +117,27 @@ export function DeviceDetail() {
     const [notes, setNotes] = useState(detail?.device.notes ?? "");
     const [saving, setSaving] = useState(false);
     const [editing, setEditing] = useState(false);
+
+    // Aviso de cambios sin guardar: si el usuario edita display_name o notes
+    // y navega away sin Guardar, useBlocker muestra un dialog de confirmación
+    // (Web Interface Guidelines — destructive actions need confirmation).
+    const isDirty =
+        editing &&
+        detail != null &&
+        (displayName !== (detail.device.display_name ?? "") ||
+            notes !== (detail.device.notes ?? ""));
+    const blocker = useBlocker(isDirty);
+    useBeforeUnload(
+        useCallback(
+            (e: BeforeUnloadEvent) => {
+                if (isDirty) {
+                    e.preventDefault();
+                    e.returnValue = "";
+                }
+            },
+            [isDirty],
+        ),
+    );
 
     // TrustBadge solo consume is_trusted (ADR-0006 / T6: manual binario).
     const trustBadgeDevice = useMemo(
@@ -329,15 +355,13 @@ export function DeviceDetail() {
                 title="No se pudo cargar el dispositivo"
                 description={error}
                 action={
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate("/devices")}
-                        className="gap-1.5"
+                    <Link
+                        to="/devices"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background h-8 px-3 text-xs font-medium hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <ArrowLeft className="h-4 w-4" aria-hidden />
                         Volver a dispositivos
-                    </Button>
+                    </Link>
                 }
             />
         );
@@ -358,15 +382,13 @@ export function DeviceDetail() {
             aria-busy={scanning}
         >
             <div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate("/devices")}
-                    className="w-fit gap-1.5 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground mb-4"
+                <Link
+                    to="/devices"
+                    className="inline-flex w-fit items-center gap-1.5 pl-0 mb-4 text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
                 >
                     <ArrowLeft className="h-4 w-4" aria-hidden />
                     Volver a dispositivos
-                </Button>
+                </Link>
 
                 {/* Cabecera Principal del Dispositivo */}
                 {/* #18: header sin glass-panel, bg-card sólido. */}
@@ -555,6 +577,8 @@ export function DeviceDetail() {
                                             placeholder={
                                                 d.hostname ?? d.primary_ip ?? ""
                                             }
+                                            name="display-name"
+                                            autoComplete="off"
                                         />
                                     </FormField>
 
@@ -569,7 +593,9 @@ export function DeviceDetail() {
                                             onChange={(e) =>
                                                 setNotes(e.target.value)
                                             }
-                                            placeholder="Notas de mantenimiento o ubicación..."
+                                            placeholder="Notas de mantenimiento o ubicación…"
+                                            name="device-notes"
+                                            autoComplete="off"
                                         />
                                     </FormField>
 
@@ -725,7 +751,7 @@ export function DeviceDetail() {
                                                     indeterminate={pct === 0}
                                                     className="h-2"
                                                 />
-                                                <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                                                <div className="flex justify-between text-xs text-muted-foreground font-medium tabular-nums">
                                                     <span>
                                                         {progress
                                                             ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
@@ -930,6 +956,40 @@ export function DeviceDetail() {
                     </Card>
                 </div>
             </div>
+
+            {/* Dialog de confirmación: cambios sin guardar antes de navegar */}
+            {blocker.state === "blocked" && (
+                <Dialog
+                    open
+                    onOpenChange={(o) => {
+                        if (!o) blocker.reset();
+                    }}
+                >
+                    <DialogContent className="max-w-sm">
+                        <DialogTitle>¿Descartar cambios?</DialogTitle>
+                        <DialogDescription>
+                            Tienes cambios sin guardar en este dispositivo. Si
+                            navegas ahora, se perderán.
+                        </DialogDescription>
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => blocker.reset()}
+                            >
+                                Seguir editando
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => blocker.proceed()}
+                            >
+                                Descartar y salir
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }
@@ -961,7 +1021,10 @@ function Field({
                 <MaskedValue field={field} value={value} mono={mono} />
             ) : (
                 <span
-                    className={cn("font-medium", mono && "font-mono text-xs")}
+                    className={cn(
+                        "font-medium break-words",
+                        mono && "font-mono text-xs",
+                    )}
                     title={title}
                 >
                     {value}

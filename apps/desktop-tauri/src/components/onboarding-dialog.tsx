@@ -80,12 +80,14 @@ export function OnboardingDialog() {
             <DialogContent className="max-w-md">
                 <div className="flex items-center gap-2">
                     <Wifi className="h-5 w-5 text-primary" aria-hidden />
-                    <DialogTitle>Bienvenido a MyLAN</DialogTitle>
+                    <DialogTitle>
+                        Bienvenido a <span translate="no">MyLAN</span>
+                    </DialogTitle>
                 </div>
                 <DialogDescription>
-                    MyLAN te ayuda a entender tu red local: qué dispositivos hay
-                    conectados, qué servicios exponen y cómo cambia tu red con
-                    el tiempo.
+                    <span translate="no">MyLAN</span> te ayuda a entender tu red
+                    local: qué dispositivos hay conectados, qué servicios
+                    exponen y cómo cambia tu red con el tiempo.
                 </DialogDescription>
 
                 <div className="flex flex-col gap-4">

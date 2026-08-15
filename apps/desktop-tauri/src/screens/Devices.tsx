@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -59,26 +59,49 @@ import { SECTION_GAP } from "@/lib/design-tokens";
 
 type View = "cards" | "table";
 
+// Hook que sincroniza un valor string con un query param de la URL.
+// Usa replace: true para no llenar el historial en cada cambio.
+function useUrlState<T extends string>(
+    key: string,
+    defaultValue: T,
+): [T, (value: T) => void] {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const value = (searchParams.get(key) as T) ?? defaultValue;
+    const setValue = useCallback(
+        (next: T) => {
+            setSearchParams(
+                (prev) => {
+                    if (next === defaultValue) prev.delete(key);
+                    else prev.set(key, next);
+                    return prev;
+                },
+                { replace: true },
+            );
+        },
+        [key, defaultValue, setSearchParams],
+    );
+    return [value, setValue];
+}
+
 export function Devices() {
     const { toast } = useToast();
-    const navigate = useNavigate();
     const { scanning, progress, devicesFound, startScan } = useScan();
     const { censorshipEnabled } = useCensorship();
     const [devices, setDevices] = useState<Device[]>([]);
-    const [query, setQuery] = useState("");
+    const [query, setQuery] = useUrlState<string>("q", "");
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState<View>("cards");
+    const [view, setView] = useUrlState<View>("view", "cards");
     // Filtros de la lista (AC-14): tipo, estado online y confiable (manual
     // binario via is_trusted, ADR-0006). Por defecto "all" → se ven todos
-    // (offline incluidos, AC-15).
-    const [filterType, setFilterType] = useState<string>("all");
-    const [filterOnline, setFilterOnline] = useState<
+    // (offline incluidos, AC-15). Sincronizados a URL para deep-linking.
+    const [filterType, setFilterType] = useUrlState("type", "all");
+    const [filterOnline, setFilterOnline] = useUrlState<
         "all" | "online" | "offline"
-    >("all");
-    const [filterTrust, setFilterTrust] = useState<
+    >("online", "all");
+    const [filterTrust, setFilterTrust] = useUrlState<
         "all" | "trusted" | "untrusted"
-    >("all");
+    >("trust", "all");
 
     async function refresh() {
         setLoading(true);
@@ -152,9 +175,6 @@ export function Devices() {
             toast(`Error exportando: ${e}`, "error");
         }
     }
-
-    const go = (d: Device) =>
-        navigate(`/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`);
 
     return (
         <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={loading}>
@@ -271,23 +291,20 @@ export function Devices() {
                                 onChange={(e) => setQuery(e.target.value)}
                                 aria-label="Buscar dispositivos"
                                 className="pl-9"
+                                name="device-search"
+                                autoComplete="off"
                             />
                         </div>
                         {/* Filtros por tipo, estado y confiable (AC-14). */}
                         <div className="mt-3 flex flex-wrap items-end gap-3">
-                            <div className="flex flex-col gap-1">
-                                <span
-                                    id="filter-type-label"
-                                    className="text-xs text-muted-foreground"
-                                >
-                                    Tipo
-                                </span>
+                            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                Tipo
                                 <Select
                                     value={filterType}
                                     onValueChange={setFilterType}
                                 >
                                     <SelectTrigger
-                                        className="w-40"
+                                        className="w-40 mt-1"
                                         aria-label="Filtrar por tipo"
                                     >
                                         <SelectValue placeholder="Todos" />
@@ -303,7 +320,7 @@ export function Devices() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                            </div>
+                            </label>
                             <FilterToggle
                                 label="Estado"
                                 ariaLabel="Filtrar por estado"
@@ -429,119 +446,125 @@ export function Devices() {
                             >
                                 {filtered.map((d) => {
                                     const Icon = deviceIcon(d.device_type);
+                                    const devicePath = `/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`;
                                     return (
-                                        <Card
+                                        <li
                                             key={d.id}
                                             role="listitem"
-                                            className="group relative cursor-pointer glass-panel border border-border/40 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring overflow-hidden shadow-sm"
-                                            onClick={() => go(d)}
-                                            onKeyDown={(e) => {
-                                                if (
-                                                    e.key === "Enter" ||
-                                                    e.key === " "
-                                                ) {
-                                                    e.preventDefault();
-                                                    go(d);
-                                                }
-                                            }}
-                                            tabIndex={0}
-                                            aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
+                                            className="list-none cv-auto"
                                         >
-                                            <CardContent className="flex flex-col gap-4 p-5">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex min-w-0 items-center gap-3">
-                                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                                                            <Icon
-                                                                className="h-5 w-5 text-primary"
-                                                                aria-hidden
-                                                            />
-                                                        </div>
-                                                        <div className="flex min-w-0 flex-col">
-                                                            <span className="truncate font-bold text-foreground text-sm">
-                                                                <MaskedValue
-                                                                    field={
-                                                                        d.display_name
-                                                                            ? "display_name"
-                                                                            : d.hostname
-                                                                              ? "hostname"
-                                                                              : d.primary_ip
-                                                                                ? "primary_ip"
-                                                                                : "id"
-                                                                    }
-                                                                    value={
-                                                                        d.display_name ??
-                                                                        d.hostname ??
-                                                                        d.primary_ip ??
-                                                                        d.id
-                                                                    }
-                                                                />
-                                                            </span>
-                                                            {(d.display_name ||
-                                                                d.hostname) &&
-                                                                d.primary_ip && (
-                                                                    <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                                            <Link
+                                                to={devicePath}
+                                                aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
+                                                className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                <Card className="group relative glass-panel border border-border/40 overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/40">
+                                                    <CardContent className="flex flex-col gap-4 p-5">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                                                                    <Icon
+                                                                        className="h-5 w-5 text-primary"
+                                                                        aria-hidden
+                                                                    />
+                                                                </div>
+                                                                <div className="flex min-w-0 flex-col">
+                                                                    <span className="truncate font-bold text-foreground text-sm">
                                                                         <MaskedValue
-                                                                            field="primary_ip"
+                                                                            field={
+                                                                                d.display_name
+                                                                                    ? "display_name"
+                                                                                    : d.hostname
+                                                                                      ? "hostname"
+                                                                                      : d.primary_ip
+                                                                                        ? "primary_ip"
+                                                                                        : "id"
+                                                                            }
                                                                             value={
-                                                                                d.primary_ip
+                                                                                d.display_name ??
+                                                                                d.hostname ??
+                                                                                d.primary_ip ??
+                                                                                d.id
                                                                             }
                                                                         />
                                                                     </span>
-                                                                )}
-                                                            <DeviceIdentity
-                                                                hostname={
-                                                                    d.hostname ??
-                                                                    d.display_name
+                                                                    {(d.display_name ||
+                                                                        d.hostname) &&
+                                                                        d.primary_ip && (
+                                                                            <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                                                                                <MaskedValue
+                                                                                    field="primary_ip"
+                                                                                    value={
+                                                                                        d.primary_ip
+                                                                                    }
+                                                                                />
+                                                                            </span>
+                                                                        )}
+                                                                    <DeviceIdentity
+                                                                        hostname={
+                                                                            d.hostname ??
+                                                                            d.display_name
+                                                                        }
+                                                                        primaryMac={
+                                                                            d.primary_mac
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                                <ChevronRight
+                                                                    className="h-4 w-4"
+                                                                    aria-hidden
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* #14: Card con 2 badges (Online + Confiable); el ícono grande
+                                                            ya codifica el tipo, se quitó el Badge de texto de tipo. */}
+                                                        <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 pt-3">
+                                                            <OnlineBadge
+                                                                isOnline={
+                                                                    d.is_online
                                                                 }
-                                                                primaryMac={
-                                                                    d.primary_mac
-                                                                }
+                                                            />
+                                                            <TrustBadge
+                                                                device={d}
                                                             />
                                                         </div>
-                                                    </div>
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-all duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    </div>
-                                                </div>
 
-                                                {/* #14: Card con 2 badges (Online + Confiable); el ícono grande
-                                                    ya codifica el tipo, se quitó el Badge de texto de tipo. */}
-                                                <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 pt-3">
-                                                    <OnlineBadge
-                                                        isOnline={d.is_online}
-                                                    />
-                                                    <TrustBadge device={d} />
-                                                </div>
-
-                                                <div className="flex flex-col gap-1 border-t border-border/10 pt-3 text-[11px]">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Fabricante
-                                                        </span>
-                                                        <span
-                                                            className="font-semibold text-foreground/80 truncate max-w-[150px]"
-                                                            title={
-                                                                d.vendor ??
-                                                                "Genérico"
-                                                            }
-                                                        >
-                                                            {d.vendor ??
-                                                                "Fabricante genérico"}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between text-muted-foreground/70">
-                                                        <span>Visto</span>
-                                                        <span className="font-medium text-foreground/75">
-                                                            <RelativeTime
-                                                                value={
-                                                                    d.last_seen_at
-                                                                }
-                                                            />
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                                        <div className="flex flex-col gap-1 border-t border-border/10 pt-3 text-[11px]">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-muted-foreground">
+                                                                    Fabricante
+                                                                </span>
+                                                                <span
+                                                                    className="font-semibold text-foreground/80 truncate max-w-[150px]"
+                                                                    title={
+                                                                        d.vendor ??
+                                                                        "Genérico"
+                                                                    }
+                                                                >
+                                                                    {d.vendor ??
+                                                                        "Fabricante genérico"}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-muted-foreground/70">
+                                                                <span>
+                                                                    Visto
+                                                                </span>
+                                                                <span className="font-medium text-foreground/75">
+                                                                    <RelativeTime
+                                                                        value={
+                                                                            d.last_seen_at
+                                                                        }
+                                                                    />
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </Link>
+                                        </li>
                                     );
                                 })}
                             </div>
@@ -606,14 +629,21 @@ export function Devices() {
                                             return (
                                                 <TableRow
                                                     key={d.id}
-                                                    className="cursor-pointer group"
-                                                    onClick={() => go(d)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter")
-                                                            go(d);
-                                                    }}
-                                                    tabIndex={0}
+                                                    className="group relative cv-auto-row"
                                                 >
+                                                    {/* Stretched link overlay — cubre toda la fila */}
+                                                    <td className="absolute inset-0 p-0">
+                                                        <Link
+                                                            to={`/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`}
+                                                            className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                                                            aria-label={`Abrir dispositivo ${d.primary_ip ?? d.id}: ${deviceLabel(d.device_type)}`}
+                                                        >
+                                                            <span className="sr-only">
+                                                                Abrir
+                                                                dispositivo
+                                                            </span>
+                                                        </Link>
+                                                    </td>
                                                     <TableCell>
                                                         <div className="flex items-center gap-3">
                                                             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground shrink-0">
@@ -690,8 +720,11 @@ export function Devices() {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end">
-                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-all duration-200 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
-                                                                <ChevronRight className="h-3.5 w-3.5" />
+                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                                <ChevronRight
+                                                                    className="h-3.5 w-3.5"
+                                                                    aria-hidden
+                                                                />
                                                             </div>
                                                         </div>
                                                     </TableCell>

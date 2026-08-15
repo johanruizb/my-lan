@@ -110,10 +110,11 @@ export function CensuraUpgradeDialog() {
                     <DialogTitle>Modo censura</DialogTitle>
                 </div>
                 <DialogDescription>
-                    MyLAN puede enmascarar identificadores sensibles (IP, MAC,
-                    hostname, gateway, DNS) en la interfaz y los exports para
-                    evitar que se compartan por error en capturas de pantalla o
-                    archivos. Puedes cambiarlo cuando quieras desde Ajustes.
+                    <span translate="no">MyLAN</span> puede enmascarar
+                    identificadores sensibles (IP, MAC, hostname, gateway, DNS)
+                    en la interfaz y los exports para evitar que se compartan
+                    por error en capturas de pantalla o archivos. Puedes
+                    cambiarlo cuando quieras desde Ajustes.
                 </DialogDescription>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <Button

@@ -10,6 +10,15 @@ export interface FormatTimestampOpts {
     relative?: boolean;
 }
 
+// Formato absoluto locale-aware (Intl.DateTimeFormat en lugar de hardcoded).
+const absoluteFormatter = new Intl.DateTimeFormat("es", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+});
+
 export function formatTimestamp(
     value: string | number | Date | null | undefined,
     opts: FormatTimestampOpts = {},
@@ -17,7 +26,8 @@ export function formatTimestamp(
     if (value === null || value === undefined || value === "") return "—";
     const d = dayjs(value);
     if (!d.isValid()) return "—";
-    return opts.relative ? d.fromNow() : d.format("YYYY-MM-DD HH:mm");
+    if (opts.relative) return d.fromNow();
+    return absoluteFormatter.format(d.toDate());
 }
 
 export function formatRelative(

@@ -87,6 +87,7 @@ export function Dashboard() {
         <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={scanning}>
             {/* active network section */}
             <section aria-label="Red activa">
+                <h2 className="sr-only">Red activa</h2>
                 <Card className="overflow-hidden shadow-sm">
                     <Collapsible open={openNet} onOpenChange={setOpenNet}>
                         <CollapsibleTrigger asChild>
@@ -102,7 +103,7 @@ export function Dashboard() {
                                             {netName ||
                                                 cidr ||
                                                 iface?.name ||
-                                                "Detectando..."}
+                                                "Detectando…"}
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -175,6 +176,7 @@ export function Dashboard() {
             </section>
 
             <section aria-label="Resumen">
+                <h2 className="sr-only">Resumen</h2>
                 <div className="grid gap-4 sm:grid-cols-3">
                     <Stat
                         label="Dispositivos detectados"
@@ -198,6 +200,7 @@ export function Dashboard() {
             </section>
 
             <section aria-label="Descubrir dispositivos">
+                <h2 className="sr-only">Descubrir dispositivos</h2>
                 <Card className="shadow-sm overflow-hidden">
                     <CardHeader className="p-4">
                         <CardTitle className="flex items-center gap-2 text-base md:text-lg font-bold">
@@ -225,12 +228,12 @@ export function Dashboard() {
                                 </div>
                                 <div className="text-center px-4">
                                     <p className="text-sm font-bold text-primary animate-pulse">
-                                        Escaneando red local...
+                                        Escaneando red local…
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1 max-w-[280px] sm:max-w-md">
                                         {progress && progress.total > 0
                                             ? `${progress.swept} de ${progress.total} hosts analizados (${progress.percent}%)`
-                                            : "Analizando puertos y detectando hostnames activos..."}
+                                            : "Analizando puertos y detectando hostnames activos…"}
                                     </p>
                                 </div>
                                 <div className="w-full max-w-xs px-4">
@@ -246,7 +249,7 @@ export function Dashboard() {
                                     variant="destructive"
                                     size="sm"
                                     onClick={cancel}
-                                    className="gap-1.5 mt-2 transition-all hover:bg-destructive/90"
+                                    className="gap-1.5 mt-2 transition-colors hover:bg-destructive/90"
                                 >
                                     <X className="h-4 w-4" aria-hidden />
                                     Detener escaneo
@@ -268,7 +271,7 @@ export function Dashboard() {
                                     <Button
                                         onClick={() => startScan(profile)}
                                         disabled={scanning}
-                                        className="gap-1.5 shadow-sm transition-all hover:opacity-90 font-medium"
+                                        className="gap-1.5 shadow-sm transition-opacity hover:opacity-90 font-medium"
                                     >
                                         <Play className="h-4 w-4" aria-hidden />
                                         Iniciar descubrimiento
@@ -380,7 +383,7 @@ function Stat({
                     <span className="text-xs font-semibold text-muted-foreground">
                         {label}
                     </span>
-                    <span className="text-2xl font-extrabold tracking-tight mt-0.5">
+                    <span className="text-2xl font-extrabold tracking-tight mt-0.5 tabular-nums">
                         {value}
                     </span>
                 </div>

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useBlocker, useBeforeUnload } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -20,6 +21,12 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import {
     Sun,
     Moon,
@@ -48,6 +55,22 @@ export function Settings() {
     const [settings, setSettingsState] = useState<SettingsDto | null>(null);
     const [dbPathValue, setDbPathValue] = useState("");
     const [saving, setSaving] = useState(false);
+
+    // Aviso de cambios sin guardar: db_path modificado pero no guardado.
+    // theme y censorship se aplican inmediatamente (no necesitan guardado).
+    const dbPathDirty = settings != null && dbPathValue !== settings.db_path;
+    const blocker = useBlocker(dbPathDirty);
+    useBeforeUnload(
+        useCallback(
+            (e: BeforeUnloadEvent) => {
+                if (dbPathDirty) {
+                    e.preventDefault();
+                    e.returnValue = "";
+                }
+            },
+            [dbPathDirty],
+        ),
+    );
 
     useEffect(() => {
         Promise.all([getSettings(), dbPath()])
@@ -98,13 +121,14 @@ export function Settings() {
                         Ajustes
                     </CardTitle>
                     <CardDescription>
-                        Configuración de MyLAN Desktop.
+                        Configuración de <span translate="no">MyLAN</span>{" "}
+                        Desktop.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-5">
                     {/* Sub-sección Escaneo (#20): perfil de scan por defecto. */}
                     <section className="flex flex-col gap-3">
-                        <h3 className="text-sm font-medium">Escaneo</h3>
+                        <h2 className="text-sm font-medium">Escaneo</h2>
                         <div className="flex flex-col gap-1.5">
                             <label
                                 htmlFor="default-profile"
@@ -133,7 +157,7 @@ export function Settings() {
                         (#16). Sin Badge "Activo": aria-pressed ya indica el
                         estado (#20). */}
                     <section className="flex flex-col gap-3">
-                        <h3 className="text-sm font-medium">Apariencia</h3>
+                        <h2 className="text-sm font-medium">Apariencia</h2>
                         <div className="flex flex-col gap-1.5">
                             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <Palette className="h-3.5 w-3.5" aria-hidden />
@@ -196,7 +220,7 @@ export function Settings() {
                         con el toggle confiable de DeviceDetail. Cambio
                         inmediato vía provider; handleSave persiste. */}
                     <section className="flex flex-col gap-3">
-                        <h3 className="text-sm font-medium">Privacidad</h3>
+                        <h2 className="text-sm font-medium">Privacidad</h2>
                         <div className="flex flex-col gap-1.5">
                             <div className="flex items-center justify-between gap-3">
                                 <span
@@ -266,6 +290,9 @@ export function Settings() {
                                             setDbPathValue(e.target.value)
                                         }
                                         className="max-w-xl"
+                                        name="db-path"
+                                        autoComplete="off"
+                                        spellCheck={false}
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         Ubicación donde la app guarda sus datos.
@@ -296,6 +323,40 @@ export function Settings() {
                     </Button>
                 </CardContent>
             </Card>
+
+            {/* Dialog de confirmación: db_path sin guardar antes de navegar */}
+            {blocker.state === "blocked" && (
+                <Dialog
+                    open
+                    onOpenChange={(o) => {
+                        if (!o) blocker.reset();
+                    }}
+                >
+                    <DialogContent className="max-w-sm">
+                        <DialogTitle>¿Descartar cambios?</DialogTitle>
+                        <DialogDescription>
+                            Has modificado la ruta de la base de datos sin
+                            guardar. Si navegas ahora, se perderá el cambio.
+                        </DialogDescription>
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => blocker.reset()}
+                            >
+                                Quedarse
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => blocker.proceed()}
+                            >
+                                Descartar y salir
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }

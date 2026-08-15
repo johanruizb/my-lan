@@ -165,6 +165,8 @@ function LastScanBadge() {
     return (
         <div
             className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs"
+            role="status"
+            aria-live="polite"
             aria-label={`Último escaneo: ${lastScan.hosts_alive} dispositivos activos, ${lastScan.hosts_new} nuevos`}
         >
             <Activity
@@ -312,7 +314,7 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                     </>
                 )}
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground" translate="no">
                 MyLAN v{version || "…"}
             </p>
             <button
@@ -339,7 +341,10 @@ function AppShell() {
             <aside className="hidden h-full w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 md:flex">
                 <div className="flex items-center gap-2 px-2 pt-2">
                     <Network className="h-6 w-6 text-primary" aria-hidden />
-                    <span className="text-lg font-bold tracking-tight">
+                    <span
+                        className="text-lg font-bold tracking-tight"
+                        translate="no"
+                    >
                         MyLAN
                     </span>
                 </div>
@@ -351,7 +356,14 @@ function AppShell() {
                 <header className="z-30 flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
                     <div className="flex items-center gap-3">
                         {/* #37: "MyLAN" solo en móvil (desktop tiene el brand en la sidebar). */}
-                        <h1 className="text-lg font-semibold tracking-tight md:hidden">
+                        <h1
+                            className="text-lg font-semibold tracking-tight md:hidden"
+                            translate="no"
+                        >
+                            MyLAN
+                        </h1>
+                        {/* h1 para desktop: visualmente oculto, accesible a SR. */}
+                        <h1 className="sr-only" translate="no">
                             MyLAN
                         </h1>
                         <LastScanBadge />
@@ -406,7 +418,16 @@ function AppShell() {
                         </span>
                     </button>
                 </nav>
-                <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
+                <a
+                    href="#main-content"
+                    className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:border focus:border-border"
+                >
+                    Saltar al contenido principal
+                </a>
+                <main
+                    id="main-content"
+                    className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8"
+                >
                     <div className="mx-auto flex max-w-5xl flex-col gap-6">
                         <Routes>
                             <Route path="/" element={<Dashboard />} />

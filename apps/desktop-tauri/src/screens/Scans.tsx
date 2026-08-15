@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
@@ -64,7 +64,6 @@ function scanTypeLabel(scanType: string): string {
 }
 
 export function Scans() {
-    const navigate = useNavigate();
     const [history, setHistory] = useState<ScanSummaryDto[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyError, setHistoryError] = useState<string | null>(null);
@@ -87,27 +86,13 @@ export function Scans() {
         refreshHistory();
     }, []);
 
-    function openDevices() {
-        navigate("/devices");
-    }
-
-    function openScan(s: ScanSummaryDto) {
-        navigate(scanTargetPath(s));
-    }
-
-    function handleRowKeyDown(e: React.KeyboardEvent, s: ScanSummaryDto) {
-        if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            openScan(s);
-        }
-    }
-
     return (
         <div
             className={cn("flex flex-col", SECTION_GAP)}
             aria-busy={historyLoading}
         >
             <section aria-label="Historial de escaneos">
+                <h2 className="sr-only">Historial de escaneos</h2>
                 <Card>
                     <CardHeader variant="toolbar">
                         <CardTitle className="flex items-center gap-2">
@@ -169,17 +154,16 @@ export function Scans() {
                                     title="Sin escaneos previos"
                                     description="Aún no hay escaneos registrados. Explora los dispositivos de tu red."
                                     action={
-                                        <Button
-                                            size="sm"
-                                            onClick={openDevices}
-                                            className="gap-1.5"
+                                        <Link
+                                            to="/devices"
+                                            className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         >
                                             <Network
                                                 className="h-3.5 w-3.5"
                                                 aria-hidden
                                             />
                                             Ver dispositivos
-                                        </Button>
+                                        </Link>
                                     }
                                 />
                             )}
@@ -248,20 +232,23 @@ export function Scans() {
                                                 return (
                                                     <tr
                                                         key={s.id}
-                                                        className="cursor-pointer border-b transition-colors hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                                                        onClick={() =>
-                                                            openScan(s)
-                                                        }
-                                                        tabIndex={0}
-                                                        onKeyDown={(e) =>
-                                                            handleRowKeyDown(
-                                                                e,
-                                                                s,
-                                                            )
-                                                        }
-                                                        role="button"
-                                                        aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
+                                                        className="group relative border-b transition-colors hover:bg-muted/50 cv-auto-row"
                                                     >
+                                                        {/* Stretched link overlay — cubre toda la fila */}
+                                                        <td className="absolute inset-0 p-0">
+                                                            <Link
+                                                                to={scanTargetPath(
+                                                                    s,
+                                                                )}
+                                                                className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                                                                aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
+                                                            >
+                                                                <span className="sr-only">
+                                                                    Abrir
+                                                                    escaneo
+                                                                </span>
+                                                            </Link>
+                                                        </td>
                                                         <td className="p-3 align-middle">
                                                             <Badge
                                                                 variant="outline"
@@ -308,7 +295,7 @@ export function Scans() {
                                                                 {s.profile}
                                                             </Badge>
                                                         </td>
-                                                        <td className="p-3 align-middle text-muted-foreground">
+                                                        <td className="p-3 align-middle text-muted-foreground tabular-nums">
                                                             {isPorts
                                                                 ? s.open_ports
                                                                 : "—"}

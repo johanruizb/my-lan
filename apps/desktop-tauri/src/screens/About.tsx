@@ -68,7 +68,9 @@ export function AboutDialog({
             <DialogContent className="max-w-md">
                 <div className="flex items-center gap-2">
                     <Info className="h-5 w-5 text-primary" aria-hidden />
-                    <DialogTitle>Acerca de MyLAN</DialogTitle>
+                    <DialogTitle>
+                        Acerca de <span translate="no">MyLAN</span>
+                    </DialogTitle>
                 </div>
                 <DialogDescription>
                     Escáner de red local de escritorio.
@@ -78,10 +80,14 @@ export function AboutDialog({
                         <Badge variant="secondary">v{version || "…"}</Badge>
                     </MetaRow>
                     <MetaRow label="Licencia" icon={Scale}>
-                        <span className="text-sm font-medium">AGPL-3.0</span>
+                        <span className="text-sm font-medium" translate="no">
+                            AGPL-3.0
+                        </span>
                     </MetaRow>
                     <MetaRow label="Autor" icon={User}>
-                        <span className="text-sm font-medium">johanruizb</span>
+                        <span className="text-sm font-medium" translate="no">
+                            johanruizb
+                        </span>
                     </MetaRow>
 
                     <div className="flex flex-wrap gap-2 pt-1">
