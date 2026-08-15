@@ -62,7 +62,6 @@ pub fn run(ctx: &AppContext, ip_str: &str) -> anyhow::Result<()> {
     println!("  Primera vez   : {}", device.first_seen_at);
     println!("  Última vez    : {}", device.last_seen_at);
 
-    // Servicios/puertos asociados.
     let services = mylan_db::service_repo::list_services_by_device(&conn, &device.id)?;
     if services.is_empty() {
         println!("\nServicios: (ninguno escaneado). Usa `mylan ports {ip}`.");

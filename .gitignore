@@ -13,6 +13,7 @@
 # Artefactos de orquestación/planeación (specs, plans, state, logs locales)
 .omc/
 .serena/
+.sisyphus/
 
 # Configuración local / secretos
 .env

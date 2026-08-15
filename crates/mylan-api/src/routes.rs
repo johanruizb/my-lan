@@ -22,7 +22,6 @@ use mylan_discovery::{detect_interface, discover, DiscoverOptions};
 
 use crate::{ApiError, AppState};
 
-/// Router de los 8 endpoints REST bajo `/api/v1/*`.
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/api/v1/status", get(status))
@@ -34,7 +33,6 @@ pub fn router() -> Router<AppState> {
         .route("/api/v1/scans", get(scans).post(post_scan))
 }
 
-/// Mapea un `DbResult` a `Result<_, ApiError>` (error interno 500 con el mensaje).
 fn db_err<T>(r: DbResult<T>) -> Result<T, ApiError> {
     r.map_err(|e| ApiError::Internal(format!("db: {e}")))
 }
@@ -243,7 +241,6 @@ async fn post_scan(
     })))
 }
 
-/// Parsea un `ScanProfile` desde su nombre `snake_case` (body de `POST /scans`).
 fn parse_profile(s: &str) -> Result<ScanProfile, ApiError> {
     ScanProfile::parse(s).map_err(ApiError::BadRequest)
 }

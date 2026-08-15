@@ -85,7 +85,6 @@ export function Dashboard() {
 
     return (
         <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={scanning}>
-            {/* active network section */}
             <section aria-label="Red activa">
                 <h2 className="sr-only">Red activa</h2>
                 <Card className="overflow-hidden shadow-sm">
@@ -215,7 +214,6 @@ export function Dashboard() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-6 p-4 pt-0">
-                        {/* Radar visual sweeping animation when scanning */}
                         {scanning ? (
                             <div className="flex flex-col items-center justify-center py-6 gap-4 border border-dashed border-primary/20 bg-primary/5 rounded-lg">
                                 <div className="relative flex h-24 w-24 items-center justify-center">

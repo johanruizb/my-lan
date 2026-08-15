@@ -76,7 +76,6 @@ import { Input } from "@/components/ui/input";
 import { formatRelative, formatTimestamp } from "@/lib/format";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 
-// Iconos de estado de servicio (open/closed/filtered — AC-5).
 function serviceStateIcon(state: string) {
     const s = state.toLowerCase();
     if (s === "open") return CircleCheck;
@@ -175,7 +174,6 @@ export function DeviceDetail() {
         };
     }, [ip]);
 
-    // Listeners de progreso/heartbeat/cancel/finish
     useEffect(() => {
         if (!scanning || !scanId) return;
         const unlisteners: UnlistenFn[] = [];
@@ -228,7 +226,6 @@ export function DeviceDetail() {
         };
     }, [scanning, scanId, ip]);
 
-    // Resetea el estado de edición solo cuando cambia el dispositivo o sus campos clave
     useEffect(() => {
         if (!detail) return;
         const dev = detail.device;
@@ -250,7 +247,6 @@ export function DeviceDetail() {
         detail?.device.notes,
     ]);
 
-    // Al navegar a otro dispositivo (cambia id), salir del modo edición.
     useEffect(() => {
         setEditing(false);
     }, [detail?.device.id]);
@@ -289,7 +285,6 @@ export function DeviceDetail() {
         }
     }
 
-    // #19: is_trusted persiste al toggle (cambio inmediato, sin Guardar).
     async function handleTrustToggle(nextTrusted: boolean) {
         if (!detail) return;
         const prev = isTrusted;
@@ -311,7 +306,6 @@ export function DeviceDetail() {
         }
     }
 
-    // #19: display_name + notes en modo edición (Guardar persiste ambos).
     async function handleSaveEdit() {
         if (!detail) return;
         const d = detail.device;
@@ -390,7 +384,6 @@ export function DeviceDetail() {
                     Volver a dispositivos
                 </Link>
 
-                {/* Cabecera Principal del Dispositivo */}
                 {/* #18: header sin glass-panel, bg-card sólido. */}
                 <div className="bg-card p-6 rounded-xl border border-border flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 min-w-0">
@@ -444,8 +437,6 @@ export function DeviceDetail() {
                             </div>
                         </div>
                     </div>
-                    {/* #18/#14: 2 badges (Online + Trust), sin Badge tipo texto
-                        (ícono 64px codifica tipo). */}
                     <div className="flex flex-wrap items-center gap-2">
                         <OnlineBadge
                             isOnline={d.is_online}
@@ -459,11 +450,8 @@ export function DeviceDetail() {
                 </div>
             </div>
 
-            {/* Layout en Grid Principal */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                {/* Columna Izquierda: Información y Gestión */}
                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    {/* Tarjeta: Detalles Técnicos */}
                     <Card>
                         <CardHeader className="p-3 border-b border-border/10">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
@@ -526,7 +514,7 @@ export function DeviceDetail() {
                         </CardContent>
                     </Card>
 
-                    {/* Tarjeta: Gestión */}
+                    
                     <Card>
                         <CardHeader className="p-3 border-b border-border/10">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
@@ -656,9 +644,7 @@ export function DeviceDetail() {
                     </Card>
                 </div>
 
-                {/* Columna Derecha: Escaneo y Servicios */}
                 <div className="flex flex-col gap-6 lg:col-span-2">
-                    {/* Tarjeta: Escaneo de Puertos */}
                     <div ref={scanRef}>
                         <Card>
                             <CardHeader className="p-3 border-b border-border/10">
@@ -671,59 +657,66 @@ export function DeviceDetail() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-4 flex flex-col gap-4">
-                                <div className="flex flex-wrap items-end justify-between gap-4">
-                                    <FormField
-                                        label="Perfil de escaneo"
+                                <div className="flex flex-col gap-1.5">
+                                    <label
                                         htmlFor="detail-profile"
-                                        helper="Intensidad del barrido"
-                                        className="flex-1 min-w-[200px]"
+                                        className="text-sm font-medium leading-none text-foreground"
                                     >
+                                        Perfil de escaneo
+                                    </label>
+                                    <div className="flex flex-wrap items-end gap-4">
                                         <ProfileSelect
                                             value={profile}
                                             onChange={setProfile}
-                                            className="w-full bg-background/50 border-border/30"
+                                            className="flex-1 min-w-[200px] w-full bg-background/50 border-border/30"
                                             id="detail-profile"
                                             disabled={scanning}
                                         />
-                                    </FormField>
-                                    <div className="flex gap-2 shrink-0">
-                                        <Button
-                                            onClick={handleScanPorts}
-                                            disabled={scanning}
-                                            className="gap-1.5"
-                                        >
-                                            {scanning ? (
-                                                <>
-                                                    <Loader2
-                                                        className="h-4 w-4 animate-spin"
-                                                        aria-hidden
-                                                    />
-                                                    Escaneando…
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Play
+                                        <div className="flex gap-2 shrink-0">
+                                            <Button
+                                                onClick={handleScanPorts}
+                                                disabled={scanning}
+                                                className="gap-1.5"
+                                            >
+                                                {scanning ? (
+                                                    <>
+                                                        <Loader2
+                                                            className="h-4 w-4 animate-spin"
+                                                            aria-hidden
+                                                        />
+                                                        Escaneando…
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Play
+                                                            className="h-4 w-4"
+                                                            aria-hidden
+                                                        />
+                                                        Escanear puertos
+                                                    </>
+                                                )}
+                                            </Button>
+                                            {scanning && (
+                                                <Button
+                                                    variant="destructive"
+                                                    onClick={handleCancel}
+                                                    className="gap-1.5"
+                                                >
+                                                    <Square
                                                         className="h-4 w-4"
                                                         aria-hidden
                                                     />
-                                                    Escanear puertos
-                                                </>
+                                                    Cancelar
+                                                </Button>
                                             )}
-                                        </Button>
-                                        {scanning && (
-                                            <Button
-                                                variant="destructive"
-                                                onClick={handleCancel}
-                                                className="gap-1.5"
-                                            >
-                                                <Square
-                                                    className="h-4 w-4"
-                                                    aria-hidden
-                                                />
-                                                Cancelar
-                                            </Button>
-                                        )}
+                                        </div>
                                     </div>
+                                    <p
+                                        id="detail-profile-helper"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        Intensidad del barrido
+                                    </p>
                                 </div>
 
                                 {scanning && (
@@ -733,7 +726,6 @@ export function DeviceDetail() {
                                         aria-atomic="true"
                                     >
                                         <div className="flex flex-col md:flex-row items-center gap-6 justify-center bg-muted/20 p-4 rounded-lg border border-border/10">
-                                            {/* Animación Radar Sonar */}
                                             {/* #22: sin animate-ping/pulse overlays. Radar icon spin
                                                 (3s) + Progress + contador + timer. motion-safe
                                                 respeta prefers-reduced-motion. */}
@@ -779,7 +771,7 @@ export function DeviceDetail() {
                         </Card>
                     </div>
 
-                    {/* Tarjeta: Servicios */}
+                    
                     <Card>
                         <CardHeader className="pb-3 border-b border-border/10 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">

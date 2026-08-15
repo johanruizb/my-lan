@@ -125,7 +125,6 @@ mod tests {
         let ports = select_ports(32);
         assert_eq!(ports.len(), 32);
         assert_eq!(ports[0], 80);
-        // El perfil quick cubre los puertos LAN más relevantes.
         assert!(ports.contains(&22));
         assert!(ports.contains(&443));
         assert!(ports.contains(&445));

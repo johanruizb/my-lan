@@ -58,7 +58,6 @@ function scanTargetPath(s: ScanSummaryDto): string {
     return "/devices";
 }
 
-// Etiqueta legible del tipo de escaneo para la columna "Tipo".
 function scanTypeLabel(scanType: string): string {
     return scanType.toLowerCase() === "ports" ? "Puertos" : "Descubrimiento";
 }

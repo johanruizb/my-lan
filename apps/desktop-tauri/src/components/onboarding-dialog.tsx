@@ -50,7 +50,6 @@ export function OnboardingDialog() {
         }
     }, []);
 
-    // Registrar el handler de re-apertura mientras el componente está montado.
     useEffect(() => {
         reopenFn = () => {
             try {

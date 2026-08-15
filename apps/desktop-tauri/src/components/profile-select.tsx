@@ -7,9 +7,6 @@ import {
 } from "@/components/ui/select";
 import { getProfile, PROFILES } from "@/lib/profiles";
 
-// ProfileSelect: selector de perfiles con descripción visible (AC-2).
-// Mantiene value/onChange API. Descripciones desde profiles.ts (F0.6, hardcode TS).
-
 export function ProfileSelect({
     value,
     onChange,
@@ -53,7 +50,6 @@ export function ProfileSelect({
     );
 }
 
-/** Genera un id único para un scan (usado como clave de cancelación). */
 export function newScanId(): string {
     return `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

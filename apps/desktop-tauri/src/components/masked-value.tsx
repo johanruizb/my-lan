@@ -28,7 +28,6 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
     const { censorshipEnabled } = useCensorship();
     const [revealed, setRevealed] = useState(false);
 
-    // Passthrough: censura apagada, valor nulo o campo no sensible.
     if (!censorshipEnabled || value == null || !isSensitive(field)) {
         return (
             <span className={cn(mono && "font-mono text-sm")}>
@@ -37,7 +36,6 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
         );
     }
 
-    // MAC-family: placeholder constante, nunca hover-revelable (AC-5).
     if (isMacField(field)) {
         return (
             <span
@@ -49,12 +47,6 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
         );
     }
 
-    // Otro campo sensible: blur + reveal-on-hover/focus.
-    // Mientras esta blurred, select-none evita copia casual del DOM; al revelar
-    // se permite seleccion (transitorio).
-    // aria-label fija al valor enmascarado: el lector de pantalla anuncia la
-    // versión censurada (maskValue) siempre, incluso cuando el valor real se
-    // muestra visualmente al revelar.
     const masked = maskValue(field, value);
     return (
         <span

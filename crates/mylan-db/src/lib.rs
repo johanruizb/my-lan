@@ -79,7 +79,6 @@ mod concurrency_tests {
     fn two_writers_contention_errors_instead_of_hanging() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("lock.db");
-        // Primera conexión retiene un bloqueo de escritura con BEGIN IMMEDIATE.
         let conn_a = fixture_conn(path.clone());
         conn_a
             .execute_batch(
@@ -90,7 +89,6 @@ mod concurrency_tests {
             )
             .unwrap();
 
-        // Un segundo hilo intenta escribir mientras el primero retiene el lock.
         let path_b = path.clone();
         let handle = thread::spawn(move || {
             let conn_b = connection::connect(&path_b).unwrap();

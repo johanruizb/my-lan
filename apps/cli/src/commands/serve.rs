@@ -109,9 +109,6 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().expect("tokio rt");
         let result = rt.block_on(run(&ctx, 43117));
 
-        // `_xdg` restaura XDG_CONFIG_HOME al salir (Drop), incluso si los
-        // asserts de abajo panic.
-
         assert!(result.is_err(), "run debe errar si el config no existe");
         let msg = format!("{}", result.unwrap_err());
         assert!(
@@ -133,8 +130,6 @@ mod tests {
 
         let rt = tokio::runtime::Runtime::new().expect("tokio rt");
         let result = rt.block_on(run(&ctx, 43117));
-
-        // `_xdg`/`_home` restauran las vars al salir (Drop), incluso ante pánico.
 
         assert!(result.is_err(), "run sin HOME/XDG debe errar");
     }

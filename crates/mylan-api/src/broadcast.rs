@@ -44,7 +44,6 @@ mod tests {
     #[tokio::test]
     async fn send_with_no_receivers_is_ok_no_block() {
         let (tx, _rx) = event_channel(16);
-        // Sin receptores vivos: send es no-op (no bloquea, no backpressure).
         let event = Event {
             id: "evt-2".to_string(),
             network_id: "net-1".to_string(),
@@ -55,10 +54,7 @@ mod tests {
             data_json: None,
             created_at: "2026-07-03T00:00:01Z".to_string(),
         };
-        // drop el receiver para simular "sin clientes".
         drop(_rx);
-        // send devuelve Err (no hay receptores) pero NO bloquea ni entra en
-        // pánico — el caller puede ignorarlo.
         let _ = tx.send(event);
     }
 }

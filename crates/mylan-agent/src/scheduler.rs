@@ -92,7 +92,6 @@ pub async fn run_scheduler(
                         tracing::warn!(%key, "scan previo aún en curso; skip este tick");
                         continue;
                     }
-                    // cold_start: true la primera vez que se ve esta red.
                     let cs = {
                         let mut cs_map = cold_start.lock().await;
                         let was_cold = !cs_map.contains_key(&key);
@@ -145,7 +144,6 @@ pub struct NetworkRunner {
 }
 
 impl NetworkRunner {
-    /// Crea un `NetworkRunner` vacío.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

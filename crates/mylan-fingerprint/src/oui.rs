@@ -19,7 +19,6 @@ pub struct OuiDatabase {
 }
 
 impl OuiDatabase {
-    /// Crea una base vacía.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

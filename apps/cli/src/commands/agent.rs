@@ -11,7 +11,6 @@ use anyhow::{anyhow, Result};
 use crate::cli::AgentSub;
 use crate::ctx::AppContext;
 
-/// Despacha el subcomando `agent`.
 pub async fn run(ctx: &AppContext, what: AgentSub) -> Result<()> {
     match what {
         AgentSub::Start { config, api_port } => run_start(ctx, config.as_deref(), api_port),
@@ -91,7 +90,6 @@ fn resolve_config_path(config: Option<&str>) -> Result<PathBuf> {
         .ok_or_else(|| anyhow!("no se pudo resolver config path (sin $HOME); usa --config"))
 }
 
-/// Resuelve el puerto del API: override o el de la config.
 fn resolve_api_port(api_port: Option<u16>, config_path: &Path) -> Result<u16> {
     if let Some(p) = api_port {
         return Ok(p);
@@ -116,7 +114,6 @@ fn pidfile_path(ctx: &AppContext) -> PathBuf {
         .join("mylan-agent.pid")
 }
 
-/// Lee el pid del pidfile (si existe y es válido).
 fn read_pid(pidfile: &Path) -> Option<i32> {
     let s = std::fs::read_to_string(pidfile).ok()?;
     s.trim().parse::<i32>().ok()
@@ -127,7 +124,6 @@ fn mylan_agent_binary() -> PathBuf {
     PathBuf::from("mylan-agent")
 }
 
-/// `true` si el proceso `pid` está vivo.
 #[cfg(unix)]
 fn is_process_alive(pid: i32) -> bool {
     std::process::Command::new("kill")

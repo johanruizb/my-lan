@@ -47,7 +47,6 @@ pub fn run_services(
         }
     };
 
-    // `--device` admite IP o ID de dispositivo.
     let device_filter = match device {
         Some(d) => match d.parse::<IpAddr>() {
             Ok(ip) => match mylan_db::device_repo::get_device_by_ip(&conn, &net_id, ip)? {
@@ -155,7 +154,6 @@ fn render_services_table(rows: &[ServiceExportRow]) {
     println!("{table}");
 }
 
-/// ¿El puerto está en la lista fija de sensibles?
 fn is_sensitive(port: u16) -> bool {
     SENSITIVE_PORTS.contains(&port)
 }

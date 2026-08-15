@@ -24,9 +24,9 @@ pub async fn grab_banner(stream: &mut TcpStream, timeout: Duration) -> Option<St
     let mut buf = [0u8; BANNER_MAX];
     let read = tokio::time::timeout(timeout, stream.read(&mut buf)).await;
     match read {
-        Ok(Ok(0)) => None, // EOF inmediato: sin banner.
+        Ok(Ok(0)) => None,
         Ok(Ok(n)) => trim_banner(&buf[..n]),
-        Ok(Err(_)) | Err(_) => None, // timeout o error: sin banner.
+        Ok(Err(_)) | Err(_) => None,
     }
 }
 
