@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
@@ -64,6 +64,7 @@ function scanTypeLabel(scanType: string): string {
 }
 
 export function Scans() {
+    const navigate = useNavigate();
     const [history, setHistory] = useState<ScanSummaryDto[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyError, setHistoryError] = useState<string | null>(null);
@@ -232,23 +233,26 @@ export function Scans() {
                                                 return (
                                                     <tr
                                                         key={s.id}
-                                                        className="group relative border-b transition-colors hover:bg-muted/50 cv-auto-row"
-                                                    >
-                                                        {/* Stretched link overlay — cubre toda la fila */}
-                                                        <td className="absolute inset-0 p-0">
-                                                            <Link
-                                                                to={scanTargetPath(
+                                                        onClick={(e) => {
+                                                            // Fila completa navega (como antes con el
+                                                            // stretched link), salvo clicks en el enlace
+                                                            // real de la celda Destino (evita doble push).
+                                                            if (
+                                                                (
+                                                                    e.target as HTMLElement
+                                                                ).closest(
+                                                                    "a, [tabindex]",
+                                                                )
+                                                            )
+                                                                return;
+                                                            navigate(
+                                                                scanTargetPath(
                                                                     s,
-                                                                )}
-                                                                className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                                                                aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
-                                                            >
-                                                                <span className="sr-only">
-                                                                    Abrir
-                                                                    escaneo
-                                                                </span>
-                                                            </Link>
-                                                        </td>
+                                                                ),
+                                                            );
+                                                        }}
+                                                        className="cursor-pointer border-b transition-colors hover:bg-muted/50 cv-auto-row"
+                                                    >
                                                         <td className="p-3 align-middle text-xs font-medium text-foreground/80">
                                                             {scanTypeLabel(
                                                                 s.scan_type,
@@ -256,11 +260,17 @@ export function Scans() {
                                                         </td>
                                                         <td className="p-3 align-middle">
                                                             <div className="flex flex-col gap-0.5">
-                                                                <span className="font-medium text-primary">
+                                                                <Link
+                                                                    to={scanTargetPath(
+                                                                        s,
+                                                                    )}
+                                                                    className="w-fit rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                    aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
+                                                                >
                                                                     {
                                                                         targetLabel
                                                                     }
-                                                                </span>
+                                                                </Link>
                                                                 {hasDiscovery && (
                                                                     <span className="text-xs text-muted-foreground">
                                                                         {

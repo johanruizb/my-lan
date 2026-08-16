@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -84,6 +84,7 @@ function useUrlState<T extends string>(
 }
 
 export function Devices() {
+    const navigate = useNavigate();
     const { toast } = useToast();
     const { scanning, progress, devicesFound, startScan } = useScan();
     const { censorshipEnabled } = useCensorship();
@@ -628,21 +629,24 @@ export function Devices() {
                                             return (
                                                 <TableRow
                                                     key={d.id}
-                                                    className="group relative cv-auto-row"
+                                                    onClick={(e) => {
+                                                        // Fila completa navega (como antes con el
+                                                        // stretched link), salvo clicks en el enlace
+                                                        // real o en valores enmascarados (tabindex).
+                                                        if (
+                                                            (
+                                                                e.target as HTMLElement
+                                                            ).closest(
+                                                                "a, [tabindex]",
+                                                            )
+                                                        )
+                                                            return;
+                                                        navigate(
+                                                            `/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`,
+                                                        );
+                                                    }}
+                                                    className="group cursor-pointer cv-auto-row"
                                                 >
-                                                    {/* Stretched link overlay — cubre toda la fila */}
-                                                    <td className="absolute inset-0 p-0">
-                                                        <Link
-                                                            to={`/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`}
-                                                            className="absolute inset-0 z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                                                            aria-label={`Abrir dispositivo ${d.primary_ip ?? d.id}: ${deviceLabel(d.device_type)}`}
-                                                        >
-                                                            <span className="sr-only">
-                                                                Abrir
-                                                                dispositivo
-                                                            </span>
-                                                        </Link>
-                                                    </td>
                                                     <TableCell>
                                                         <div className="flex items-center gap-3">
                                                             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground shrink-0">
@@ -719,12 +723,16 @@ export function Devices() {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end">
-                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                            <Link
+                                                                to={`/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`}
+                                                                className="flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                aria-label={`Abrir dispositivo ${d.primary_ip ?? d.id}: ${deviceLabel(d.device_type)}`}
+                                                            >
                                                                 <ChevronRight
                                                                     className="h-3.5 w-3.5"
                                                                     aria-hidden
                                                                 />
-                                                            </div>
+                                                            </Link>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
