@@ -159,6 +159,47 @@ function LastScanBadge() {
     );
 }
 
+// Marca de la app: el mismo hub-and-spoke del icono nativo (public/favicon.svg),
+// inline para que la sidebar tenga identidad propia en vez de un icono genérico
+// de librería. Colores fijos del icono (navy + cyan), no tokens de tema.
+function AppMark({ className }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 32 32" className={className} aria-hidden>
+            <rect width="32" height="32" rx="7" fill="#0c111c" />
+            <circle cx="16" cy="8" r="2.5" fill="#22d3ee" />
+            <circle cx="8" cy="24" r="2.5" fill="#22d3ee" />
+            <circle cx="24" cy="24" r="2.5" fill="#22d3ee" />
+            <line
+                x1="16"
+                y1="8"
+                x2="8"
+                y2="24"
+                stroke="#22d3ee"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+            />
+            <line
+                x1="16"
+                y1="8"
+                x2="24"
+                y2="24"
+                stroke="#22d3ee"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+            />
+            <line
+                x1="8"
+                y1="24"
+                x2="24"
+                y2="24"
+                stroke="#22d3ee"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
+
 function Sidebar() {
     return (
         <nav aria-label="Navegación principal" className="flex flex-col gap-1">
@@ -171,15 +212,31 @@ function Sidebar() {
                         end={n.end}
                         className={({ isActive }) =>
                             cn(
-                                "flex items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-[background-color,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]",
                                 isActive
-                                    ? "border-primary bg-accent text-foreground"
-                                    : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                                    ? "bg-primary/10 text-foreground"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )
                         }
                     >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        <span>{n.label}</span>
+                        {({ isActive }) => (
+                            <>
+                                {isActive && (
+                                    <span
+                                        className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary"
+                                        aria-hidden
+                                    />
+                                )}
+                                <Icon
+                                    className={cn(
+                                        "h-4 w-4 shrink-0",
+                                        isActive && "text-primary",
+                                    )}
+                                    aria-hidden
+                                />
+                                <span>{n.label}</span>
+                            </>
+                        )}
                     </NavLink>
                 );
             })}
@@ -187,11 +244,9 @@ function Sidebar() {
     );
 }
 
-// Pie de la sidebar (AC-8): nombre de la red activa (SSID / etiqueta / CIDR,
-// renderizado en claro — NUNCA enmascarado, AC-11) con un control "Editar"
-// inline que persiste una etiqueta de usuario, más la versión corta de la app.
-// El tag "auto"/"editado" indica el origen del nombre para que el usuario
-// entienda que un re-escaneo no pisa su etiqueta (AC-3).
+// Pie de la sidebar (AC-8): panel compacto con la red activa (SSID / etiqueta
+// / CIDR, renderizado en claro, NUNCA enmascarado, AC-11), edición inline que
+// persiste una etiqueta de usuario, y la fila de meta (versión + Acerca de).
 function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
     const { name, cidr, editName } = useNetworkName();
     const [version, setVersion] = useState("");
@@ -213,12 +268,10 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
     }
 
     return (
-        <div className="mt-auto flex flex-col gap-2 px-2 text-xs text-muted-foreground">
-            <div className="flex flex-col gap-1">
-                <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-                    <Network className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Red activa
-                </span>
+        <div className="mt-auto flex flex-col gap-3">
+            {/* Red activa: panel compacto. El punto verde es estado semántico
+                (red detectada), no decoración. */}
+            <div className="rounded-lg border bg-muted/30 p-3">
                 {editing ? (
                     <div className="flex flex-col gap-1.5">
                         <Input
@@ -252,41 +305,53 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                         </div>
                     </div>
                 ) : (
-                    <>
-                        <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
                             <span
-                                className="truncate font-medium text-foreground"
+                                className={cn(
+                                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                                    cidr
+                                        ? "bg-emerald-500"
+                                        : "bg-muted-foreground/40",
+                                )}
+                                aria-hidden
+                            />
+                            <span
+                                className="truncate text-sm font-medium"
                                 title={displayName}
                             >
                                 {displayName}
                             </span>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setDraft(name);
-                                    setEditing(true);
-                                }}
-                                disabled={!cidr}
-                                className="inline-flex w-fit items-center gap-1 rounded text-[11px] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                            >
-                                <Pencil className="h-3 w-3" aria-hidden />
-                                Editar
-                            </button>
                         </div>
-                    </>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDraft(name);
+                                setEditing(true);
+                            }}
+                            disabled={!cidr}
+                            aria-label="Editar nombre de la red"
+                            title="Editar nombre de la red"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
+                            <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                    </div>
                 )}
             </div>
-            <p className="text-[10px] text-muted-foreground" translate="no">
-                MyLAN v{version || "…"}
-            </p>
-            <button
-                type="button"
-                onClick={onOpenAbout}
-                className="inline-flex w-fit items-center gap-1.5 rounded text-[11px] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-                <Info className="h-3 w-3" aria-hidden />
-                Acerca de
-            </button>
+            <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] text-muted-foreground" translate="no">
+                    MyLAN v{version || "…"}
+                </p>
+                <button
+                    type="button"
+                    onClick={onOpenAbout}
+                    className="inline-flex items-center gap-1 rounded text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <Info className="h-3 w-3" aria-hidden />
+                    Acerca de
+                </button>
+            </div>
         </div>
     );
 }
@@ -301,8 +366,8 @@ function AppShell() {
         <div className="flex h-screen overflow-hidden bg-background text-foreground">
             {/* Sidebar fija en desktop; en móvil se colapsa arriba (AC-1). */}
             <aside className="hidden h-full w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 md:flex">
-                <div className="flex items-center gap-2 px-2 pt-2">
-                    <Network className="h-6 w-6 text-primary" aria-hidden />
+                <div className="flex items-center gap-2.5 px-1 pt-1">
+                    <AppMark className="h-8 w-8 shrink-0" />
                     <span
                         className="text-lg font-bold tracking-tight"
                         translate="no"
@@ -346,10 +411,10 @@ function AppShell() {
                                 end={n.end}
                                 className={({ isActive }) =>
                                     cn(
-                                        "flex items-center gap-1.5 rounded-md border-l-2 px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         isActive
-                                            ? "border-primary bg-accent text-foreground"
-                                            : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                                            ? "bg-primary/10 text-foreground"
+                                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
                                     )
                                 }
                             >
@@ -362,7 +427,7 @@ function AppShell() {
                     <button
                         type="button"
                         onClick={openAbout}
-                        className="flex items-center gap-1.5 rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <Info className="h-3.5 w-3.5" aria-hidden />
                         <span>Acerca de</span>
