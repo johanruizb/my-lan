@@ -1,7 +1,7 @@
 {
   "name": "mylan-workspace",
   "private": true,
-  "version": "0.5.7",
+  "version": "0.5.8",
   "type": "module",
   "scripts": {
     "//version": "sync = sincroniza la versión entre package.json y Cargo.toml (escribe archivos) | check = solo verifica, falla si hay desync",

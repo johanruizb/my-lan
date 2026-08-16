@@ -2390,12 +2390,12 @@ name = "mylan-fingerprint"
 version = "0.5.7"
 dependencies = [
  "csv",
- "hickory-resolver",
  "mylan-core",
  "serde",
  "serde_yaml_ng",
  "thiserror 2.0.18",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

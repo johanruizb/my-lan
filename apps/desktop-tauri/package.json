@@ -1,7 +1,7 @@
 {
   "name": "mylan-desktop",
   "private": true,
-  "version": "0.5.7",
+  "version": "0.5.8",
   "type": "module",
   "scripts": {
     "//version": "sync = sincroniza la versión con la raíz del workspace (escribe archivos) | check = solo verifica, falla si hay desync",
