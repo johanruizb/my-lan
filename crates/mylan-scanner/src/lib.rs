@@ -407,13 +407,9 @@ mod tests {
         };
         let cancel = CancellationToken::new();
         let mut progress_calls = Vec::new();
-        let svcs = scan_target(
-            ip,
-            ScanProfile::Quick,
-            opts,
-            cancel,
-            |p| progress_calls.push(p),
-        )
+        let svcs = scan_target(ip, ScanProfile::Quick, opts, cancel, |p| {
+            progress_calls.push(p)
+        })
         .await
         .expect("ok");
 
@@ -431,7 +427,10 @@ mod tests {
         );
         // El último reporte debe llevar ports_tested al total y 100%.
         let last = progress_calls.last().unwrap();
-        assert_eq!(last.ports_total, last.ports_tested, "debe sondear todos los puertos");
+        assert_eq!(
+            last.ports_total, last.ports_tested,
+            "debe sondear todos los puertos"
+        );
         assert_eq!(last.percent_done, 100, "debe terminar en 100%");
     }
 
