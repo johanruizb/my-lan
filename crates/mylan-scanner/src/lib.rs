@@ -98,6 +98,15 @@ struct PortHit {
     probe: Option<ProbeResult>,
 }
 
+/// Mensaje del canal de sondeo: un puerto abierto (hit) o cerrado/filtrado (miss).
+/// Ambos avanzan el progreso; sólo los hits producen [`Service`].
+enum ScanMsg {
+    /// Puerto abierto: produce un [`Service`] vía [`to_service_with_probe`].
+    Hit(PortHit),
+    /// Puerto cerrado/filtrado/no alcanzable: avanza el progreso sin service.
+    Miss,
+}
+
 /// Escaneo moderno (AC-2, AC-5): sondea el catálogo de `profile` sobre `target`
 /// con cancelación cooperativa y progreso en vivo.
 ///
@@ -131,7 +140,7 @@ pub async fn scan_target(
     let sem = Arc::new(Semaphore::new(concurrency));
     // Token hijo: cancelar los spawns sin cancelar el recibidor del llamador.
     let probe_cancel = cancel.child_token();
-    let (tx, mut rx) = mpsc::channel::<PortHit>(total.max(1));
+    let (tx, mut rx) = mpsc::channel::<ScanMsg>(total.max(1));
 
     let connect_timeout = options.connect_timeout;
     let banner_timeout = options.banner_timeout;
@@ -157,20 +166,26 @@ pub async fn scan_target(
             let addr = SocketAddr::new(target, port);
             let connect = TcpStream::connect(addr);
             let stream = tokio::time::timeout(connect_timeout, connect).await;
-            if let Ok(Ok(mut stream)) = stream {
-                let banner = grab_banner(&mut stream, banner_timeout).await;
-                let probe = if do_probes {
-                    probe_service(&mut stream, port, banner_timeout).await
-                } else {
-                    None
-                };
-                let _ = tx
-                    .send(PortHit {
-                        port,
-                        banner,
-                        probe,
-                    })
-                    .await;
+            match stream {
+                Ok(Ok(mut stream)) => {
+                    let banner = grab_banner(&mut stream, banner_timeout).await;
+                    let probe = if do_probes {
+                        probe_service(&mut stream, port, banner_timeout).await
+                    } else {
+                        None
+                    };
+                    let _ = tx
+                        .send(ScanMsg::Hit(PortHit {
+                            port,
+                            banner,
+                            probe,
+                        }))
+                        .await;
+                }
+                // Puerto cerrado/filtrado/timeout: avanza el progreso sin hit.
+                _ => {
+                    let _ = tx.send(ScanMsg::Miss).await;
+                }
             }
         });
     }
@@ -178,7 +193,8 @@ pub async fn scan_target(
     drop(tx);
 
     let mut hits = Vec::new();
-    let mut tested = 0usize;
+    let mut probed = 0usize;
+    let mut latest_open_port: Option<u16> = None;
     // Deadline global fijo (no se reinicia en cada iteración del select).
     let deadline = tokio::time::sleep(options.scan_timeout);
     tokio::pin!(deadline);
@@ -192,18 +208,41 @@ pub async fn scan_target(
                 break;
             },
             recv = rx.recv() => match recv {
-                Some(hit) => {
-                    tested += 1;
-                    on_progress(ScanProgress {
-                        percent_done: u8::try_from((tested * 100) / total.max(1))
-                            .unwrap_or(100),
-                        ports_tested: tested,
-                        ports_total: total,
-                        latest_open_port: Some(hit.port),
-                    });
-                    hits.push(hit);
+                Some(msg) => {
+                    probed += 1;
+                    match msg {
+                        ScanMsg::Hit(hit) => {
+                            latest_open_port = Some(hit.port);
+                            hits.push(hit);
+                        }
+                        ScanMsg::Miss => {}
+                    }
+                    // Throttle: cada 8 puertos o el último, para no inundar el
+                    // callback en catálogos anchos (patrón de tcp_ping.rs).
+                    if probed.is_multiple_of(8) || probed == total {
+                        on_progress(ScanProgress {
+                            percent_done: u8::try_from((probed * 100) / total.max(1))
+                                .unwrap_or(100),
+                            ports_tested: probed,
+                            ports_total: total,
+                            latest_open_port,
+                        });
+                    }
                 }
-                None => break,
+                None => {
+                    // Avance terminal: lleva la barra al 100% en éxito (no en
+                    // cancelación/timeout, donde se congela en su último valor).
+                    if !cancel.is_cancelled() {
+                        on_progress(ScanProgress {
+                            percent_done: u8::try_from((probed * 100) / total.max(1))
+                                .unwrap_or(100),
+                            ports_tested: probed,
+                            ports_total: total,
+                            latest_open_port,
+                        });
+                    }
+                    break;
+                }
             },
         }
     }
@@ -351,6 +390,49 @@ mod tests {
         // Puede haber algún hit suelto si un spawn ya había conectado a 127.0.0.1
         // antes de observar la cancelación; no afirmamos vacío, sólo rapidez.
         let _ = svcs;
+    }
+
+    /// `scan_target` reporta progreso también para puertos cerrados, no solo
+    /// abiertos. Antes del fix, `on_progress` sólo disparaba en hits (puertos
+    /// abiertos), dejando la barra congelada cerca del 0% hasta el final.
+    #[tokio::test(flavor = "current_thread")]
+    async fn scan_target_reports_progress_for_closed_ports() {
+        let ip: IpAddr = "240.0.0.1".parse().unwrap();
+        let opts = ScanOptions {
+            connect_timeout: Duration::from_millis(80),
+            scan_timeout: Duration::from_secs(2),
+            banner_timeout: Duration::from_millis(80),
+            concurrency: 16,
+            enable_udp: false,
+        };
+        let cancel = CancellationToken::new();
+        let mut progress_calls = Vec::new();
+        let svcs = scan_target(
+            ip,
+            ScanProfile::Quick,
+            opts,
+            cancel,
+            |p| progress_calls.push(p),
+        )
+        .await
+        .expect("ok");
+
+        // TEST-NET: todos los puertos cerrados → 0 servicios.
+        assert!(svcs.is_empty(), "TEST-NET no abre puertos");
+        // El progreso debe disparar aunque no haya puertos abiertos.
+        assert!(
+            !progress_calls.is_empty(),
+            "debe haber progreso para puertos cerrados"
+        );
+        // Con throttle cada 8 y Quick (32 puertos): dispara en 8/16/24/32 + final.
+        assert!(
+            progress_calls.len() >= 2,
+            "debe disparar múltiples veces, no solo al final"
+        );
+        // El último reporte debe llevar ports_tested al total y 100%.
+        let last = progress_calls.last().unwrap();
+        assert_eq!(last.ports_total, last.ports_tested, "debe sondear todos los puertos");
+        assert_eq!(last.percent_done, 100, "debe terminar en 100%");
     }
 
     /// `scan_target` detecta un puerto abierto del catálogo `iot` (best-effort:
