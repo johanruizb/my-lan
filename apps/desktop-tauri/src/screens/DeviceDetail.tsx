@@ -454,7 +454,7 @@ export function DeviceDetail() {
                 <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card>
                         <CardHeader className="p-3 border-b border-border/10">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                                 <Info
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -514,10 +514,9 @@ export function DeviceDetail() {
                         </CardContent>
                     </Card>
 
-                    
                     <Card>
                         <CardHeader className="p-3 border-b border-border/10">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                                 <Settings
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -648,7 +647,7 @@ export function DeviceDetail() {
                     <div ref={scanRef}>
                         <Card>
                             <CardHeader className="p-3 border-b border-border/10">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                                     <Radar
                                         className="h-4 w-4 text-primary"
                                         aria-hidden
@@ -771,10 +770,9 @@ export function DeviceDetail() {
                         </Card>
                     </div>
 
-                    
                     <Card>
                         <CardHeader className="pb-3 border-b border-border/10 flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                                 <Server
                                     className="h-4 w-4 text-primary"
                                     aria-hidden

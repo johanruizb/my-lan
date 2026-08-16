@@ -76,8 +76,8 @@
         @apply bg-background text-foreground;
         -webkit-font-smoothing: antialiased;
         overflow: hidden;
-        /* #7: font-family honesto, sin fuentes no cargadas. */
-        font-family: system-ui, sans-serif;
+        /* Geist Variable (self-hosted via @fontsource-variable). */
+        font-family: "Geist Variable", system-ui, sans-serif;
     }
     /* focus-visible visible en todo elemento focusable (AC-14). */
     :focus-visible {

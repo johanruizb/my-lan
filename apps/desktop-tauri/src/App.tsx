@@ -49,6 +49,7 @@ import { Devices } from "@/screens/Devices";
 import { DeviceDetail } from "@/screens/DeviceDetail";
 import { Scans } from "@/screens/Scans";
 import { Settings } from "@/screens/Settings";
+import { NotFound } from "@/screens/NotFound";
 import { AboutDialog } from "@/screens/About";
 
 // Contexto ligero para compartir el resumen del último scan entre el Dashboard
@@ -438,6 +439,7 @@ function AppShell() {
                             />
                             <Route path="/scans" element={<Scans />} />
                             <Route path="/settings" element={<Settings />} />
+                            <Route path="*" element={<NotFound />} />
                         </Routes>
                     </div>
                 </main>
