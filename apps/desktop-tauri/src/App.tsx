@@ -226,7 +226,7 @@ function Sidebar() {
 // El tag "auto"/"editado" indica el origen del nombre para que el usuario
 // entienda que un re-escaneo no pisa su etiqueta (AC-3).
 function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
-    const { name, source, cidr, editName } = useNetworkName();
+    const { name, cidr, editName } = useNetworkName();
     const [version, setVersion] = useState("");
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState("");
@@ -293,25 +293,19 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                             >
                                 {displayName}
                             </span>
-                            <Badge
-                                variant="secondary"
-                                className="shrink-0 px-1 py-0 text-[10px]"
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDraft(name);
+                                    setEditing(true);
+                                }}
+                                disabled={!cidr}
+                                className="inline-flex w-fit items-center gap-1 rounded text-[11px] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                             >
-                                {source === "user" ? "editado" : "auto"}
-                            </Badge>
+                                <Pencil className="h-3 w-3" aria-hidden />
+                                Editar
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setDraft(name);
-                                setEditing(true);
-                            }}
-                            disabled={!cidr}
-                            className="inline-flex w-fit items-center gap-1 rounded text-[11px] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                        >
-                            <Pencil className="h-3 w-3" aria-hidden />
-                            Editar
-                        </button>
                     </>
                 )}
             </div>
