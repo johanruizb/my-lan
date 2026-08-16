@@ -7,7 +7,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
     Info,
     Tag,
@@ -77,7 +76,12 @@ export function AboutDialog({
                 </DialogDescription>
                 <div className="flex flex-col gap-4">
                     <MetaRow label="Versión" icon={Tag}>
-                        <Badge variant="secondary">v{version || "…"}</Badge>
+                        <span
+                            className="font-mono text-xs text-muted-foreground"
+                            translate="no"
+                        >
+                            v{version || "…"}
+                        </span>
                     </MetaRow>
                     <MetaRow label="Licencia" icon={Scale}>
                         <span className="text-sm font-medium" translate="no">

@@ -1,13 +1,12 @@
-// Badge de confianza **manual** y binario (Confiable/No confiable) basado
+// Indicador de confianza **manual** y binario (Confiable/No confiable) basado
 // únicamente en `is_trusted` (ADR-0006). La medición automática 0-100 vive
 // aparte en `ConfidenceBadge` como "Certeza"; `TrustBadge` ya no deriva
 // estado ni muestra score, y el estado intermedio "Reconocido" se elimina.
 //
-// Patrón visual: `confidence-badge.tsx` (tabular-nums, gap-1, h-3 w-3 icons).
-// Variantes: success (ShieldCheck) para Confiable, outline para No confiable.
+// Texto plano con ícono, sin pill: reduce el ruido de chips en la UI.
+// success (ShieldCheck verde) para Confiable, muted para No confiable.
 
 import { ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Device } from "@/lib/tauri";
 
@@ -29,16 +28,17 @@ export interface TrustBadgeProps {
 
 export function TrustBadge({ device, className }: TrustBadgeProps) {
     const { variant, label } = trustDisplay(device.is_trusted ?? false);
+    const iconClass =
+        variant === "success" ? "text-success" : "text-muted-foreground";
 
     return (
-        <Badge
-            variant={variant}
-            className={cn("gap-1", className)}
+        <span
+            className={cn("inline-flex items-center gap-1 text-xs", className)}
             title={label}
             aria-label={label}
         >
-            <ShieldCheck className="h-3 w-3" aria-hidden />
+            <ShieldCheck className={cn("h-3.5 w-3.5", iconClass)} aria-hidden />
             {label}
-        </Badge>
+        </span>
     );
 }

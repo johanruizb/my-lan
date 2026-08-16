@@ -7,7 +7,12 @@ import {
     useRef,
     useState,
 } from "react";
-import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
+import {
+    createHashRouter,
+    NavLink,
+    Outlet,
+    RouterProvider,
+} from "react-router-dom";
 import {
     LayoutDashboard,
     Network,
@@ -27,7 +32,6 @@ import { CensorshipProvider } from "@/components/censorship-provider";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import type { Device, ScanOutcomeDto, UnlistenFn } from "@/lib/tauri";
 import {
@@ -111,34 +115,10 @@ export function mergeDevice(list: Device[], device: Device): Device[] {
 }
 
 const navItems = [
-    {
-        to: "/",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        end: true,
-        desc: "Resumen de red",
-    },
-    {
-        to: "/devices",
-        label: "Dispositivos",
-        icon: Network,
-        end: false,
-        desc: "Inventario de dispositivos",
-    },
-    {
-        to: "/scans",
-        label: "Escaneo de puertos",
-        icon: Radar,
-        end: false,
-        desc: "Historial y escaneo de puertos",
-    },
-    {
-        to: "/settings",
-        label: "Ajustes",
-        icon: SettingsIcon,
-        end: false,
-        desc: "Configuración",
-    },
+    { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+    { to: "/devices", label: "Dispositivos", icon: Network, end: false },
+    { to: "/scans", label: "Escaneo de puertos", icon: Radar, end: false },
+    { to: "/settings", label: "Ajustes", icon: SettingsIcon, end: false },
 ];
 
 function ThemeToggle() {
@@ -165,22 +145,16 @@ function LastScanBadge() {
     if (!lastScan) return null;
     return (
         <div
-            className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs"
+            className="flex items-center gap-2 text-xs text-muted-foreground"
             role="status"
             aria-live="polite"
             aria-label={`Último escaneo: ${lastScan.hosts_alive} dispositivos activos, ${lastScan.hosts_new} nuevos`}
         >
-            <Activity
-                className="h-3.5 w-3.5 text-muted-foreground"
-                aria-hidden
-            />
-            <span className="text-muted-foreground">Último scan:</span>
-            <Badge variant="success" className="px-1.5 py-0">
-                {lastScan.hosts_alive} activos
-            </Badge>
-            <Badge variant="secondary" className="px-1.5 py-0">
+            <Activity className="h-3.5 w-3.5" aria-hidden />
+            <span>
+                Último scan: {lastScan.hosts_alive} activos,{" "}
                 {lastScan.hosts_new} nuevos
-            </Badge>
+            </span>
         </div>
     );
 }
@@ -205,14 +179,7 @@ function Sidebar() {
                         }
                     >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        <span className="flex flex-col">
-                            <span>{n.label}</span>
-                            {n.desc && (
-                                <span className="text-xs font-normal">
-                                    {n.desc}
-                                </span>
-                            )}
-                        </span>
+                        <span>{n.label}</span>
                     </NavLink>
                 );
             })}
@@ -387,14 +354,7 @@ function AppShell() {
                                 }
                             >
                                 <Icon className="h-3.5 w-3.5" aria-hidden />
-                                <span className="flex flex-col">
-                                    <span>{n.label}</span>
-                                    {n.desc && (
-                                        <span className="text-[10px] font-normal">
-                                            {n.desc}
-                                        </span>
-                                    )}
-                                </span>
+                                <span>{n.label}</span>
                             </NavLink>
                         );
                     })}
@@ -405,12 +365,7 @@ function AppShell() {
                         className="flex items-center gap-1.5 rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <Info className="h-3.5 w-3.5" aria-hidden />
-                        <span className="flex flex-col">
-                            <span>Acerca de</span>
-                            <span className="text-[10px] font-normal">
-                                Información de la app
-                            </span>
-                        </span>
+                        <span>Acerca de</span>
                     </button>
                 </nav>
                 <a
@@ -424,17 +379,7 @@ function AppShell() {
                     className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8"
                 >
                     <div className="mx-auto flex max-w-5xl flex-col gap-6">
-                        <Routes>
-                            <Route path="/" element={<Dashboard />} />
-                            <Route path="/devices" element={<Devices />} />
-                            <Route
-                                path="/devices/:ip"
-                                element={<DeviceDetail />}
-                            />
-                            <Route path="/scans" element={<Scans />} />
-                            <Route path="/settings" element={<Settings />} />
-                            <Route path="*" element={<NotFound />} />
-                        </Routes>
+                        <Outlet />
                     </div>
                 </main>
             </div>
@@ -442,6 +387,23 @@ function AppShell() {
         </div>
     );
 }
+
+// Router de datos (react-router v7): useBlocker en Settings y DeviceDetail
+// (aviso de cambios sin guardar) requiere un data router; AppShell es el
+// layout raíz y las pantallas se renderizan en su <Outlet />.
+const router = createHashRouter([
+    {
+        element: <AppShell />,
+        children: [
+            { path: "/", element: <Dashboard /> },
+            { path: "/devices", element: <Devices /> },
+            { path: "/devices/:ip", element: <DeviceDetail /> },
+            { path: "/scans", element: <Scans /> },
+            { path: "/settings", element: <Settings /> },
+            { path: "*", element: <NotFound /> },
+        ],
+    },
+]);
 
 function AppInner() {
     const { toast } = useToast();
@@ -563,9 +525,7 @@ function AppInner() {
                 {/* NetworkNameProvider va dentro de ScanContext para refrescar
                     el nombre tras cada scan (useNetworkName consume useScan). */}
                 <NetworkNameProvider>
-                    <HashRouter>
-                        <AppShell />
-                    </HashRouter>
+                    <RouterProvider router={router} />
                 </NetworkNameProvider>
                 {/* Dialog one-shot de upgrade censura (AC-4). Va dentro de
                     AppInner para que useCensorship resuelva (CensorshipProvider

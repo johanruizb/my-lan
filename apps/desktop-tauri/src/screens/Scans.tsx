@@ -18,6 +18,7 @@ import {
     Network,
 } from "lucide-react";
 import { listScans, type ScanSummaryDto } from "@/lib/tauri";
+import { getProfile } from "@/lib/profiles";
 
 // Scans (ADR-0001 #23, #12): vista de solo-lectura — tabla cronológica de
 // escaneos pasados (descubrimiento de red y de puertos por IP). El launch de
@@ -248,15 +249,10 @@ export function Scans() {
                                                                 </span>
                                                             </Link>
                                                         </td>
-                                                        <td className="p-3 align-middle">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="capitalize"
-                                                            >
-                                                                {scanTypeLabel(
-                                                                    s.scan_type,
-                                                                )}
-                                                            </Badge>
+                                                        <td className="p-3 align-middle text-xs font-medium text-foreground/80">
+                                                            {scanTypeLabel(
+                                                                s.scan_type,
+                                                            )}
                                                         </td>
                                                         <td className="p-3 align-middle">
                                                             <div className="flex flex-col gap-0.5">
@@ -286,13 +282,11 @@ export function Scans() {
                                                                 }
                                                             />
                                                         </td>
-                                                        <td className="p-3 align-middle">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="capitalize"
-                                                            >
-                                                                {s.profile}
-                                                            </Badge>
+                                                        <td className="p-3 align-middle text-xs text-muted-foreground">
+                                                            {getProfile(
+                                                                s.profile,
+                                                            )?.label ??
+                                                                s.profile}
                                                         </td>
                                                         <td className="p-3 align-middle text-muted-foreground tabular-nums">
                                                             {isPorts

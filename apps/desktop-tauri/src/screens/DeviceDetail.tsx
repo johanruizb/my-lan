@@ -438,14 +438,8 @@ export function DeviceDetail() {
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <OnlineBadge
-                            isOnline={d.is_online}
-                            className="px-2.5 py-1 text-xs"
-                        />
-                        <TrustBadge
-                            device={trustBadgeDevice}
-                            className="px-2.5 py-1 text-xs"
-                        />
+                        <OnlineBadge isOnline={d.is_online} />
+                        <TrustBadge device={trustBadgeDevice} />
                     </div>
                 </div>
             </div>

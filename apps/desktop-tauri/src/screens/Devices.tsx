@@ -178,7 +178,7 @@ export function Devices() {
 
     return (
         <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={loading}>
-            <Card className="glass-panel border border-border/40 shadow-sm overflow-hidden">
+            <Card className="border border-border/40 shadow-sm overflow-hidden">
                 <CardHeader variant="toolbar">
                     <CardTitle className="flex items-center gap-2">
                         <NetworkIcon
@@ -458,11 +458,11 @@ export function Devices() {
                                                 aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
                                                 className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             >
-                                                <Card className="group relative glass-panel border border-border/40 overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/40">
-                                                    <CardContent className="flex flex-col gap-4 p-5">
-                                                        <div className="flex items-start justify-between gap-3">
+                                                <Card className="group relative border border-border/40 overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/40">
+                                                    <CardContent className="flex flex-col gap-3 p-4">
+                                                        <div className="flex items-center justify-between gap-3">
                                                             <div className="flex min-w-0 items-center gap-3">
-                                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                                                                     <Icon
                                                                         className="h-5 w-5 text-primary"
                                                                         aria-hidden
@@ -488,27 +488,14 @@ export function Devices() {
                                                                             }
                                                                         />
                                                                     </span>
-                                                                    {(d.display_name ||
-                                                                        d.hostname) &&
-                                                                        d.primary_ip && (
-                                                                            <span className="font-mono text-[11px] text-muted-foreground mt-0.5">
-                                                                                <MaskedValue
-                                                                                    field="primary_ip"
-                                                                                    value={
-                                                                                        d.primary_ip
-                                                                                    }
-                                                                                />
-                                                                            </span>
+                                                                    <span className="truncate text-xs text-muted-foreground">
+                                                                        {deviceLabel(
+                                                                            d.device_type,
                                                                         )}
-                                                                    <DeviceIdentity
-                                                                        hostname={
-                                                                            d.hostname ??
-                                                                            d.display_name
-                                                                        }
-                                                                        primaryMac={
-                                                                            d.primary_mac
-                                                                        }
-                                                                    />
+                                                                        {d.vendor
+                                                                            ? ` · ${d.vendor}`
+                                                                            : ""}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
@@ -519,40 +506,52 @@ export function Devices() {
                                                             </div>
                                                         </div>
 
-                                                        {/* #14: Card con 2 badges (Online + Confiable); el ícono grande
-                                                            ya codifica el tipo, se quitó el Badge de texto de tipo. */}
-                                                        <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 pt-3">
-                                                            <OnlineBadge
-                                                                isOnline={
-                                                                    d.is_online
-                                                                }
-                                                            />
-                                                            <TrustBadge
-                                                                device={d}
-                                                            />
+                                                        <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-muted-foreground">
+                                                            <span className="truncate">
+                                                                <MaskedValue
+                                                                    field="primary_ip"
+                                                                    value={
+                                                                        d.primary_ip ??
+                                                                        d.id
+                                                                    }
+                                                                />
+                                                            </span>
+                                                            {d.primary_mac && (
+                                                                <>
+                                                                    <span
+                                                                        aria-hidden
+                                                                    >
+                                                                        ·
+                                                                    </span>
+                                                                    <span className="truncate uppercase">
+                                                                        <MaskedValue
+                                                                            field="primary_mac"
+                                                                            value={
+                                                                                d.primary_mac
+                                                                            }
+                                                                            mono
+                                                                        />
+                                                                    </span>
+                                                                </>
+                                                            )}
                                                         </div>
 
-                                                        <div className="flex flex-col gap-1 border-t border-border/10 pt-3 text-[11px]">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-muted-foreground">
-                                                                    Fabricante
-                                                                </span>
-                                                                <span
-                                                                    className="font-semibold text-foreground/80 truncate max-w-[150px]"
-                                                                    title={
-                                                                        d.vendor ??
-                                                                        "Genérico"
+                                                        {/* #14: estado + confianza en la primera fila (texto plano,
+                                                            sin pills); "Visto" en la segunda, alineado a la derecha. */}
+                                                        <div className="flex flex-col gap-1.5 text-xs">
+                                                            <div className="flex items-center gap-x-3">
+                                                                <OnlineBadge
+                                                                    isOnline={
+                                                                        d.is_online
                                                                     }
-                                                                >
-                                                                    {d.vendor ??
-                                                                        "Fabricante genérico"}
-                                                                </span>
+                                                                />
+                                                                <TrustBadge
+                                                                    device={d}
+                                                                />
                                                             </div>
-                                                            <div className="flex items-center justify-between text-muted-foreground/70">
-                                                                <span>
-                                                                    Visto
-                                                                </span>
-                                                                <span className="font-medium text-foreground/75">
+                                                            <div className="flex justify-end">
+                                                                <span className="whitespace-nowrap text-muted-foreground">
+                                                                    Visto{" "}
                                                                     <RelativeTime
                                                                         value={
                                                                             d.last_seen_at
@@ -794,51 +793,6 @@ function FilterToggle<T extends string>({
                     </Button>
                 ))}
             </div>
-        </div>
-    );
-}
-
-function DeviceIdentity({
-    hostname,
-    primaryMac,
-}: {
-    hostname: string | null;
-    primaryMac: string | null;
-}) {
-    const { censorshipEnabled } = useCensorship();
-    const displayHostname = hostname?.trim();
-    const displayMac = primaryMac?.trim();
-
-    // Cuando censura está ON, el árbol de accesibilidad (title/aria-label) no
-    // debe filtrar el valor real — se enmascara con maskValue.
-    const hostnameTitle =
-        censorshipEnabled && displayHostname
-            ? maskValue("hostname", displayHostname)
-            : displayHostname || "";
-    const macTitle =
-        censorshipEnabled && displayMac
-            ? maskValue("primary_mac", displayMac)
-            : displayMac || "";
-
-    return (
-        <div className="mt-0.5 flex min-w-0 flex-col gap-0.5 text-xs">
-            {displayHostname && (
-                <span
-                    className="truncate text-muted-foreground"
-                    title={hostnameTitle}
-                >
-                    <MaskedValue field="hostname" value={displayHostname} />
-                </span>
-            )}
-            {displayMac && (
-                <span
-                    className="truncate font-mono text-[11px] uppercase tracking-normal text-muted-foreground/80"
-                    title={macTitle}
-                    aria-label={`MAC ${macTitle}`}
-                >
-                    <MaskedValue field="primary_mac" value={displayMac} mono />
-                </span>
-            )}
         </div>
     );
 }
