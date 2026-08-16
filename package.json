@@ -4,14 +4,21 @@
   "version": "0.5.7",
   "type": "module",
   "scripts": {
+    "//version": "sync = sincroniza la versión entre package.json y Cargo.toml (escribe archivos) | check = solo verifica, falla si hay desync",
     "version:sync": "node scripts/sync-version.mjs",
     "version:check": "node scripts/sync-version.mjs --check",
+
+    "//build": "cli = compila Rust en release | desktop = tsc + vite build (solo web, sin instalador) | desktop:bundle = empaqueta el instalador nativo de Tauri | all = cli + desktop",
     "build:cli": "cargo build --release -p mylan-cli",
     "build:desktop": "npm run --prefix apps/desktop-tauri build",
     "build:desktop:bundle": "npm run --prefix apps/desktop-tauri tauri -- build",
     "build:all": "npm run build:cli && npm run build:desktop",
+
+    "//dev": "desktop = solo frontend con vite HMR (rápido, para iterar UI) | app = app nativa completa con tauri dev (lento de arrancar pero es la ventana real)",
     "dev:desktop": "npm run --prefix apps/desktop-tauri dev",
     "dev:app": "npm run --prefix apps/desktop-tauri tauri -- dev",
+
+    "//quality": "test = tests de Rust (cargo test) | lint = eslint del frontend | lint:a11y = auditoría de accesibilidad | fmt:check = verifica formato Rust sin tocar | fmt = formatea Rust y guarda | clippy = lints avanzados de Rust (-D warnings = errores) | check = megacomando pre-commit: version + fmt + clippy + test + lint + build",
     "test": "cargo test --workspace",
     "lint": "npm run --prefix apps/desktop-tauri lint",
     "lint:a11y": "npm run --prefix apps/desktop-tauri lint:a11y",
@@ -19,6 +26,8 @@
     "fmt": "cargo fmt --all",
     "clippy": "cargo clippy --workspace -- -D warnings && cargo clippy --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml -- -D warnings",
     "check": "npm run version:check && npm run fmt:check && npm run clippy && npm run test && npm run lint && npm run build:desktop",
+
+    "//clean": "clean = borra artifacts de build (target, dist, gen) | clean:cache = borra caches de npm y cargo | clean:all = clean + node_modules + cache (próximo build baja todo)",
     "clean": "rm -rf target apps/desktop-tauri/src-tauri/target apps/desktop-tauri/src-tauri/gen apps/desktop-tauri/dist",
     "clean:cache": "rm -rf ~/.npm ~/.cargo/registry ~/.cargo/git",
     "clean:all": "npm run clean && rm -rf apps/desktop-tauri/node_modules && npm run clean:cache"
