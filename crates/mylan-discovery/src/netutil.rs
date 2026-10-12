@@ -66,6 +66,56 @@ mod tests {
 
     #[test]
     fn invalid_prefix_returns_empty() {
+        assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 33).is_empty());
         assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 40).is_empty());
+        assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), u8::MAX).is_empty());
+    }
+
+    #[test]
+    fn enumerates_30_prefix() {
+        let hosts = enumerate_hosts("192.168.1.0".parse().unwrap(), 30);
+        let expected: Vec<Ipv4Addr> = vec![
+            "192.168.1.1".parse().unwrap(),
+            "192.168.1.2".parse().unwrap(),
+        ];
+        assert_eq!(hosts, expected);
+    }
+
+    #[test]
+    fn handles_nonzero_host_bits_in_ip() {
+        let hosts = enumerate_hosts("192.168.1.123".parse().unwrap(), 24);
+        assert_eq!(hosts.len(), 254);
+        assert_eq!(hosts.first().copied(), Some("192.168.1.1".parse().unwrap()));
+        assert_eq!(
+            hosts.last().copied(),
+            Some("192.168.1.254".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn safety_limit_caps_wide_subnets_at_4096() {
+        let hosts_slash_16 = enumerate_hosts("10.0.0.0".parse().unwrap(), 16);
+        assert_eq!(hosts_slash_16.len(), 4096);
+        assert_eq!(
+            hosts_slash_16.first().copied(),
+            Some("10.0.0.1".parse().unwrap())
+        );
+
+        let hosts_slash_0 = enumerate_hosts("0.0.0.0".parse().unwrap(), 0);
+        assert_eq!(hosts_slash_0.len(), 4096);
+        assert_eq!(
+            hosts_slash_0.first().copied(),
+            Some("0.0.0.1".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn enumerates_end_of_ipv4_space() {
+        let hosts = enumerate_hosts("255.255.255.252".parse().unwrap(), 30);
+        let expected: Vec<Ipv4Addr> = vec![
+            "255.255.255.253".parse().unwrap(),
+            "255.255.255.254".parse().unwrap(),
+        ];
+        assert_eq!(hosts, expected);
     }
 }
