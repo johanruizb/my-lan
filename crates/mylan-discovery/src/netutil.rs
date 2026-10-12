@@ -68,11 +68,11 @@ mod tests {
     fn invalid_prefix_returns_empty() {
         assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 33).is_empty());
         assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 40).is_empty());
-        assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), u8::MAX).is_empty());
+        assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 255).is_empty());
     }
 
     #[test]
-    fn enumerates_30_prefix() {
+    fn prefix_30_returns_two_hosts() {
         let hosts = enumerate_hosts("192.168.1.0".parse().unwrap(), 30);
         let expected: Vec<Ipv4Addr> = vec![
             "192.168.1.1".parse().unwrap(),
@@ -82,8 +82,8 @@ mod tests {
     }
 
     #[test]
-    fn handles_nonzero_host_bits_in_ip() {
-        let hosts = enumerate_hosts("192.168.1.123".parse().unwrap(), 24);
+    fn handles_non_network_aligned_ip() {
+        let hosts = enumerate_hosts("192.168.1.45".parse().unwrap(), 24);
         assert_eq!(hosts.len(), 254);
         assert_eq!(hosts.first().copied(), Some("192.168.1.1".parse().unwrap()));
         assert_eq!(
@@ -93,14 +93,17 @@ mod tests {
     }
 
     #[test]
-    fn safety_limit_caps_wide_subnets_at_4096() {
-        let hosts_slash_16 = enumerate_hosts("10.0.0.0".parse().unwrap(), 16);
-        assert_eq!(hosts_slash_16.len(), 4096);
-        assert_eq!(
-            hosts_slash_16.first().copied(),
-            Some("10.0.0.1".parse().unwrap())
-        );
+    fn wide_subnet_capped_at_4096_hosts() {
+        // /16 subnet has 65534 hosts, should be capped at 4096
+        let hosts = enumerate_hosts("10.0.0.0".parse().unwrap(), 16);
+        assert_eq!(hosts.len(), 4096);
+        assert_eq!(hosts.first().copied(), Some("10.0.0.1".parse().unwrap()));
 
+        // /20 subnet has 4094 hosts, which is below 4096 and should return all 4094
+        let hosts_20 = enumerate_hosts("10.0.0.0".parse().unwrap(), 20);
+        assert_eq!(hosts_20.len(), 4094);
+
+        // /0 subnet safety limit check
         let hosts_slash_0 = enumerate_hosts("0.0.0.0".parse().unwrap(), 0);
         assert_eq!(hosts_slash_0.len(), 4096);
         assert_eq!(
