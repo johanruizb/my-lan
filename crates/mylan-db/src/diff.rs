@@ -173,12 +173,10 @@ pub fn run_diff(
 
     // device_offline: in before is_online==1, no in after. Suprimido en cold_start.
     if !cold_start {
+        let mut offline_ids = Vec::new();
         for before in &before_devices {
             if before.is_online && !after_by_id.contains_key(before.id.as_str()) {
-                tx.execute(
-                    "UPDATE devices SET is_online = 0 WHERE id = ?1",
-                    rusqlite::params![before.id],
-                )?;
+                offline_ids.push(before.id.as_str());
                 events.push(make_event(
                     network_id,
                     Some(&before.id),
@@ -190,18 +188,17 @@ pub fn run_diff(
                 ));
             }
         }
+        update_devices_is_online(tx, &offline_ids, 0)?;
     }
 
     // device_online: in before is_online==0, in after. Suprimido en cold_start.
     // (upsert ya fijó is_online=1 vía merge incoming.is_online||existing; la
     // escritura aquí es idempotente y por contrato del plan.)
     if !cold_start {
+        let mut online_ids = Vec::new();
         for before in &before_devices {
             if !before.is_online && after_by_id.contains_key(before.id.as_str()) {
-                tx.execute(
-                    "UPDATE devices SET is_online = 1 WHERE id = ?1",
-                    rusqlite::params![before.id],
-                )?;
+                online_ids.push(before.id.as_str());
                 events.push(make_event(
                     network_id,
                     Some(&before.id),
@@ -213,6 +210,7 @@ pub fn run_diff(
                 ));
             }
         }
+        update_devices_is_online(tx, &online_ids, 1)?;
     }
 
     // device_ip_changed: in ambos, primary_ip difiere.
@@ -272,6 +270,33 @@ pub fn run_diff(
     }
 
     Ok(events)
+}
+
+/// Actualiza en batch el campo `is_online` (0 o 1) para un conjunto de `device_ids`.
+fn update_devices_is_online(
+    tx: &Transaction,
+    device_ids: &[&str],
+    is_online_val: i64,
+) -> anyhow::Result<()> {
+    if device_ids.is_empty() {
+        return Ok(());
+    }
+    // `IN (?, ?, ...)` construido con un placeholder por id.
+    // El primer parametro (is_online_val) es ?1, y los IDs son ?2, ?3, ...
+    let placeholders = (0..device_ids.len())
+        .map(|i| format!("?{}", i + 2))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = format!(
+        "UPDATE devices SET is_online = ?1 WHERE id IN ({placeholders})"
+    );
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::with_capacity(1 + device_ids.len());
+    params.push(Box::new(is_online_val));
+    for id in device_ids {
+        params.push(Box::new((*id).to_string()));
+    }
+    tx.execute(&sql, rusqlite::params_from_iter(params.iter()))?;
+    Ok(())
 }
 
 /// Re-querya los devices vistos este scan (`last_seen_at == scan_now`).
