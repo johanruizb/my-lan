@@ -160,43 +160,52 @@ function LastScanBadge() {
     );
 }
 
-// Marca de la app: el mismo hub-and-spoke del icono nativo (public/favicon.svg),
-// inline para que la sidebar tenga identidad propia en vez de un icono genérico
-// de librería. Colores fijos del icono (navy + cyan), no tokens de tema.
+// Marca de la app: Discovery Scope (Opción C oficial), retícula táctica de escaneo
+// con 4 cuadrantes simétricos, ondas de radar concéntricas en Q1 y blip de host detectado en Q3.
+// Paleta oficial: Deep Void Navy (#090D16) + Electric Cyan (#06B6D4) + Sky Signal (#38BDF8).
 function AppMark({ className }: { className?: string }) {
     return (
-        <svg viewBox="0 0 32 32" className={className} aria-hidden>
-            <rect width="32" height="32" rx="7" fill="#0c111c" />
-            <circle cx="16" cy="8" r="2.5" fill="#22d3ee" />
-            <circle cx="8" cy="24" r="2.5" fill="#22d3ee" />
-            <circle cx="24" cy="24" r="2.5" fill="#22d3ee" />
-            <line
-                x1="16"
-                y1="8"
-                x2="8"
-                y2="24"
-                stroke="#22d3ee"
-                strokeWidth="1.5"
-                strokeLinecap="round"
+        <svg viewBox="0 0 256 256" className={className} role="img" aria-hidden>
+            <rect width="256" height="256" rx="56" fill="#090D16" />
+            {/* Baliza de origen local central */}
+            <circle cx="128" cy="128" r="22" fill="#06B6D4" />
+
+            {/* 4 cuadrantes simétricos de retícula (arcos de 72° con aperturas cardinales de 18°) */}
+            <path
+                fill="#06B6D4"
+                opacity="0.9"
+                d="M 144.58 23.31 A 106 106 0 0 1 232.69 111.42 L 216.89 113.92 A 90 90 0 0 0 142.08 39.11 Z"
             />
-            <line
-                x1="16"
-                y1="8"
-                x2="24"
-                y2="24"
-                stroke="#22d3ee"
-                strokeWidth="1.5"
-                strokeLinecap="round"
+            <path
+                fill="#06B6D4"
+                opacity="0.9"
+                d="M 23.31 111.42 A 106 106 0 0 1 111.42 23.31 L 113.92 39.11 A 90 90 0 0 0 39.11 113.92 Z"
             />
-            <line
-                x1="8"
-                y1="24"
-                x2="24"
-                y2="24"
-                stroke="#22d3ee"
-                strokeWidth="1.5"
-                strokeLinecap="round"
+            <path
+                fill="#06B6D4"
+                opacity="0.9"
+                d="M 111.42 232.69 A 106 106 0 0 1 23.31 144.58 L 39.11 142.08 A 90 90 0 0 0 113.92 216.89 Z"
             />
+            <path
+                fill="#06B6D4"
+                opacity="0.9"
+                d="M 232.69 144.58 A 106 106 0 0 1 144.58 232.69 L 142.08 216.89 A 90 90 0 0 0 216.89 142.08 Z"
+            />
+
+            {/* Ondas concéntricas de barrido de radar */}
+            <path
+                fill="#06B6D4"
+                opacity="0.75"
+                d="M 137.70 66.76 A 62 62 0 0 1 189.24 118.30 L 173.43 120.80 A 46 46 0 0 0 135.20 82.57 Z"
+            />
+            <path
+                fill="#06B6D4"
+                opacity="0.5"
+                d="M 141.14 45.03 A 84 84 0 0 1 210.97 114.86 L 195.16 117.36 A 68 68 0 0 0 138.64 60.84 Z"
+            />
+
+            {/* Host detectado (blip de señal en Q3) */}
+            <circle cx="89.82" cy="166.18" r="10" fill="#38BDF8" />
         </svg>
     );
 }
