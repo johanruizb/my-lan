@@ -12,4 +12,5 @@
 
 ## Preferences
 - User approved minor bump to `0.6.0` for Discovery Scope branding and auto-updater features.
+- User approved patch bump to `0.6.1` for desktop layout elevation, Discovery Scope sidebar AppMark icon sync, and Linux updater manifest support.
 - Ship gate: prompt Go gate summary before push and triggering the GitHub Actions release workflow.

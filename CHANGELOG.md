@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-12 (fea6613)
+
 ### Added
 - **Design System y especificación de producto**: formalización del sistema de diseño visual en `DESIGN.md`, `.impeccable/design.json` y del contexto de producto en `PRODUCT.md` bajo la identidad *Discovery Scope*.
 - **Acción rápida CopyButton**: componente accesible para copiar IPs, MACs, vendors y banners al portapapeles con feedback visual y soporte completo para navegación por teclado.
@@ -16,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Alineación con Lenguaje Ubícuo**: renombramiento del menú lateral a "Historial", reemplazo de "Fabricante" por "Vendor", unificación a "Online"/"Offline" y uso estricto de "Descubrimiento".
 - **Inspección forense de banners**: celda interactiva expandible con preservación de saltos de línea y botón de copiado para firmas de servicios de red.
 - **Tematización de superficies del navegador**: estilización de selección de texto (`::selection`), color de cursor (`caret-color`) y barras de desplazamiento sutiles integradas con la paleta visual.
+
+### Fixed
+- **Identidad en barra lateral**: sincronización del icono `AppMark` en la barra de navegación lateral con el isotipo oficial *Discovery Scope*.
+- **Compatibilidad del actualizador en Linux**: inclusión de paquetes `.AppImage` y `.deb` en la generación de manifiestos `latest.json` para distribución en plataformas Linux.
+
+**Full changelog:** https://github.com/johanruizb/my-lan/compare/v0.6.0...v0.6.1
 
 ## [0.6.0] - 2026-10-12 (873ad28)
 
