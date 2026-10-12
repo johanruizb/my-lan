@@ -214,4 +214,26 @@ describe("Devices screen (AC-22)", () => {
         // La IP se renderiza como texto secundario en la tarjeta.
         expect(within(cards[0]).getByText("192.168.1.1")).toBeInTheDocument();
     });
+
+    it("muestra EmptyState sin resultados al filtrar y permite limpiar filtros", async () => {
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+
+        const input = screen.getByLabelText("Buscar dispositivos");
+        fireEvent.change(input, { target: { value: "nonexistent-device" } });
+
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(0\)/)).toBeInTheDocument();
+            expect(screen.getByText("Sin resultados")).toBeInTheDocument();
+        });
+
+        const clearBtn = screen.getByRole("button", { name: /Limpiar filtros/i });
+        fireEvent.click(clearBtn);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
+        });
+    });
 });
