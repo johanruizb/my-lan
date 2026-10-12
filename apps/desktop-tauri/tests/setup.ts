@@ -13,3 +13,27 @@ vi.stubGlobal("__TAURI_INTERNALS__", {
     invoke: vi.fn(),
     transformCallback: vi.fn(),
 });
+
+// Mitiga discordancia entre jsdom AbortSignal y Node undici Request (Node 22/24 + jsdom + react-router v7):
+// jsdom sobrescribe `globalThis.AbortSignal` con su propia clase, pero no implementa `Request`,
+// por lo que `Request` proviene del runtime de Node (undici). Al navegar en react-router,
+// este crea un Request con el AbortSignal de jsdom, provocando `TypeError: RequestInit: Expected
+// signal ("AbortSignal {}") to be an instance of AbortSignal`.
+if (typeof globalThis.Request !== "undefined") {
+    const OriginalRequest = globalThis.Request;
+    try {
+        class PatchedRequest extends OriginalRequest {
+            constructor(input: RequestInfo | URL, init?: RequestInit) {
+                if (init && "signal" in init) {
+                    const { signal, ...rest } = init;
+                    super(input, rest);
+                } else {
+                    super(input, init);
+                }
+            }
+        }
+        globalThis.Request = PatchedRequest as any;
+    } catch {
+        // En entornos sin Request nativo o si falla el patch, mantener OriginalRequest
+    }
+}

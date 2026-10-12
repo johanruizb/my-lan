@@ -1,8 +1,17 @@
-# MyLAN
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="design/branding/kit/final-horizontal-color.svg">
+    <source media="(prefers-color-scheme: light)" srcset="design/branding/kit/final-horizontal-light.svg">
+    <img alt="MyLAN" src="design/branding/kit/final-horizontal-color.svg" width="420">
+  </picture>
+</p>
 
-**Tu red, bajo control.**
+<p align="center">
+  <strong>Tu red, bajo control.</strong><br>
+  App open-source, gratuita y <em>local-first</em> para descubrir, monitorear y proteger tu red local, sin paywalls y sin nube obligatoria.
+</p>
 
-MyLAN es una app open-source, gratuita y *local-first* para descubrir, monitorear y proteger tu red local, sin paywalls y sin nube obligatoria. Es una alternativa libre y extensible a herramientas comerciales de monitoreo de red.
+---
 
 > **Estado:** desarrollo activo. El repositorio ya completó el scaffolding del workspace Rust, el CLI funcional (`mylan`), la base de datos local SQLite, el descubrimiento de red y la **Desktop UI alpha** con Tauri 2. El plan completo está en [`MyLAN_plan_open_source.md`](MyLAN_plan_open_source.md) y el orden de entrega en [`ROADMAP.md`](ROADMAP.md).
 

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Identidad de marca oficial (Discovery Scope)** (`design/branding`): diseño de identidad visual técnica vectorial, corte óptico para favicon/app icon (16–32 px), paleta Electric Cyan, manual de marca (`BRAND_GUIDELINES.md`) y paquete completo de exportaciones SVG/PNG/web-icons.
+- **Identidad de marca oficial (Discovery Scope)** (`design/branding`, `apps/desktop-tauri`): diseño de identidad visual técnica vectorial, despliegue de iconos nativos en la app de escritorio Tauri (Linux, Windows, macOS), favicon web, corte óptico (16–32 px), paleta Electric Cyan, manual de marca (`BRAND_GUIDELINES.md`), banner responsivo en README y paquete completo de exportaciones SVG/PNG/web-icons.
 - **Auto-actualización in-app** (`apps/desktop-tauri`): comprobación, descarga e instalación de nuevas versiones directamente desde la aplicación usando GitHub Releases como backend (sin costes ni servidores S3 externos).
   - Integración de `tauri-plugin-updater` y `tauri-plugin-process` en Tauri v2 con verificación criptográfica Ed25519.
   - UI interactiva en *Acerca de* y *Ajustes*, con opción de búsqueda silenciosa al arrancar y badge en la barra lateral.

@@ -9,7 +9,7 @@
 
 - **Concepto:** *Discovery Scope* es una retícula táctica de escaneo de red con 4 aberturas cardinales de 18°, ondas de radio/sonar concéntricas en el cuadrante superior derecho y un host local detectado en el cuadrante inferior izquierdo. Simboliza la visibilidad en tiempo real, el descubrimiento continuo de dispositivos y la soberanía de la red local (*Tu red, bajo control*).
 - **Versiones oficiales:**
-  - **Horizontal (Lockup principal):** `final-horizontal.svg` / `final-horizontal-color.svg` (cabeceras, web, README).
+  - **Horizontal (Lockup principal):** `final-horizontal.svg` / `final-horizontal-color.svg` (modo oscuro) / `final-horizontal-light.svg` (modo claro) (cabeceras, web, README).
   - **Apilado (Vertical):** `final-stacked.svg` (badges, documentación, pegatinas).
   - **Símbolo único:** `final-symbol.svg` (avatares, app docks, terminales).
   - **Corte óptico pequeño (16–32 px):** `final-symbol-small.svg` (favicon de navegador, bandeja del sistema/tray).

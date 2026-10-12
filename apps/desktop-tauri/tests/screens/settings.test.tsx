@@ -37,6 +37,19 @@ vi.mock("@/components/ui/toast", () => ({
     useToast: () => ({ toast: vi.fn() }),
 }));
 
+vi.mock("@/components/updater-provider", () => ({
+    useUpdater: () => ({
+        status: "idle",
+        updateInfo: null,
+        progress: null,
+        error: null,
+        checkForUpdates: vi.fn(),
+        downloadAndInstall: vi.fn(),
+        restartApp: vi.fn(),
+        dismissError: vi.fn(),
+    }),
+}));
+
 describe("Settings screen (AC-22)", () => {
     beforeEach(() => {
         getSettingsMock.mockReset();
