@@ -48,28 +48,62 @@ export function generateManifest({ version, dir, repo, notes, output }) {
     const files = readdirSync(assetsDir);
     const platforms = {};
 
-    // 1. Linux x86_64: busca artefacto updater (.AppImage.tar.gz y .sig)
-    const linuxSigFile = files.find(
+    // 1. Linux AppImage (AppImage o tar.gz)
+    const linuxAppImageSig = files.find(
         (f) =>
-            (f.endsWith(".AppImage.tar.gz.sig") || f.endsWith(".tar.gz.sig")) &&
+            (f.endsWith(".AppImage.sig") ||
+                f.endsWith(".AppImage.tar.gz.sig") ||
+                (f.endsWith(".tar.gz.sig") && !f.includes("cli"))) &&
             !f.includes("cli"),
     );
 
-    if (linuxSigFile) {
-        const payloadFile = linuxSigFile.replace(/\.sig$/, "");
+    if (linuxAppImageSig) {
+        const payloadFile = linuxAppImageSig.replace(/\.sig$/, "");
         if (files.includes(payloadFile)) {
             const sigContent = readFileSync(
-                resolve(assetsDir, linuxSigFile),
+                resolve(assetsDir, linuxAppImageSig),
                 "utf8",
             ).trim();
-            platforms["linux-x86_64"] = {
+            const entry = {
                 signature: sigContent,
                 url: `https://github.com/${repo}/releases/download/${tag}/${payloadFile}`,
             };
-            console.log(`✓ Plataforma linux-x86_64 vinculada: ${payloadFile}`);
+            platforms["linux-x86_64"] = entry;
+            platforms["linux-x86_64-appimage"] = entry;
+            console.log(
+                `✓ Plataformas linux-x86_64 y linux-x86_64-appimage vinculadas: ${payloadFile}`,
+            );
         } else {
             console.warn(
-                `⚠ Firma encontrada (${linuxSigFile}) pero falta el binario ${payloadFile}`,
+                `⚠ Firma encontrada (${linuxAppImageSig}) pero falta el binario ${payloadFile}`,
+            );
+        }
+    }
+
+    // 2. Linux DEB package
+    const linuxDebSig = files.find(
+        (f) => f.endsWith(".deb.sig") && !f.includes("cli"),
+    );
+
+    if (linuxDebSig) {
+        const payloadFile = linuxDebSig.replace(/\.sig$/, "");
+        if (files.includes(payloadFile)) {
+            const sigContent = readFileSync(
+                resolve(assetsDir, linuxDebSig),
+                "utf8",
+            ).trim();
+            const entry = {
+                signature: sigContent,
+                url: `https://github.com/${repo}/releases/download/${tag}/${payloadFile}`,
+            };
+            platforms["linux-x86_64-deb"] = entry;
+            if (!platforms["linux-x86_64"]) {
+                platforms["linux-x86_64"] = entry;
+            }
+            console.log(`✓ Plataforma linux-x86_64-deb vinculada: ${payloadFile}`);
+        } else {
+            console.warn(
+                `⚠ Firma encontrada (${linuxDebSig}) pero falta el binario ${payloadFile}`,
             );
         }
     }

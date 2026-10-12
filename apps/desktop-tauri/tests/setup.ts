@@ -25,14 +25,15 @@ if (typeof globalThis.Request !== "undefined") {
         class PatchedRequest extends OriginalRequest {
             constructor(input: RequestInfo | URL, init?: RequestInit) {
                 if (init && "signal" in init) {
-                    const { signal, ...rest } = init;
+                    const rest = { ...init };
+                    delete rest.signal;
                     super(input, rest);
                 } else {
                     super(input, init);
                 }
             }
         }
-        globalThis.Request = PatchedRequest as any;
+        globalThis.Request = PatchedRequest as unknown as typeof Request;
     } catch {
         // En entornos sin Request nativo o si falla el patch, mantener OriginalRequest
     }
