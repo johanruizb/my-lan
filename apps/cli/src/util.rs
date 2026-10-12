@@ -46,6 +46,7 @@ mod tests {
             output.contains("Censúralas antes de compartirlas en canales públicos."),
             "La nota debe advertir sobre la censura antes de compartir"
         );
+        assert!(output.ends_with('\n'));
     }
 
     #[test]
