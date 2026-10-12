@@ -116,7 +116,11 @@ fn pidfile_path(ctx: &AppContext) -> PathBuf {
 
 fn read_pid(pidfile: &Path) -> Option<i32> {
     let s = std::fs::read_to_string(pidfile).ok()?;
-    s.trim().parse::<i32>().ok()
+    let pid = s.trim().parse::<i32>().ok()?;
+    if pid <= 0 {
+        return None;
+    }
+    Some(pid)
 }
 
 /// Nombre del binario `mylan-agent` (asume que está en `PATH`).
@@ -126,16 +130,21 @@ fn mylan_agent_binary() -> PathBuf {
 
 #[cfg(unix)]
 fn is_process_alive(pid: i32) -> bool {
-    std::process::Command::new("kill")
-        .arg("-0")
-        .arg(pid.to_string())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    if pid <= 0 {
+        return false;
+    }
+    let nix_pid = nix::unistd::Pid::from_raw(pid);
+    matches!(
+        nix::sys::signal::kill(nix_pid, None),
+        Ok(_) | Err(nix::errno::Errno::EPERM)
+    )
 }
 
 #[cfg(not(unix))]
 fn is_process_alive(pid: i32) -> bool {
+    if pid <= 0 {
+        return false;
+    }
     std::process::Command::new("tasklist")
         .arg("/FI")
         .arg(format!("PID eq {pid}"))
@@ -147,19 +156,20 @@ fn is_process_alive(pid: i32) -> bool {
 /// Envía SIGTERM (Unix) / taskkill (Windows) al pid.
 #[cfg(unix)]
 fn send_sigterm(pid: i32) -> Result<()> {
-    let status = std::process::Command::new("kill")
-        .arg("-TERM")
-        .arg(pid.to_string())
-        .status()
-        .map_err(|e| anyhow!("kill -TERM {pid}: {e}"))?;
-    if !status.success() {
-        return Err(anyhow!("kill -TERM {pid} falló (exit {:?})", status.code()));
+    if pid <= 0 {
+        return Err(anyhow!("PID inválido: {pid}"));
     }
+    let nix_pid = nix::unistd::Pid::from_raw(pid);
+    nix::sys::signal::kill(nix_pid, nix::sys::signal::Signal::SIGTERM)
+        .map_err(|e| anyhow!("kill -TERM {pid}: {e}"))?;
     Ok(())
 }
 
 #[cfg(not(unix))]
 fn send_sigterm(pid: i32) -> Result<()> {
+    if pid <= 0 {
+        return Err(anyhow!("PID inválido: {pid}"));
+    }
     let status = std::process::Command::new("taskkill")
         .arg("/PID")
         .arg(pid.to_string())
@@ -214,6 +224,33 @@ mod tests {
         let pidfile = tmp.path().join("bad.pid");
         std::fs::write(&pidfile, "not-a-number").unwrap();
         assert!(read_pid(&pidfile).is_none());
+    }
+
+    #[test]
+    fn read_pid_returns_none_for_negative_or_zero_pid() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        for invalid_pid in ["0", "-1", "-9999"] {
+            let pidfile = tmp.path().join(format!("bad_{invalid_pid}.pid"));
+            std::fs::write(&pidfile, invalid_pid).unwrap();
+            assert!(
+                read_pid(&pidfile).is_none(),
+                "read_pid debe retornar None para pid {invalid_pid}"
+            );
+        }
+    }
+
+    #[test]
+    fn is_process_alive_non_positive_pid_returns_false() {
+        assert!(!is_process_alive(0));
+        assert!(!is_process_alive(-1));
+        assert!(!is_process_alive(-9999));
+    }
+
+    #[test]
+    fn send_sigterm_non_positive_pid_errors() {
+        assert!(send_sigterm(0).is_err());
+        assert!(send_sigterm(-1).is_err());
+        assert!(send_sigterm(-9999).is_err());
     }
 
     #[test]
