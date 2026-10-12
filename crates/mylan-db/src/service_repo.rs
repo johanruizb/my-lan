@@ -302,8 +302,8 @@ mod tests {
     fn ip(s: &str) -> std::net::IpAddr {
         s.parse().unwrap()
     }
-    fn mac(s: &str) -> MacAddr {
-        MacAddr::parse(s).unwrap()
+    fn mac(s: &str) -> Option<MacAddr> {
+        MacAddr::parse(s)
     }
 
     fn fixture(dir: &std::path::Path) -> Connection {
@@ -322,7 +322,7 @@ mod tests {
         )
         .unwrap();
         let mut d = Device::new("dev-1", "net-1", "2026-06-27T00:00:00Z");
-        d.primary_mac = Some(mac("aa:bb:cc:dd:ee:ff"));
+        d.primary_mac = mac("aa:bb:cc:dd:ee:ff");
         d.primary_ip = Some(ip("192.168.1.5"));
         upsert_device(&conn, &d).unwrap();
         conn
@@ -405,12 +405,12 @@ mod tests {
         )
         .unwrap();
         let mut d1 = Device::new("dev-1", "net-1", "t0");
-        d1.primary_mac = Some(mac("aa:bb:cc:dd:ee:01"));
+        d1.primary_mac = mac("aa:bb:cc:dd:ee:01");
         d1.primary_ip = Some(ip("192.168.1.1"));
         d1.display_name = Some("router".to_string());
         upsert_device(&conn, &d1).unwrap();
         let mut d2 = Device::new("dev-2", "net-1", "t0");
-        d2.primary_mac = Some(mac("aa:bb:cc:dd:ee:02"));
+        d2.primary_mac = mac("aa:bb:cc:dd:ee:02");
         d2.primary_ip = Some(ip("192.168.1.2"));
         d2.display_name = Some("nas".to_string());
         upsert_device(&conn, &d2).unwrap();

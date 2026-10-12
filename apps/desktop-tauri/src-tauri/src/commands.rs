@@ -703,7 +703,9 @@ pub async fn set_settings_cmd(
 ) -> Result<(), String> {
     let path = settings_path(&app);
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| format!("no se pudo escribir {:?}: {e}", path))?;
+    tokio::fs::write(&path, json)
+        .await
+        .map_err(|e| format!("no se pudo escribir {:?}: {e}", path))?;
     *state.settings.write().await = settings;
     Ok(())
 }
