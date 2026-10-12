@@ -11,6 +11,12 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
+import {
+    Collapsible,
+    CollapsibleTrigger,
+    CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { CopyButton } from "@/components/copy-button";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
 import { deviceIcon } from "@/components/device-icons";
@@ -88,6 +94,44 @@ function serviceStateLabel(state: string) {
     if (s === "open") return "Abierto";
     if (s === "closed") return "Cerrado";
     return "Filtrado";
+}
+
+function ServiceStateBadge({ state }: { state: string }) {
+    const s = state.toLowerCase();
+    const StateIcon = serviceStateIcon(s);
+    const label = serviceStateLabel(s);
+
+    if (s === "open") {
+        return (
+            <Badge
+                variant="outline"
+                className="gap-1 h-5 px-2 text-[10px] font-semibold border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+            >
+                <StateIcon className="h-2.5 w-2.5" aria-hidden />
+                {label}
+            </Badge>
+        );
+    }
+    if (s === "closed") {
+        return (
+            <Badge
+                variant="outline"
+                className="gap-1 h-5 px-2 text-[10px] font-semibold border-destructive/30 text-red-700 dark:text-red-400 bg-destructive/10"
+            >
+                <StateIcon className="h-2.5 w-2.5" aria-hidden />
+                {label}
+            </Badge>
+        );
+    }
+    return (
+        <Badge
+            variant="outline"
+            className="gap-1 h-5 px-2 text-[10px] font-semibold border-amber-500/30 text-amber-800 dark:text-amber-400 bg-amber-500/10"
+        >
+            <StateIcon className="h-2.5 w-2.5" aria-hidden />
+            {label}
+        </Badge>
+    );
 }
 
 export function DeviceDetail() {
@@ -369,6 +413,12 @@ export function DeviceDetail() {
 
     const d = detail.device;
     const Icon = deviceIcon(d.device_type);
+    const openServices = detail.services.filter(
+        (s) => s.state.toLowerCase() === "open",
+    );
+    const closedOrFilteredServices = detail.services.filter(
+        (s) => s.state.toLowerCase() !== "open",
+    );
 
     return (
         <div
@@ -391,7 +441,7 @@ export function DeviceDetail() {
                             <Icon className="h-8 w-8" aria-hidden />
                         </div>
                         <div className="flex flex-col min-w-0 gap-1">
-                            <h1 className="text-xl font-bold text-foreground truncate">
+                            <h1 className="text-xl font-bold text-foreground truncate flex items-center gap-2">
                                 <MaskedValue
                                     field={
                                         d.display_name
@@ -409,30 +459,59 @@ export function DeviceDetail() {
                                         d.id
                                     }
                                 />
+                                {!d.display_name &&
+                                    !d.hostname &&
+                                    d.primary_ip && (
+                                        <CopyButton
+                                            value={d.primary_ip}
+                                            label="IP"
+                                            className="h-5 w-5"
+                                        />
+                                    )}
                             </h1>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] font-semibold">
-                                    <MaskedValue
-                                        field="primary_ip"
-                                        value={d.primary_ip ?? "—"}
-                                    />
-                                </span>
+                                {(d.display_name || d.hostname) &&
+                                    d.primary_ip && (
+                                        <div className="flex items-center gap-1 font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] font-semibold">
+                                            <MaskedValue
+                                                field="primary_ip"
+                                                value={d.primary_ip}
+                                            />
+                                            <CopyButton
+                                                value={d.primary_ip}
+                                                label="IP"
+                                                className="h-4 w-4"
+                                            />
+                                        </div>
+                                    )}
                                 {d.primary_mac && (
-                                    <span className="font-mono uppercase text-[11px]">
+                                    <div className="flex items-center gap-1 font-mono uppercase text-[11px]">
                                         <MaskedValue
                                             field="primary_mac"
                                             value={d.primary_mac}
                                             mono
                                         />
-                                    </span>
+                                        <CopyButton
+                                            value={d.primary_mac}
+                                            label="MAC"
+                                            className="h-5 w-5"
+                                        />
+                                    </div>
                                 )}
                                 {d.vendor && (
-                                    <span
-                                        className="truncate max-w-[150px]"
-                                        title={d.vendor}
-                                    >
-                                        {d.vendor}
-                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <span
+                                            className="truncate max-w-[260px] md:max-w-xs"
+                                            title={d.vendor}
+                                        >
+                                            {d.vendor}
+                                        </span>
+                                        <CopyButton
+                                            value={d.vendor}
+                                            label="Vendor"
+                                            className="h-5 w-5"
+                                        />
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -469,11 +548,14 @@ export function DeviceDetail() {
                                 mono
                                 field="primary_mac"
                                 glossaryKey="mac"
+                                copyable
                             />
                             <Field
-                                label="Fabricante"
+                                label="Vendor"
                                 value={d.vendor ?? "—"}
                                 glossaryKey="vendor"
+                                title={d.vendor ?? undefined}
+                                copyable
                             />
                             <Field
                                 label="Familia S.O."
@@ -771,7 +853,7 @@ export function DeviceDetail() {
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
                                 />
-                                Servicios activos ({detail.services.length})
+                                Servicios abiertos ({openServices.length})
                             </CardTitle>
                             {/* #27: 1 botón Exportar + dropdown CSV/JSON (mismo
                                 patrón que Devices). */}
@@ -820,7 +902,7 @@ export function DeviceDetail() {
                                 <EmptyState
                                     icon={Cpu}
                                     title="Sin servicios"
-                                    description="Aún no hay servicios detectados. Realiza un escaneo de puertos en este dispositivo para descubrir servicios activos."
+                                    description="Aún no hay servicios detectados. Realiza un escaneo de puertos en este dispositivo para identificar sus servicios."
                                     action={
                                         <Button
                                             size="sm"
@@ -835,6 +917,21 @@ export function DeviceDetail() {
                                         </Button>
                                     }
                                 />
+                            ) : openServices.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                                    <ShieldAlert
+                                        className="h-8 w-8 text-muted-foreground/60 mb-2"
+                                        aria-hidden
+                                    />
+                                    <p className="font-medium text-foreground">
+                                        Sin servicios abiertos
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                                        No se detectaron puertos abiertos en
+                                        este dispositivo durante el último
+                                        escaneo.
+                                    </p>
+                                </div>
                             ) : (
                                 <div className="overflow-x-auto rounded-md border border-border/40">
                                     <Table>
@@ -881,9 +978,7 @@ export function DeviceDetail() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {detail.services.map((s) => {
-                                                const StateIcon =
-                                                    serviceStateIcon(s.state);
+                                            {openServices.map((s) => {
                                                 return (
                                                     <TableRow
                                                         key={s.id}
@@ -895,39 +990,24 @@ export function DeviceDetail() {
                                                         <TableCell className="uppercase font-semibold text-xs text-foreground/80">
                                                             {s.protocol}
                                                         </TableCell>
-                                                        <TableCell className="text-xs">
+                                                        <TableCell className="text-xs font-medium">
                                                             {s.service_name ??
                                                                 "—"}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge
-                                                                variant={
-                                                                    s.state.toLowerCase() ===
-                                                                    "open"
-                                                                        ? "success"
-                                                                        : "outline"
-                                                                }
-                                                                className="gap-1 h-5 px-2 text-[10px] font-semibold"
-                                                            >
-                                                                <StateIcon
-                                                                    className="h-2.5 w-2.5"
-                                                                    aria-hidden
-                                                                />
-                                                                {serviceStateLabel(
-                                                                    s.state,
-                                                                )}
-                                                            </Badge>
+                                                            <ServiceStateBadge
+                                                                state={s.state}
+                                                            />
                                                         </TableCell>
                                                         <TableCell className="text-xs text-muted-foreground">
                                                             {s.version ?? "—"}
                                                         </TableCell>
-                                                        <TableCell
-                                                            className="font-mono text-xs text-muted-foreground/80 truncate max-w-[150px]"
-                                                            title={
-                                                                s.banner ?? ""
-                                                            }
-                                                        >
-                                                            {s.banner ?? "—"}
+                                                        <TableCell>
+                                                            <BannerCell
+                                                                banner={
+                                                                    s.banner
+                                                                }
+                                                            />
                                                         </TableCell>
                                                     </TableRow>
                                                 );
@@ -938,6 +1018,114 @@ export function DeviceDetail() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {closedOrFilteredServices.length > 0 && (
+                        <Collapsible className="rounded-xl border border-border/60 bg-card overflow-hidden">
+                            <CollapsibleTrigger className="flex w-full items-center justify-between p-4 text-sm font-medium hover:bg-muted/40 transition-colors [&[data-state=open]>svg]:rotate-180">
+                                <span className="flex items-center gap-2 font-semibold text-muted-foreground">
+                                    <ShieldAlert
+                                        className="h-4 w-4 text-muted-foreground"
+                                        aria-hidden
+                                    />
+                                    Puertos cerrados o filtrados (
+                                    {closedOrFilteredServices.length})
+                                </span>
+                                <ChevronDown
+                                    className="h-4 w-4 text-muted-foreground transition-transform duration-200"
+                                    aria-hidden
+                                />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="p-4 pt-0">
+                                <div className="overflow-x-auto rounded-md border border-border/40 mt-2">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="hover:bg-transparent">
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Puerto
+                                                        <InfoTooltip
+                                                            term="Puerto"
+                                                            glossaryKey="puerto"
+                                                        />
+                                                    </span>
+                                                </TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Protocolo
+                                                        <InfoTooltip
+                                                            term="Protocolo"
+                                                            glossaryKey="protocolo"
+                                                        />
+                                                    </span>
+                                                </TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Servicio
+                                                        <InfoTooltip
+                                                            term="Servicio"
+                                                            glossaryKey="servicio"
+                                                        />
+                                                    </span>
+                                                </TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                <TableHead>Versión</TableHead>
+                                                <TableHead>
+                                                    <span className="inline-flex items-center gap-1">
+                                                        Banner
+                                                        <InfoTooltip
+                                                            term="Banner"
+                                                            glossaryKey="banner"
+                                                        />
+                                                    </span>
+                                                </TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {closedOrFilteredServices.map(
+                                                (s) => {
+                                                    return (
+                                                        <TableRow
+                                                            key={s.id}
+                                                            className="hover:bg-muted/30"
+                                                        >
+                                                            <TableCell className="font-mono text-xs font-semibold">
+                                                                {s.port}
+                                                            </TableCell>
+                                                            <TableCell className="uppercase font-semibold text-xs text-foreground/80">
+                                                                {s.protocol}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs">
+                                                                {s.service_name ??
+                                                                    "—"}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <ServiceStateBadge
+                                                                    state={
+                                                                        s.state
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground">
+                                                                {s.version ??
+                                                                    "—"}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <BannerCell
+                                                                    banner={
+                                                                        s.banner
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                },
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    )}
                 </div>
             </div>
 
@@ -978,6 +1166,52 @@ export function DeviceDetail() {
     );
 }
 
+function BannerCell({ banner }: { banner: string | null }) {
+    const [expanded, setExpanded] = useState(false);
+    if (!banner)
+        return <span className="text-xs text-muted-foreground">—</span>;
+
+    const isLong = banner.length > 25;
+
+    return (
+        <div
+            className={cn(
+                "flex items-start min-w-0 gap-1.5 font-mono text-xs text-muted-foreground/90",
+                expanded ? "max-w-xl" : "max-w-[320px]",
+            )}
+        >
+            <span
+                className={cn(
+                    "min-w-0 transition-all",
+                    !expanded &&
+                        isLong &&
+                        "truncate max-w-[220px] inline-block",
+                    expanded && "break-all whitespace-pre-wrap",
+                )}
+                title={banner}
+            >
+                {banner}
+            </span>
+            <div className="flex items-center shrink-0 gap-0.5 mt-0.5">
+                {isLong && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setExpanded(!expanded);
+                        }}
+                        className="text-[10px] px-1 py-0.5 rounded text-primary hover:bg-muted font-sans font-medium"
+                        title={expanded ? "Contraer banner" : "Expandir banner"}
+                    >
+                        {expanded ? "Menos" : "Más"}
+                    </button>
+                )}
+                <CopyButton value={banner} label="Banner" className="h-5 w-5" />
+            </div>
+        </div>
+    );
+}
+
 function Field({
     label,
     value,
@@ -985,6 +1219,7 @@ function Field({
     field,
     glossaryKey,
     title,
+    copyable,
 }: {
     label: string;
     value: string;
@@ -992,6 +1227,7 @@ function Field({
     field?: string;
     glossaryKey?: string;
     title?: string;
+    copyable?: boolean;
 }) {
     return (
         <div className="flex flex-col gap-1">
@@ -1001,19 +1237,28 @@ function Field({
                     <InfoTooltip term={label} glossaryKey={glossaryKey} />
                 )}
             </span>
-            {field && isSensitive(field) ? (
-                <MaskedValue field={field} value={value} mono={mono} />
-            ) : (
-                <span
-                    className={cn(
-                        "font-medium break-words",
-                        mono && "font-mono text-xs",
-                    )}
-                    title={title}
-                >
-                    {value}
-                </span>
-            )}
+            <div className="flex items-center gap-1.5">
+                {field && isSensitive(field) ? (
+                    <MaskedValue field={field} value={value} mono={mono} />
+                ) : (
+                    <span
+                        className={cn(
+                            "font-medium break-words",
+                            mono && "font-mono text-xs",
+                        )}
+                        title={title}
+                    >
+                        {value}
+                    </span>
+                )}
+                {copyable && value && value !== "—" && (
+                    <CopyButton
+                        value={value}
+                        label={label}
+                        className="h-5 w-5"
+                    />
+                )}
+            </div>
         </div>
     );
 }

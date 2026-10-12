@@ -2361,14 +2361,14 @@ dependencies = [
 
 [[package]]
 name = "mylan-core"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "mylan-db"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "mylan-core",
@@ -2382,7 +2382,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-desktop"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "csv",
  "mylan-core",
@@ -2405,7 +2405,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-discovery"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "hickory-resolver",
  "mdns-sd",
@@ -2423,7 +2423,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-fingerprint"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "csv",
  "mylan-core",
@@ -2436,7 +2436,7 @@ dependencies = [
 
 [[package]]
 name = "mylan-scanner"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "mylan-core",
  "serde",

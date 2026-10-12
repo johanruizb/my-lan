@@ -43,7 +43,6 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     },
     vendor: {
         term: "Vendor",
-        translation: "Fabricante",
         tooltip:
             "El fabricante de la tarjeta de red del dispositivo, deducido de su MAC.",
     },

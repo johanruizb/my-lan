@@ -184,7 +184,7 @@ export function Dashboard() {
                         tone="primary"
                     />
                     <Stat
-                        label="Activos en último scan"
+                        label="Activos en último descubrimiento"
                         value={lastScan?.hosts_alive ?? 0}
                         icon={Activity}
                         tone="success"
@@ -226,7 +226,7 @@ export function Dashboard() {
                                 </div>
                                 <div className="text-center px-4">
                                     <p className="text-sm font-bold text-primary animate-pulse">
-                                        Escaneando red local…
+                                        Descubriendo red local…
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1 max-w-[280px] sm:max-w-md">
                                         {progress && progress.total > 0
@@ -250,14 +250,14 @@ export function Dashboard() {
                                     className="gap-1.5 mt-2 transition-colors hover:bg-destructive/90"
                                 >
                                     <X className="h-4 w-4" aria-hidden />
-                                    Detener escaneo
+                                    Detener descubrimiento
                                 </Button>
                             </div>
                         ) : (
                             <FormField
                                 label="Configuración del perfil"
                                 htmlFor="dash-profile"
-                                helper="Selecciona el tipo de barrido de red. Los perfiles rápidos escanean puertos conocidos; los profundos revisan todo el rango."
+                                helper="Selecciona el perfil de barrido para el descubrimiento de la red local."
                             >
                                 <div className="flex flex-wrap items-center gap-3 mt-1.5">
                                     <ProfileSelect

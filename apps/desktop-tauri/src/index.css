@@ -76,13 +76,52 @@
         @apply bg-background text-foreground;
         -webkit-font-smoothing: antialiased;
         overflow: hidden;
-        /* Geist Variable (self-hosted via @fontsource-variable). */
-        font-family: "Geist Variable", system-ui, sans-serif;
+        /* Technical workbench typography: offline Geist font with native OS system fallbacks. */
+        font-family:
+            "Geist Variable",
+            system-ui,
+            -apple-system,
+            "Segoe UI",
+            Roboto,
+            "Helvetica Neue",
+            Arial,
+            sans-serif;
+    }
+    code,
+    kbd,
+    samp,
+    pre {
+        font-family:
+            "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo,
+            Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-variant-numeric: tabular-nums;
     }
     /* focus-visible visible en todo elemento focusable (AC-14). */
     :focus-visible {
         outline: 2px solid hsl(var(--ring));
         outline-offset: 2px;
+    }
+    ::selection {
+        background-color: hsl(var(--primary) / 0.25);
+        color: hsl(var(--foreground));
+    }
+    input,
+    textarea {
+        caret-color: hsl(var(--primary));
+    }
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: hsl(var(--border));
+        border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--muted-foreground) / 0.4);
     }
 }
 

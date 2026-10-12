@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Design System y especificación de producto**: formalización del sistema de diseño visual en `DESIGN.md`, `.impeccable/design.json` y del contexto de producto en `PRODUCT.md` bajo la identidad *Discovery Scope*.
+- **Acción rápida CopyButton**: componente accesible para copiar IPs, MACs, vendors y banners al portapapeles con feedback visual y soporte completo para navegación por teclado.
+
+### Changed
+- **Separación de servicios y puertos en detalle**: la tabla principal de `DeviceDetail` muestra exclusivamente puertos abiertos (`Servicios abiertos`), mientras que los puertos cerrados o filtrados se agrupan en un panel colapsable secundario para evitar falsas alarmas.
+- **Ergonomía y densidad en escritorio**: ampliación del contenedor principal a ancho de pantalla completo (`max-w-7xl 2xl:max-w-screen-2xl`) y vista tabular de alta densidad en el inventario de dispositivos.
+- **Alineación con Lenguaje Ubícuo**: renombramiento del menú lateral a "Historial", reemplazo de "Fabricante" por "Vendor", unificación a "Online"/"Offline" y uso estricto de "Descubrimiento".
+- **Inspección forense de banners**: celda interactiva expandible con preservación de saltos de línea y botón de copiado para firmas de servicios de red.
+- **Tematización de superficies del navegador**: estilización de selección de texto (`::selection`), color de cursor (`caret-color`) y barras de desplazamiento sutiles integradas con la paleta visual.
+
 ## [0.6.0] - 2026-10-12 (873ad28)
 
 ### Added

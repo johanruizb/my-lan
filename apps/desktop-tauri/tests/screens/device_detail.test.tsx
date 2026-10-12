@@ -99,4 +99,132 @@ describe("DeviceDetail screen (AC-18)", () => {
             );
         });
     });
+
+    it("separa servicios abiertos de puertos cerrados o filtrados en un collapsible", async () => {
+        getDeviceMock.mockResolvedValue({
+            device: fixtureDevice,
+            services: [
+                {
+                    id: "svc-1",
+                    device_id: "dev-edit-1",
+                    protocol: "tcp",
+                    port: 22,
+                    service_name: "ssh",
+                    product: "OpenSSH",
+                    version: "9.2",
+                    banner: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3",
+                    state: "open",
+                    first_seen_at: "2026-01-01T00:00:00Z",
+                    last_seen_at: "2026-01-01T00:00:00Z",
+                },
+                {
+                    id: "svc-2",
+                    device_id: "dev-edit-1",
+                    protocol: "tcp",
+                    port: 80,
+                    service_name: "http",
+                    product: null,
+                    version: null,
+                    banner: null,
+                    state: "closed",
+                    first_seen_at: "2026-01-01T00:00:00Z",
+                    last_seen_at: "2026-01-01T00:00:00Z",
+                },
+            ],
+        });
+
+        renderWithProviders(
+            <Routes>
+                <Route path="/devices/:ip" element={<DeviceDetail />} />
+            </Routes>,
+            ["/devices/192.168.1.1"],
+        );
+
+        // Verifica que la card principal muestra Servicios abiertos (1)
+        await waitFor(() => {
+            expect(
+                screen.getByText(/Servicios abiertos \(1\)/),
+            ).toBeInTheDocument();
+        });
+
+        // Verifica que el puerto 22 está en el documento
+        expect(screen.getByText("22")).toBeInTheDocument();
+
+        // El collapsible muestra "Puertos cerrados o filtrados (1)"
+        expect(
+            screen.getByText(/Puertos cerrados o filtrados \(1\)/),
+        ).toBeInTheDocument();
+    });
+
+    it("no duplica la IP cuando no hay display_name ni hostname", async () => {
+        const noNameDevice = makeDevice({
+            id: "dev-noname-1",
+            primary_ip: "10.0.0.42",
+            hostname: null,
+            display_name: null,
+            primary_mac: "00:11:22:33:44:55",
+            vendor: "Acme Corp",
+        });
+
+        getDeviceMock.mockResolvedValue({
+            device: noNameDevice,
+            services: [],
+        });
+
+        renderWithProviders(
+            <Routes>
+                <Route path="/devices/:ip" element={<DeviceDetail />} />
+            </Routes>,
+            ["/devices/10.0.0.42"],
+        );
+
+        await waitFor(() => {
+            expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+                "10.0.0.42",
+            );
+        });
+
+        // Verifica que 10.0.0.42 solo aparece en el título h1 y no duplicado como subtitle
+        const allIpInstances = screen.getAllByText("10.0.0.42");
+        expect(allIpInstances).toHaveLength(1);
+    });
+
+    it("permite expandir y contraer el banner largo del servicio", async () => {
+        getDeviceMock.mockResolvedValue({
+            device: fixtureDevice,
+            services: [
+                {
+                    id: "svc-1",
+                    device_id: "dev-edit-1",
+                    protocol: "tcp",
+                    port: 22,
+                    service_name: "ssh",
+                    product: "OpenSSH",
+                    version: "9.2",
+                    banner: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3 very long banner content",
+                    state: "open",
+                    first_seen_at: "2026-01-01T00:00:00Z",
+                    last_seen_at: "2026-01-01T00:00:00Z",
+                },
+            ],
+        });
+
+        renderWithProviders(
+            <Routes>
+                <Route path="/devices/:ip" element={<DeviceDetail />} />
+            </Routes>,
+            ["/devices/192.168.1.1"],
+        );
+
+        await waitFor(() => {
+            expect(
+                screen.getByRole("button", { name: "Más" }),
+            ).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: "Más" }));
+        expect(
+            screen.getByRole("button", { name: "Menos" }),
+        ).toBeInTheDocument();
+    });
 });

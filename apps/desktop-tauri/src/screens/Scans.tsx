@@ -30,20 +30,29 @@ function statusBadge(status: string) {
     const s = status.toLowerCase();
     if (s === "completed")
         return (
-            <Badge variant="success" className="gap-1">
+            <Badge
+                variant="outline"
+                className="gap-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 font-medium"
+            >
                 <CircleCheck className="h-3 w-3" aria-hidden />
                 Completado
             </Badge>
         );
     if (s === "failed")
         return (
-            <Badge variant="destructive" className="gap-1">
+            <Badge
+                variant="outline"
+                className="gap-1 border-destructive/30 text-destructive bg-destructive/10 font-medium"
+            >
                 <CircleX className="h-3 w-3" aria-hidden />
                 Fallido
             </Badge>
         );
     return (
-        <Badge variant="secondary" className="gap-1">
+        <Badge
+            variant="outline"
+            className="gap-1 border-primary/30 text-primary bg-primary/10 font-medium"
+        >
             <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
             En curso
         </Badge>
@@ -92,8 +101,8 @@ export function Scans() {
             className={cn("flex flex-col", SECTION_GAP)}
             aria-busy={historyLoading}
         >
-            <section aria-label="Historial de escaneos">
-                <h2 className="sr-only">Historial de escaneos</h2>
+            <section aria-label="Historial de descubrimientos">
+                <h2 className="sr-only">Historial de descubrimientos</h2>
                 <Card>
                     <CardHeader variant="toolbar">
                         <CardTitle className="flex items-center gap-2">
@@ -101,7 +110,7 @@ export function Scans() {
                                 className="h-5 w-5 text-primary"
                                 aria-hidden
                             />
-                            Historial ({history.length})
+                            Historial de descubrimientos ({history.length})
                         </CardTitle>
                         <Button
                             variant="outline"
@@ -152,8 +161,8 @@ export function Scans() {
                             history.length === 0 && (
                                 <EmptyState
                                     icon={History}
-                                    title="Sin escaneos previos"
-                                    description="Aún no hay escaneos registrados. Explora los dispositivos de tu red."
+                                    title="Sin descubrimientos previos"
+                                    description="Aún no hay descubrimientos ni escaneos registrados. Explora los dispositivos de tu red."
                                     action={
                                         <Link
                                             to="/devices"
@@ -175,7 +184,8 @@ export function Scans() {
                                 <div className="overflow-x-auto rounded-md border border-border">
                                     <table className="w-full caption-bottom text-sm">
                                         <caption className="sr-only">
-                                            Historial cronológico de escaneos
+                                            Historial cronológico de
+                                            descubrimientos
                                         </caption>
                                         <thead className="[&_tr]:border-b">
                                             <tr className="border-b">

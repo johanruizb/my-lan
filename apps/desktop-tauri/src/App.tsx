@@ -16,10 +16,8 @@ import {
 import {
     LayoutDashboard,
     Network,
-    Radar,
+    History,
     Settings as SettingsIcon,
-    Sun,
-    Moon,
     Activity,
     Info,
     Pencil,
@@ -27,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProviderApp } from "@/components/ui/toast";
-import { ThemeProvider, useTheme } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { CensorshipProvider } from "@/components/censorship-provider";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
@@ -118,28 +116,9 @@ export function mergeDevice(list: Device[], device: Device): Device[] {
 const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
     { to: "/devices", label: "Dispositivos", icon: Network, end: false },
-    { to: "/scans", label: "Escaneo de puertos", icon: Radar, end: false },
+    { to: "/scans", label: "Historial", icon: History, end: false },
     { to: "/settings", label: "Ajustes", icon: SettingsIcon, end: false },
 ];
-
-function ThemeToggle() {
-    const { theme, toggleTheme } = useTheme();
-    const isDark = theme === "dark";
-    return (
-        <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
-        >
-            {isDark ? (
-                <Sun className="h-4 w-4" aria-hidden />
-            ) : (
-                <Moon className="h-4 w-4" aria-hidden />
-            )}
-        </Button>
-    );
-}
 
 function LastScanBadge() {
     const { lastScan } = useLastScan();
@@ -149,11 +128,11 @@ function LastScanBadge() {
             className="flex items-center gap-2 text-xs text-muted-foreground"
             role="status"
             aria-live="polite"
-            aria-label={`Último escaneo: ${lastScan.hosts_alive} dispositivos activos, ${lastScan.hosts_new} nuevos`}
+            aria-label={`Último descubrimiento: ${lastScan.hosts_alive} dispositivos activos, ${lastScan.hosts_new} nuevos`}
         >
             <Activity className="h-3.5 w-3.5" aria-hidden />
             <span>
-                Último scan: {lastScan.hosts_alive} activos,{" "}
+                Último descubrimiento: {lastScan.hosts_alive} activos,{" "}
                 {lastScan.hosts_new} nuevos
             </span>
         </div>
@@ -431,7 +410,6 @@ function AppShell() {
                         </h1>
                         <LastScanBadge />
                     </div>
-                    <ThemeToggle />
                 </header>
                 {/* Navegación móvil (sidebar arriba en pantallas pequeñas, AC-1). */}
                 <nav
@@ -477,9 +455,9 @@ function AppShell() {
                 </a>
                 <main
                     id="main-content"
-                    className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8"
+                    className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-6"
                 >
-                    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+                    <div className="mx-auto flex w-full max-w-7xl 2xl:max-w-screen-2xl flex-col gap-6">
                         <Outlet />
                     </div>
                 </main>

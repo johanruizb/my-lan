@@ -14,7 +14,7 @@ export function OnlineBadge({ isOnline, className }: OnlineBadgeProps) {
     // is_online vía models.rs #[serde(default)], pero si llegara undefined,
     // default a offline). fix review #2.
     const online = isOnline ?? false;
-    const label = online ? "En línea" : "Fuera de línea";
+    const label = online ? "Online" : "Offline";
     // #35: dot verde usa el token semántico `success` (no green-500 hardcodeado).
     const dotClass = online ? "bg-success" : "bg-muted-foreground/50";
     return (

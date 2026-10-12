@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Devices } from "@/screens/Devices";
 import { renderWithProviders } from "./helpers";
-import { deviceFixtures } from "../fixtures";
+import { deviceFixtures, makeDevice } from "../fixtures";
 
 // Polyfill pointer capture + scrollIntoView para Radix Select en jsdom (jsdom
 // no implementa `hasPointerCapture`/`releasePointerCapture`/`scrollIntoView`;
@@ -106,8 +106,8 @@ describe("Devices screen (AC-22)", () => {
         ).not.toBeInTheDocument();
     });
 
-    // AC-18: OnlineBadge renderiza "En línea" (online) / "Fuera de línea" (offline).
-    it("OnlineBadge renderiza En línea para dispositivos online y Fuera de línea para offline", async () => {
+    // AC-18: OnlineBadge renderiza "Online" (online) / "Offline" (offline).
+    it("OnlineBadge renderiza Online para dispositivos online y Offline para offline", async () => {
         renderWithProviders(<Devices />);
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
@@ -115,9 +115,9 @@ describe("Devices screen (AC-22)", () => {
 
         const cards = screen.getAllByRole("listitem");
         expect(cards).toHaveLength(3);
-        // dev-1 y dev-2 online → "En línea"; dev-3 offline → "Fuera de línea".
-        expect(within(cards[0]).getByText("En línea")).toBeInTheDocument();
-        expect(within(cards[2]).getByText("Fuera de línea")).toBeInTheDocument();
+        // dev-1 y dev-2 online → "Online"; dev-3 offline → "Offline".
+        expect(within(cards[0]).getByText("Online")).toBeInTheDocument();
+        expect(within(cards[2]).getByText("Offline")).toBeInTheDocument();
     });
 
     // ADR-0006/T6: TrustBadge es manual binario (is_trusted) → Confiable / No
@@ -136,8 +136,8 @@ describe("Devices screen (AC-22)", () => {
         expect(within(cards[2]).getByText("No confiable")).toBeInTheDocument();
     });
 
-    // AC-15/AC-18: filtro Estado "En línea" oculta offline; "Todos" los restaura.
-    it("filtro Estado En línea muestra solo dispositivos online y Todos los restaura", async () => {
+    // AC-15/AC-18: filtro Estado "Online" oculta offline; "Todos" los restaura.
+    it("filtro Estado Online muestra solo dispositivos online y Todos los restaura", async () => {
         renderWithProviders(<Devices />);
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
@@ -147,8 +147,8 @@ describe("Devices screen (AC-22)", () => {
         expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
 
         // #26: Filtros siempre visibles (sin Collapsible).
-        // Toggle "En línea" → solo online (dev-1, dev-2) → 2 visibles.
-        fireEvent.click(screen.getByRole("button", { name: "En línea" }));
+        // Toggle "Online" → solo online (dev-1, dev-2) → 2 visibles.
+        fireEvent.click(screen.getByRole("button", { name: "Online" }));
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(2\)/)).toBeInTheDocument();
         });
@@ -235,5 +235,63 @@ describe("Devices screen (AC-22)", () => {
         await waitFor(() => {
             expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
+    });
+
+    it("en vista de tarjetas no duplica la IP como subtítulo si no hay display_name ni hostname", async () => {
+        const customDevices = [
+            makeDevice({
+                id: "dev-no-name",
+                primary_ip: "10.0.0.99",
+                hostname: null,
+                display_name: null,
+                primary_mac: "11:22:33:44:55:66",
+            }),
+        ];
+        listDevicesMock.mockResolvedValue(customDevices);
+
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
+        });
+
+        // 10.0.0.99 debe aparecer solo una vez (como título de tarjeta), no repetido en el subtítulo
+        const ipInstances = screen.getAllByText("10.0.0.99");
+        expect(ipInstances).toHaveLength(1);
+    });
+
+    it("en vista de tabla muestra la clasificación del dispositivo cuando no hay display_name ni hostname", async () => {
+        const customDevices = [
+            makeDevice({
+                id: "dev-printer-1",
+                primary_ip: "10.0.0.77",
+                hostname: null,
+                display_name: null,
+                primary_mac: "11:22:33:44:55:66",
+                vendor: "Brother",
+                device_type: "printer",
+            }),
+        ];
+        listDevicesMock.mockResolvedValue(customDevices);
+
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
+        });
+
+        // Cambiar a vista de tabla
+        const tableButton = screen.getByRole("button", { name: "Vista de tabla" });
+        fireEvent.click(tableButton);
+
+        // La columna Dispositivo debe mostrar "Impresora" y NO el id interno "dev-printer-1"
+        expect(screen.getByText("Impresora")).toBeInTheDocument();
+        expect(screen.queryByText("dev-printer-1")).not.toBeInTheDocument();
+
+        // La columna IP debe mostrar 10.0.0.77
+        expect(screen.getByText("10.0.0.77")).toBeInTheDocument();
+
+        // Los botones de copia deben estar disponibles para IP, MAC y Vendor
+        expect(screen.getByRole("button", { name: "Copiar IP" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Copiar MAC" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Copiar Vendor" })).toBeInTheDocument();
     });
 });

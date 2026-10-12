@@ -41,6 +41,7 @@ import {
     RefreshCw,
     Download,
     CheckCircle2,
+    AlertCircle,
     Settings as SettingsIcon,
 } from "lucide-react";
 import { useUpdater } from "@/components/updater-provider";
@@ -65,6 +66,7 @@ export function Settings() {
         status,
         updateInfo,
         progress,
+        error: updateError,
         checkForUpdates,
         downloadAndInstall,
         restartApp,
@@ -144,14 +146,14 @@ export function Settings() {
                 <CardContent className="flex flex-col gap-5">
                     {/* #20 */}
                     <section className="flex flex-col gap-3">
-                        <h2 className="text-sm font-medium">Escaneo</h2>
+                        <h2 className="text-sm font-medium">Descubrimiento</h2>
                         <div className="flex flex-col gap-1.5">
                             <label
                                 htmlFor="default-profile"
                                 className="flex items-center gap-1.5 text-xs text-muted-foreground"
                             >
                                 <Gauge className="h-3.5 w-3.5" aria-hidden />
-                                Perfil de scan por defecto
+                                Perfil de descubrimiento por defecto
                             </label>
                             <ProfileSelect
                                 value={settings.default_profile}
@@ -405,9 +407,20 @@ export function Settings() {
                                     </span>
                                 )}
                                 {status === "error" && (
-                                    <span className="text-xs text-destructive">
-                                        Error al comprobar
-                                    </span>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
+                                            <AlertCircle
+                                                className="h-3.5 w-3.5 shrink-0"
+                                                aria-hidden
+                                            />
+                                            Error al comprobar actualizaciones
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            {updateError
+                                                ? updateError
+                                                : "Verifica tu conexión a Internet o inténtalo nuevamente."}
+                                        </span>
+                                    </div>
                                 )}
                             </div>
 
@@ -448,7 +461,7 @@ export function Settings() {
                                         status === "checking" ||
                                         status === "downloading"
                                     }
-                                    className="h-7 gap-1.5 text-xs"
+                                    className="h-7 gap-1.5 text-xs shrink-0"
                                 >
                                     <RefreshCw
                                         className={cn(
@@ -458,7 +471,9 @@ export function Settings() {
                                         )}
                                         aria-hidden
                                     />
-                                    Comprobar ahora
+                                    {status === "error"
+                                        ? "Reintentar"
+                                        : "Comprobar ahora"}
                                 </Button>
                             )}
                         </div>

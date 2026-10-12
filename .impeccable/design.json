@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T17:20:00Z",
+  "title": "Design System: MyLAN",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Deep Teal",
+        "canonical": "#0891b2",
+        "tonalRamp": ["#083344", "#164e63", "#155e75", "#0e7490", "#0891b2", "#06b6d4", "#22d3ee", "#67e8f9"]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Electric Cyan",
+        "canonical": "#06b6d4",
+        "tonalRamp": ["#083344", "#164e63", "#0e7490", "#0891b2", "#06b6d4", "#22d3ee", "#67e8f9", "#cffafe"]
+      },
+      "sky-signal": {
+        "role": "accent",
+        "displayName": "Sky Signal",
+        "canonical": "#38bdf8",
+        "tonalRamp": ["#082f49", "#0c4a6e", "#0369a1", "#0284c7", "#38bdf8", "#7dd3fc", "#bae6fd", "#e0f2fe"]
+      },
+      "deep-void-navy": {
+        "role": "neutral",
+        "displayName": "Deep Void Navy",
+        "canonical": "#090d16",
+        "tonalRamp": ["#05070c", "#090d16", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Títulos y vistas principales de pantalla (Dashboard, Dispositivos, Historial)." },
+      "headline": { "displayName": "Headline", "purpose": "Títulos de tarjetas e inspectores." },
+      "title": { "displayName": "Title", "purpose": "Subsecciones y cabeceras de tabla." },
+      "body": { "displayName": "Body", "purpose": "Texto general de interfaz y descripciones." },
+      "label": { "displayName": "Label / Data Mono", "purpose": "IPs, MACs, puertos, CIDRs y banners de servicio." }
+    },
+    "shadows": [
+      {
+        "name": "surface-subtle",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Elevación discreta de tarjetas sobre el fondo neutro."
+      },
+      {
+        "name": "sonar-glow",
+        "value": "0 0 15px rgba(56, 189, 248, 0.25)",
+        "purpose": "Resplandor del nodo central del radar animado en descubrimiento."
+      }
+    ],
+    "motion": [
+      {
+        "name": "radar-pulse",
+        "value": "scale(0.95..1.4) opacity(0.8..0) 3s infinite linear",
+        "purpose": "Efecto de onda de sonar concéntrico durante el barrido de hosts."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Transición estándar de estado (150-200ms)."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Botón principal de acción (Iniciar descubrimiento, Guardar cambios).",
+      "html": "<button class=\"ds-btn-primary\">Iniciar descubrimiento</button>",
+      "css": ".ds-btn-primary { background: #0891b2; color: #ffffff; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; transition: opacity 0.15s ease; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }"
+    },
+    {
+      "name": "Copy Button",
+      "kind": "button",
+      "refersTo": "button-copy",
+      "description": "Acción rápida de copiado al portapapeles para IP, MAC y Vendor.",
+      "html": "<button class=\"ds-btn-copy\" aria-label=\"Copiar al portapapeles\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></svg></button>",
+      "css": ".ds-btn-copy { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: 4px; color: #64748b; cursor: pointer; transition: color 0.15s ease, background 0.15s ease; } .ds-btn-copy:hover { color: #0891b2; background: rgba(8, 145, 178, 0.1); } .ds-btn-copy:focus-visible { outline: 2px solid #0891b2; outline-offset: 1px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-status",
+      "description": "Chip outline sutil para estados de servicio (Abierto, Cerrado, Filtrado).",
+      "html": "<span class=\"ds-badge-open\"><span class=\"ds-badge-dot\"></span>Abierto</span>",
+      "css": ".ds-badge-open { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; font-size: 10px; font-weight: 600; border-radius: 9999px; border: 1px solid rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.1); color: #15803d; } .ds-badge-dot { width: 6px; height: 6px; border-radius: 9999px; background: #22c55e; }"
+    },
+    {
+      "name": "Device Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Tarjeta de dispositivo en cuadrícula de inventario con estado y atajos.",
+      "html": "<div class=\"ds-card-device\"><div class=\"ds-card-header\"><span class=\"ds-card-title\">192.168.1.1</span><span class=\"ds-badge-open\">Online</span></div><div class=\"ds-card-meta\"><span>Router</span> · <span class=\"ds-mono\">44:48:89:FA:D3:0D</span></div></div>",
+      "css": ".ds-card-device { padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s ease; } .ds-card-device:hover { border-color: #0891b2; } .ds-card-header { display: flex; justify-content: space-between; align-items: center; } .ds-card-title { font-weight: 700; font-size: 15px; font-family: monospace; } .ds-card-meta { font-size: 12px; color: #64748b; } .ds-mono { font-family: monospace; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Discovery Scope — El Banco de Trabajo Táctico de Red",
+    "overview": "MyLAN es una herramienta de escritorio local-first y de alta fidelidad técnica creada para homelabbers, administradores de sistemas y usuarios avanzados. La interfaz rechaza deliberadamente el exceso de decoración, los degradados superfluos y el software inflado de los SaaS modernos; en su lugar, abraza la estética sobria, densa y orientada al propósito de los analizadores de sistemas de precisión.",
+    "keyCharacteristics": [
+      "Claridad de instrumentación: Densidad técnica alta con alineación numérica tabular (tabular-nums).",
+      "Soberanía y privacidad: Tokens visuales integrados de censura para enmascarar direcciones sin alterar datos.",
+      "Señalética sobria: Paleta cian/teal táctica sobre superficies neutras (Deep Void Navy y Pure Slate).",
+      "Micro-interacciones táctiles: Transiciones directas (150-200ms) y aceleradores de teclado."
+    ],
+    "rules": [
+      {
+        "name": "The Telemetry Rarity Rule",
+        "body": "El color primario cian y el color de acento se reservan para ≤10% de la superficie visual en pantalla.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic State Rule",
+        "body": "Los badges de estado en tablas usan variantes outline con fondos tintados al 10%, reservando los fondos sólidos para botones primarios o alertas críticas.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single-IP Hierarchy Rule",
+        "body": "En tarjetas y encabezados de detalle, cuando un dispositivo carece de nombre personalizado o hostname, la dirección IP se muestra una sola vez como título prominente.",
+        "section": "typography"
+      },
+      {
+        "name": "The Crisp Border Doctrine",
+        "body": "Las tarjetas, modales y tablas definen su elevación mediante bordes exactos de 1px (border-border). Quedan prohibidas las sombras gruesas decorativas.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do utilizar siempre el Lenguaje Ubícuo canónico (Descubrimiento vs Escaneo de puertos).",
+      "Do formatear todas las direcciones IP, MACs, puertos y banners con fuente monoespaciada y tabular-nums.",
+      "Do incorporar botones de copiado rápido accesibles (CopyButton) en cada identificador de red relevante.",
+      "Do aislar los puertos cerrados o filtrados en el panel colapsable secundario, manteniendo la tabla principal enfocada en servicios abiertos."
+    ],
+    "donts": [
+      "Don't llamar 'servicios activos' a puertos cerrados o filtrados.",
+      "Don't duplicar la dirección IP como título y subtítulo en tarjetas o encabezados cuando no exista un hostname conocido.",
+      "Don't usar sombras gruesas decorativas, gradientes de texto ni desenfoques de vidrio sin propósito funcional.",
+      "Don't forzar barras laterales con nombres confusos; la vista de historial de barridos debe llamarse Historial, no Escaneo de puertos.",
+      "Don't usar 'Fabricante' en lugar del término técnico estándar Vendor."
+    ]
+  }
+}

@@ -30,6 +30,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { CopyButton } from "@/components/copy-button";
 import { exportDevices, listDevices, type Device } from "@/lib/tauri";
 import { deviceKey, useScan } from "@/App";
 import { MaskedValue } from "@/components/masked-value";
@@ -333,14 +334,8 @@ export function Devices() {
                                 ariaLabel="Filtrar por estado"
                                 options={[
                                     { value: "all", label: "Todos" },
-                                    {
-                                        value: "online",
-                                        label: "En línea",
-                                    },
-                                    {
-                                        value: "offline",
-                                        label: "Fuera de línea",
-                                    },
+                                    { value: "online", label: "Online" },
+                                    { value: "offline", label: "Offline" },
                                 ]}
                                 value={filterOnline}
                                 onChange={setFilterOnline}
@@ -373,7 +368,7 @@ export function Devices() {
                             aria-live="polite"
                         >
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>Escaneando red…</span>
+                                <span>Descubriendo red…</span>
                                 <span>
                                     {progress && progress.total > 0
                                         ? `${progress.swept}/${progress.total} (${progress.percent}%)`
@@ -427,7 +422,7 @@ export function Devices() {
                         <EmptyState
                             icon={NetworkIcon}
                             title="Sin dispositivos"
-                            description="Aún no hay dispositivos en tu red. Escanea para descubrirlos."
+                            description="Aún no hay dispositivos en tu red. Inicia un descubrimiento para encontrarlos."
                             action={
                                 <Button
                                     size="sm"
@@ -539,32 +534,37 @@ export function Devices() {
                                                         </div>
 
                                                         <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-muted-foreground">
-                                                            <span className="truncate">
-                                                                <MaskedValue
-                                                                    field="primary_ip"
-                                                                    value={
-                                                                        d.primary_ip ??
-                                                                        d.id
-                                                                    }
-                                                                />
-                                                            </span>
-                                                            {d.primary_mac && (
-                                                                <>
+                                                            {(d.display_name ||
+                                                                d.hostname) && (
+                                                                <span className="truncate">
+                                                                    <MaskedValue
+                                                                        field="primary_ip"
+                                                                        value={
+                                                                            d.primary_ip ??
+                                                                            d.id
+                                                                        }
+                                                                    />
+                                                                </span>
+                                                            )}
+                                                            {(d.display_name ||
+                                                                d.hostname) &&
+                                                                d.primary_mac && (
                                                                     <span
                                                                         aria-hidden
                                                                     >
                                                                         ·
                                                                     </span>
-                                                                    <span className="truncate uppercase">
-                                                                        <MaskedValue
-                                                                            field="primary_mac"
-                                                                            value={
-                                                                                d.primary_mac
-                                                                            }
-                                                                            mono
-                                                                        />
-                                                                    </span>
-                                                                </>
+                                                                )}
+                                                            {d.primary_mac && (
+                                                                <span className="truncate uppercase">
+                                                                    <MaskedValue
+                                                                        field="primary_mac"
+                                                                        value={
+                                                                            d.primary_mac
+                                                                        }
+                                                                        mono
+                                                                    />
+                                                                </span>
                                                             )}
                                                         </div>
 
@@ -641,9 +641,9 @@ export function Devices() {
                                             </TableHead>
                                             <TableHead>
                                                 <span className="inline-flex items-center gap-1">
-                                                    Fabricante
+                                                    Vendor
                                                     <InfoTooltip
-                                                        term="Fabricante"
+                                                        term="Vendor"
                                                         glossaryKey="vendor"
                                                     />
                                                 </span>
@@ -668,7 +668,7 @@ export function Devices() {
                                                             (
                                                                 e.target as HTMLElement
                                                             ).closest(
-                                                                "a, [tabindex]",
+                                                                "a, [tabindex], button",
                                                             )
                                                         )
                                                             return;
@@ -688,42 +688,69 @@ export function Devices() {
                                                             </div>
                                                             <div className="flex flex-col min-w-0">
                                                                 <span className="font-semibold text-foreground truncate">
-                                                                    <MaskedValue
-                                                                        field={
-                                                                            d.display_name
-                                                                                ? "display_name"
-                                                                                : d.hostname
-                                                                                  ? "hostname"
-                                                                                  : "id"
-                                                                        }
-                                                                        value={
-                                                                            d.display_name ??
-                                                                            d.hostname ??
-                                                                            d.id
-                                                                        }
-                                                                    />
+                                                                    {d.display_name ||
+                                                                    d.hostname ? (
+                                                                        <MaskedValue
+                                                                            field={
+                                                                                d.display_name
+                                                                                    ? "display_name"
+                                                                                    : "hostname"
+                                                                            }
+                                                                            value={
+                                                                                d.display_name ??
+                                                                                d.hostname ??
+                                                                                ""
+                                                                            }
+                                                                        />
+                                                                    ) : (
+                                                                        <span>
+                                                                            {deviceLabel(
+                                                                                d.device_type,
+                                                                            )}
+                                                                        </span>
+                                                                    )}
                                                                 </span>
-                                                                <span className="font-mono text-[10px] text-muted-foreground truncate uppercase">
-                                                                    <MaskedValue
-                                                                        field="primary_mac"
-                                                                        value={
-                                                                            d.primary_mac ??
-                                                                            "—"
-                                                                        }
-                                                                        mono
-                                                                    />
-                                                                </span>
+                                                                {d.primary_mac && (
+                                                                    <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground uppercase">
+                                                                        <MaskedValue
+                                                                            field="primary_mac"
+                                                                            value={
+                                                                                d.primary_mac
+                                                                            }
+                                                                            mono
+                                                                        />
+                                                                        <CopyButton
+                                                                            value={
+                                                                                d.primary_mac
+                                                                            }
+                                                                            label="MAC"
+                                                                            className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100 h-4 w-4"
+                                                                        />
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="font-mono text-xs">
-                                                        <MaskedValue
-                                                            field="primary_ip"
-                                                            value={
-                                                                d.primary_ip ??
-                                                                "—"
-                                                            }
-                                                        />
+                                                        <div className="flex items-center gap-1.5 font-mono text-xs">
+                                                            <MaskedValue
+                                                                field="primary_ip"
+                                                                value={
+                                                                    d.primary_ip ??
+                                                                    "—"
+                                                                }
+                                                                mono
+                                                            />
+                                                            {d.primary_ip && (
+                                                                <CopyButton
+                                                                    value={
+                                                                        d.primary_ip
+                                                                    }
+                                                                    label="IP"
+                                                                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100 h-4 w-4"
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <OnlineBadge
@@ -743,7 +770,27 @@ export function Devices() {
                                                         />
                                                     </TableCell>
                                                     <TableCell className="text-xs">
-                                                        {d.vendor ?? "—"}
+                                                        <div
+                                                            className="flex items-center gap-1 max-w-[200px]"
+                                                            title={
+                                                                d.vendor ??
+                                                                undefined
+                                                            }
+                                                        >
+                                                            <span className="truncate text-foreground/90 font-medium">
+                                                                {d.vendor ??
+                                                                    "—"}
+                                                            </span>
+                                                            {d.vendor && (
+                                                                <CopyButton
+                                                                    value={
+                                                                        d.vendor
+                                                                    }
+                                                                    label="Vendor"
+                                                                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100 h-4 w-4 shrink-0"
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="text-xs text-muted-foreground">
                                                         <RelativeTime
@@ -807,7 +854,7 @@ function FilterToggle<T extends string>({
 }: {
     label: string;
     ariaLabel: string;
-    options: { value: T; label: string }[];
+    options: { value: T; label: string; ariaLabel?: string }[];
     value: T;
     onChange: (v: T) => void;
 }) {
@@ -826,6 +873,7 @@ function FilterToggle<T extends string>({
                         size="sm"
                         onClick={() => onChange(o.value)}
                         aria-pressed={value === o.value}
+                        aria-label={o.ariaLabel}
                         className="gap-1.5"
                     >
                         {o.label}

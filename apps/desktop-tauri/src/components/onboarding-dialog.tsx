@@ -111,7 +111,7 @@ export function OnboardingDialog() {
                         </div>
                         <div className="flex flex-col gap-0.5">
                             <p className="text-sm font-medium">
-                                Escaneo de puertos (Scans)
+                                Escaneo de puertos (Detalle)
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 Analiza un dispositivo concreto para ver qué

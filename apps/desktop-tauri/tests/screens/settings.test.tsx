@@ -37,17 +37,29 @@ vi.mock("@/components/ui/toast", () => ({
     useToast: () => ({ toast: vi.fn() }),
 }));
 
+const checkForUpdatesMock = vi.fn();
+let updaterMockState: {
+    status: string;
+    updateInfo: unknown;
+    progress: unknown;
+    error: string | null;
+    checkForUpdates: ReturnType<typeof vi.fn>;
+    downloadAndInstall: ReturnType<typeof vi.fn>;
+    restartApp: ReturnType<typeof vi.fn>;
+    dismissUpdate: ReturnType<typeof vi.fn>;
+} = {
+    status: "idle",
+    updateInfo: null,
+    progress: null,
+    error: null,
+    checkForUpdates: checkForUpdatesMock,
+    downloadAndInstall: vi.fn(),
+    restartApp: vi.fn(),
+    dismissUpdate: vi.fn(),
+};
+
 vi.mock("@/components/updater-provider", () => ({
-    useUpdater: () => ({
-        status: "idle",
-        updateInfo: null,
-        progress: null,
-        error: null,
-        checkForUpdates: vi.fn(),
-        downloadAndInstall: vi.fn(),
-        restartApp: vi.fn(),
-        dismissError: vi.fn(),
-    }),
+    useUpdater: () => updaterMockState,
 }));
 
 describe("Settings screen (AC-22)", () => {
@@ -55,6 +67,17 @@ describe("Settings screen (AC-22)", () => {
         getSettingsMock.mockReset();
         setSettingsMock.mockReset();
         dbPathMock.mockReset();
+        checkForUpdatesMock.mockReset();
+        updaterMockState = {
+            status: "idle",
+            updateInfo: null,
+            progress: null,
+            error: null,
+            checkForUpdates: checkForUpdatesMock,
+            downloadAndInstall: vi.fn(),
+            restartApp: vi.fn(),
+            dismissUpdate: vi.fn(),
+        };
         getSettingsMock.mockResolvedValue(defaultSettings);
         setSettingsMock.mockResolvedValue(undefined);
         dbPathMock.mockResolvedValue("/tmp/mylan.db");
@@ -81,5 +104,33 @@ describe("Settings screen (AC-22)", () => {
             expect(getSettingsMock).toHaveBeenCalled();
             expect(dbPathMock).toHaveBeenCalled();
         });
+    });
+
+    it("muestra mensaje de error claro y acción de reintentar cuando falla la comprobación", async () => {
+        updaterMockState = {
+            status: "error",
+            updateInfo: null,
+            progress: null,
+            error: "Fallo de conexión con el servidor",
+            checkForUpdates: checkForUpdatesMock,
+            downloadAndInstall: vi.fn(),
+            restartApp: vi.fn(),
+            dismissUpdate: vi.fn(),
+        };
+
+        renderWithProviders(<Settings />);
+        await waitFor(() => {
+            expect(
+                screen.getByText("Error al comprobar actualizaciones"),
+            ).toBeInTheDocument();
+        });
+        expect(
+            screen.getByText("Fallo de conexión con el servidor"),
+        ).toBeInTheDocument();
+
+        const retryButton = screen.getByRole("button", { name: "Reintentar" });
+        expect(retryButton).toBeInTheDocument();
+        retryButton.click();
+        expect(checkForUpdatesMock).toHaveBeenCalledWith({ silent: false });
     });
 });
