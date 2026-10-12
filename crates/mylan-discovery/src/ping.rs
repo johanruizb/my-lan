@@ -285,7 +285,7 @@ mod tests {
     #[tokio::test]
     async fn ping_unreachable_is_not_reachable() {
         // 240.0.0.1: reservado (RFC 1112), no routable. Timeout corto para el test.
-        let target: IpAddr = "240.0.0.1".parse().unwrap();
+        let target = IpAddr::V4(Ipv4Addr::new(240, 0, 0, 1));
         let r = ping_host(target, 2, Duration::from_millis(200))
             .await
             .expect("ping ok");
@@ -299,7 +299,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "red real: ejecutar con --ignored-urls/manual"]
     async fn ping_real_internet_host() {
-        let target: IpAddr = "1.1.1.1".parse().unwrap();
+        let target = IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1));
         let r = ping_host(target, 4, Duration::from_secs(1))
             .await
             .expect("ping ok");
