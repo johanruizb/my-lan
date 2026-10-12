@@ -122,30 +122,49 @@ describe("maskValue — dispatch por nombre de campo", () => {
         expect(maskValue("gateway_mac", "aa:bb:cc:dd:ee:ff")).toBe("••••");
     });
 
-    it("ip/primary_ip/gateway_ip/device_ip aplican maskIp", () => {
+    it("ip/primary_ip/gateway_ip/device_ip aplican maskIp con IPv4 e IPv6", () => {
         expect(maskValue("ip", "192.168.1.42")).toBe("192.168.*.*");
         expect(maskValue("primary_ip", "10.0.0.1")).toBe("10.0.*.*");
         expect(maskValue("gateway_ip", "192.168.1.1")).toBe("192.168.*.*");
         expect(maskValue("device_ip", "172.16.0.5")).toBe("172.16.*.*");
+        expect(maskValue("primary_ip", "2001:db8::1:2:3")).toBe("2001:db8::*:*:*");
+        expect(maskValue("ip", "fe80::1")).toBe("*:*:*");
     });
 
-    it("hostname/display_name aplican maskHostname", () => {
+    it("hostname/display_name aplican maskHostname con o sin dominio", () => {
         expect(maskValue("hostname", "router.lan")).toBe("router.*");
         expect(maskValue("display_name", "my-pc.local")).toBe("my-pc.*");
+        expect(maskValue("hostname", "localhost")).toBe("*");
+        expect(maskValue("display_name", "standalone")).toBe("*");
     });
 
-    it("cidr aplica maskCidr conservando el prefix-len", () => {
+    it("cidr aplica maskCidr conservando el prefix-len o fallback a maskIp", () => {
         expect(maskValue("cidr", "192.168.1.0/24")).toBe("192.168.*.*/24");
+        expect(maskValue("cidr", "10.0.0.1")).toBe("10.0.*.*");
     });
 
-    it("dns_servers enmascara cada entrada separada por coma", () => {
+    it("dns_servers enmascara cada entrada separada por coma con o sin espacios", () => {
         expect(maskValue("dns_servers", "8.8.8.8, 1.1.1.1")).toBe(
             "8.8.*.*, 1.1.*.*",
         );
+        expect(maskValue("dns_servers", " 8.8.8.8 ,  1.1.1.1 ")).toBe(
+            "8.8.*.*, 1.1.*.*",
+        );
+        expect(maskValue("dns_servers", "1.1.1.1")).toBe("1.1.*.*");
     });
 
-    it("campo no sensible pasa el valor sin cambios", () => {
+    it("campo no sensible o cadena vacía pasa el valor sin cambios", () => {
         expect(maskValue("vendor", "ExampleVendor")).toBe("ExampleVendor");
         expect(maskValue("notes", "texto libre")).toBe("texto libre");
+        expect(maskValue("unknown_field", "value")).toBe("value");
+        expect(maskValue("vendor", "")).toBe("");
+    });
+
+    it("maneja cadenas vacías en campos sensibles adecuadamente", () => {
+        expect(maskValue("primary_ip", "")).toBe("*");
+        expect(maskValue("hostname", "")).toBe("*");
+        expect(maskValue("primary_mac", "")).toBe("••••");
+        expect(maskValue("cidr", "")).toBe("*");
+        expect(maskValue("dns_servers", "")).toBe("*");
     });
 });
