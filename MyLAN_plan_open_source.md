@@ -1905,4 +1905,3 @@ El proyecto debe enfocarse en ser:
 - seguro,
 - multiplataforma,
 - sin paywalls.
-

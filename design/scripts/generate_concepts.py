@@ -82,7 +82,7 @@ concept_b_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
     A 48 48 0 0 1 32 176
     L 32 80
     A 48 48 0 0 1 80 32 Z
-    
+
     M 84 56
     A 28 28 0 0 0 56 84
     L 56 172
@@ -118,7 +118,7 @@ concept_b2_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
     L 128 228
     L 42 178
     L 42 78 Z
-    
+
     M 128 56
     L 66 92
     L 66 164
@@ -154,7 +154,7 @@ concept_c_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
   <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
   <!-- Central host beacon -->
   <circle cx="128" cy="128" r="20" fill="#000000" />
-  
+
   <!-- Arc 1: Inner scan ring (r=52, stroke 16) -> drawn as path -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 68
@@ -163,7 +163,7 @@ concept_c_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
     A 44 44 0 1 0 128 84
     Z
   " />
-  
+
   <!-- Arc 2: Middle discovery wave (r=86, stroke 16) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 34
@@ -172,7 +172,7 @@ concept_c_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
     A 78 78 0 0 0 128 50
     Z
   " />
-  
+
   <!-- Arc 3: Outer perimeter bracket (r=118, stroke 16) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 10
@@ -181,7 +181,7 @@ concept_c_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
     A 102 102 0 0 0 128 26
     Z
   " />
-  
+
   <!-- Lower left pulse arc -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 50 128
@@ -198,7 +198,7 @@ concept_c2_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
   <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
   <!-- Central Local Host Node -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
-  
+
   <!-- First Concentric Discovery Wave (Radius 58..76, 3 quadrants) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 52
@@ -207,7 +207,7 @@ concept_c2_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
     A 58 58 0 1 0 128 70
     Z
   " />
-  
+
   <!-- Second Concentric Discovery Wave (Radius 94..112, diagonal sweep from 45 deg to 225 deg) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 16
@@ -231,7 +231,7 @@ concept_c3_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
   <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
   <!-- Center Core Node -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Inner ring: 270 degree sweep -->
   <path fill="#000000" d="
     M 128 64
@@ -240,7 +240,7 @@ concept_c3_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
     A 46 46 0 1 0 128 82
     Z
   " />
-  
+
   <!-- Outer ring: Staggered pulse quadrant -->
   <path fill="#000000" d="
     M 128 26

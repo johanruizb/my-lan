@@ -2,7 +2,7 @@
   <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
   <!-- Center Core Node -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Inner ring: 270 degree sweep -->
   <path fill="#000000" d="
     M 128 64
@@ -11,7 +11,7 @@
     A 46 46 0 1 0 128 82
     Z
   " />
-  
+
   <!-- Outer ring: Staggered pulse quadrant -->
   <path fill="#000000" d="
     M 128 26

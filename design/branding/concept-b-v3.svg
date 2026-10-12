@@ -28,11 +28,11 @@
   <circle cx="86" cy="128" r="12" fill="#000000" />
   <!-- Right Node -->
   <circle cx="170" cy="128" r="12" fill="#000000" />
-  
+
   <!-- Interconnecting Traces / Bus lines (thickness 10) -->
   <rect x="123" y="80" width="10" height="96" fill="#000000" />
   <rect x="86" y="123" width="84" height="10" fill="#000000" />
-  
+
   <!-- Perimeter link from Top Node to outer frame -->
   <rect x="124" y="48" width="8" height="34" fill="#000000" />
 </svg>

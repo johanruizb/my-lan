@@ -12,31 +12,25 @@
     L 32 80
     A 48 48 0 0 1 80 32
     Z
-    
-    <!-- Gateway Router Node at top -->
+
     M 128 64
     A 18 18 0 1 0 128.1 64
     Z
-    
-    <!-- Drop Trunk from Router to Bus -->
+
     M 122 82 L 134 82 L 134 132 L 122 132 Z
-    
-    <!-- Horizontal LAN Bus -->
+
     M 68 126 L 188 126 L 188 138 L 68 138 Z
-    
-    <!-- Left Device Drop -->
+
     M 74 138 L 84 138 L 84 160 L 74 160 Z
     M 79 160
     A 14 14 0 1 0 79.1 160
     Z
-    
-    <!-- Center Device Drop -->
+
     M 123 138 L 133 138 L 133 168 L 123 168 Z
     M 128 168
     A 14 14 0 1 0 128.1 168
     Z
-    
-    <!-- Right Device Drop -->
+
     M 172 138 L 182 138 L 182 160 L 172 160 Z
     M 177 160
     A 14 14 0 1 0 177.1 160

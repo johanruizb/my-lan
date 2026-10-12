@@ -9,7 +9,7 @@
     L 36 178
     L 36 78
     Z
-    
+
     M 128 54
     L 200 94
     L 200 162
@@ -18,17 +18,17 @@
     L 56 94
     Z
   " />
-  
+
   <!-- Central Gateway Node with 3 connected satellite devices -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Top Node (Internet / Gateway) -->
   <circle cx="128" cy="84" r="12" fill="#000000" />
   <!-- Bottom-Left Node (Desktop / Server) -->
   <circle cx="90" cy="154" r="12" fill="#000000" />
   <!-- Bottom-Right Node (Mobile / IoT) -->
   <circle cx="166" cy="154" r="12" fill="#000000" />
-  
+
   <!-- Connecting bus traces -->
   <rect x="123" y="84" width="10" height="46" fill="#000000" />
   <path fill="#000000" d="M 124 128 L 90 154 L 96 162 L 130 136 Z" />

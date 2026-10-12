@@ -2,7 +2,7 @@
   <title id="title-c">MyLAN Logo - Discovery Scope</title>
   <!-- Center Core Beacon (local host scanner) -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Reticle Bracket Top-Left -->
   <path fill="#000000" d="
     M 36 112
@@ -47,7 +47,7 @@
     L 200 144
     Z
   " />
-  
+
   <!-- Inner Discovery Wave Arc (radius 56..70, upper-right sweep) -->
   <path fill="#000000" d="
     M 128 72
@@ -56,7 +56,7 @@
     A 42 42 0 0 0 128 86
     Z
   " />
-  
+
   <!-- Outer Discovery Wave Arc (radius 78..92, upper-right sweep) -->
   <path fill="#000000" d="
     M 128 48
@@ -65,7 +65,7 @@
     A 66 66 0 0 0 128 62
     Z
   " />
-  
+
   <!-- Counter-balance pulse blip in lower-left quadrant (discovered device) -->
   <circle cx="84" cy="172" r="10" fill="#000000" />
 </svg>

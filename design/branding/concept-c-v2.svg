@@ -2,7 +2,7 @@
   <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
   <!-- Central Local Host Node -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
-  
+
   <!-- First Concentric Discovery Wave (Radius 58..76, 3 quadrants) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 52
@@ -11,7 +11,7 @@
     A 58 58 0 1 0 128 70
     Z
   " />
-  
+
   <!-- Second Concentric Discovery Wave (Radius 94..112, diagonal sweep from 45 deg to 225 deg) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 16

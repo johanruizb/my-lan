@@ -2,7 +2,7 @@
   <title id="title-c">MyLAN Logo - Subnet Scope</title>
   <!-- Central Origin Beacon -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
-  
+
   <!-- Concentric Scanner Ring 1 (thickness 16) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 62
@@ -11,7 +11,7 @@
     A 50 50 0 1 0 128 78
     Z
   " />
-  
+
   <!-- Outer Concentric Scanner Ring 2 (thickness 16, with 60 deg opening) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 24
@@ -20,7 +20,7 @@
     A 88 88 0 1 0 128 40
     Z
   " />
-  
+
   <!-- Discovered Device Node in the scan opening -->
   <circle cx="196" cy="60" r="14" fill="#000000" />
 </svg>

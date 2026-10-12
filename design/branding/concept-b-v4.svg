@@ -12,13 +12,11 @@
     L 32 76
     A 44 44 0 0 1 76 32
     Z
-    
-    <!-- Central Network Node Cutout (negative space circular hub) -->
+
     M 128 98
     A 30 30 0 1 0 128.1 98
     Z
-    
-    <!-- Negative space routing channels -->
+
     M 122 56 L 134 56 L 134 98 L 122 98 Z
     M 122 158 L 134 158 L 134 200 L 122 200 Z
     M 56 122 L 98 122 L 98 134 L 56 134 Z

@@ -2,7 +2,7 @@
   <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
   <!-- Central host beacon -->
   <circle cx="128" cy="128" r="20" fill="#000000" />
-  
+
   <!-- Arc 1: Inner scan ring (r=52, stroke 16) -> drawn as path -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 68
@@ -11,7 +11,7 @@
     A 44 44 0 1 0 128 84
     Z
   " />
-  
+
   <!-- Arc 2: Middle discovery wave (r=86, stroke 16) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 34
@@ -20,7 +20,7 @@
     A 78 78 0 0 0 128 50
     Z
   " />
-  
+
   <!-- Arc 3: Outer perimeter bracket (r=118, stroke 16) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 10
@@ -29,7 +29,7 @@
     A 102 102 0 0 0 128 26
     Z
   " />
-  
+
   <!-- Lower left pulse arc -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 50 128

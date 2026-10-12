@@ -110,14 +110,14 @@ def generate_concept_b():
     L 80 52
     Z
   " />
-  
+
   <!-- Symmetrical 45-degree Diagonal Network Conduits (anchored into squircle corners) -->
   <polygon points="54.5,61.5 61.5,54.5 201.5,194.5 194.5,201.5" fill="#000000" />
   <polygon points="54.5,194.5 61.5,201.5 201.5,61.5 194.5,54.5" fill="#000000" />
-  
+
   <!-- Central Gateway Hub (Exact center 128, 128) -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
-  
+
   <!-- 4 Symmetrical Subnet Satellite Nodes (dx=46, dy=46 from center) -->
   <circle cx="82" cy="82" r="13" fill="#000000" />
   <circle cx="174" cy="82" r="13" fill="#000000" />
@@ -175,19 +175,19 @@ def generate_concept_b():
 def arc_quadrant(cx, cy, r_in, r_out, a1_deg, a2_deg):
     a1 = math.radians(a1_deg)
     a2 = math.radians(a2_deg)
-    
+
     # Outer start (a2) to outer end (a1)
     x_out_start = cx + r_out * math.cos(a2)
     y_out_start = cy - r_out * math.sin(a2)
     x_out_end = cx + r_out * math.cos(a1)
     y_out_end = cy - r_out * math.sin(a1)
-    
+
     # Inner start (a1) to inner end (a2)
     x_in_start = cx + r_in * math.cos(a1)
     y_in_start = cy - r_in * math.sin(a1)
     x_in_end = cx + r_in * math.cos(a2)
     y_in_end = cy - r_in * math.sin(a2)
-    
+
     return f"""M {x_out_start:.2f} {y_out_start:.2f}
     A {r_out} {r_out} 0 0 1 {x_out_end:.2f} {y_out_end:.2f}
     L {x_in_start:.2f} {y_in_start:.2f}
@@ -197,38 +197,38 @@ def arc_quadrant(cx, cy, r_in, r_out, a1_deg, a2_deg):
 def generate_concept_c():
     cx, cy = 128, 128
     r_ret_in, r_ret_out = 90, 106 # reticle ring
-    
+
     # 4 Reticle segments (each 72 degrees, gaps of 18 degrees at 0, 90, 180, 270)
     q1 = arc_quadrant(cx, cy, r_ret_in, r_ret_out, 9, 81)
     q2 = arc_quadrant(cx, cy, r_ret_in, r_ret_out, 99, 171)
     q3 = arc_quadrant(cx, cy, r_ret_in, r_ret_out, 189, 251)
     q4 = arc_quadrant(cx, cy, r_ret_in, r_ret_out, 279, 351)
-    
+
     # 2 Radar Sweep Waves in Q1 (sharing the exact radial spoke angles 9° to 81°!)
     wave1 = arc_quadrant(cx, cy, 46, 62, 9, 81)
     wave2 = arc_quadrant(cx, cy, 68, 84, 9, 81)
-    
+
     # Blip in Q3: r_blip = (46 + 62)/2 = 54 (midpoint of wave 1 range)
     blip_r = 54
     blip_a = math.radians(225)
     blip_x = cx + blip_r * math.cos(blip_a)
     blip_y = cy - blip_r * math.sin(blip_a)
-    
+
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
   <title id="title-c">MyLAN - Discovery Scope Symbol</title>
   <!-- Central Origin Beacon (Host Scanner) -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- 4 Symmetrical Reticle Quadrants (72° arc with 18° cardinal breaks) -->
   <path fill="#000000" d="{q1}" />
   <path fill="#000000" d="{q2}" />
   <path fill="#000000" d="{q3}" />
   <path fill="#000000" d="{q4}" />
-  
+
   <!-- Radar Sweep Waves (sharing exact radial spokes 9° to 81°) -->
   <path fill="#000000" d="{wave1}" />
   <path fill="#000000" d="{wave2}" />
-  
+
   <!-- Discovered Host Blip (positioned exactly at 225° on Range Ring 1) -->
   <circle cx="{blip_x:.2f}" cy="{blip_y:.2f}" r="10" fill="#000000" />
 </svg>
@@ -274,23 +274,23 @@ wordmark_code = """
   <path fill="#000000" d="
     M 270 74 L 290 74 L 310 134 L 330 74 L 350 74 L 350 184 L 330 184 L 330 110 L 318 146 L 302 146 L 290 110 L 290 184 L 270 184 Z
   " />
-  
+
   <!-- Letter y (x: 364..420) -->
   <path fill="#000000" d="
     M 364 106 L 384 106 L 396 144 L 408 106 L 428 106 L 404 184 C 398 202 388 214 372 214 L 364 214 L 364 196 L 372 196 C 380 196 386 190 388 180 L 390 170 Z
   " />
-  
+
   <!-- Letter L (x: 434..486) -->
   <path fill="#000000" d="
     M 434 74 L 454 74 L 454 164 L 486 164 L 486 184 L 434 184 Z
   " />
-  
+
   <!-- Letter A (x: 500..568) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 524 74 L 544 74 L 568 184 L 546 184 L 540 156 L 528 156 L 522 184 L 500 184 Z
     M 534 106 L 531 138 L 537 138 Z
   " />
-  
+
   <!-- Letter N (x: 582..644) -->
   <path fill="#000000" d="
     M 582 74 L 602 74 L 624 146 L 624 74 L 644 74 L 644 184 L 624 184 L 602 112 L 602 184 L 582 184 Z

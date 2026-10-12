@@ -66,14 +66,14 @@ svg_b_symbol = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     L 80 52
     Z
   " />
-  
+
   <!-- Diagonal Network Conduits with Exact Center Alignment (width 10, passing through 128,128) -->
   <polygon points="54.5,61.5 61.5,54.5 201.5,194.5 194.5,201.5" fill="#000000" />
   <polygon points="54.5,194.5 61.5,201.5 201.5,61.5 194.5,54.5" fill="#000000" />
-  
+
   <!-- Central Gateway Hub (Radius 24, exact center 128, 128) -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
-  
+
   <!-- 4 Symmetrical Client Nodes on the 45° Diagonals (dx=46, dy=46, radius 13) -->
   <circle cx="82" cy="82" r="13" fill="#000000" />
   <circle cx="174" cy="82" r="13" fill="#000000" />
@@ -115,17 +115,17 @@ svg_c_symbol = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
   <title id="title-c">MyLAN - Discovery Scope Symbol</title>
   <!-- Central Local Origin Beacon -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- 4 Symmetrical Reticle Quadrants (72° arc with 18° cardinal breaks) -->
   <path fill="#000000" d="{q1}" />
   <path fill="#000000" d="{q2}" />
   <path fill="#000000" d="{q3}" />
   <path fill="#000000" d="{q4}" />
-  
+
   <!-- Radar Sweep Waves (sharing exact radial spokes 9° to 81°) -->
   <path fill="#000000" d="{wave1}" />
   <path fill="#000000" d="{wave2}" />
-  
+
   <!-- Discovered Host Blip (positioned exactly at 225° on Range Ring 1) -->
   <circle cx="{blip_x:.2f}" cy="{blip_y:.2f}" r="10" fill="#000000" />
 </svg>
@@ -139,23 +139,23 @@ wordmark_paths = """
   <path fill="#000000" d="
     M 270 74 L 290 74 L 310 134 L 330 74 L 350 74 L 350 184 L 330 184 L 330 110 L 318 146 L 302 146 L 290 110 L 290 184 L 270 184 Z
   " />
-  
+
   <!-- Letter y (x: 364..420, width 56, gap 14) -->
   <path fill="#000000" d="
     M 364 106 L 384 106 L 396 144 L 408 106 L 428 106 L 404 184 C 398 202 388 214 372 214 L 364 214 L 364 196 L 372 196 C 380 196 386 190 388 180 L 390 170 Z
   " />
-  
+
   <!-- Letter L (x: 434..486, width 52, gap 14) -->
   <path fill="#000000" d="
     M 434 74 L 454 74 L 454 164 L 486 164 L 486 184 L 434 184 Z
   " />
-  
+
   <!-- Letter A (x: 500..568, width 68, gap 14) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 524 74 L 544 74 L 568 184 L 546 184 L 540 156 L 528 156 L 522 184 L 500 184 Z
     M 534 106 L 531 138 L 537 138 Z
   " />
-  
+
   <!-- Letter N (x: 582..644, width 62, gap 14) -->
   <path fill="#000000" d="
     M 582 74 L 602 74 L 624 146 L 624 74 L 644 74 L 644 184 L 624 184 L 602 112 L 602 184 L 582 184 Z

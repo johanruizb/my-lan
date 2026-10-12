@@ -53,7 +53,7 @@ concept_a = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" wid
     L 72 206
     L 36 206
     Z
-    
+
     M 128 138
     A 12 12 0 1 0 128.1 138
     Z
@@ -105,36 +105,30 @@ concept_b = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" wid
     C 102 206 40 162 40 94
     C 40 46 80 32 128 32
     Z
-    
-    <!-- Central Gateway Node Cutout (negative space) -->
+
     M 128 108
     A 20 20 0 1 0 128.1 108
     Z
-    
-    <!-- Top Client Node Cutout -->
+
     M 128 66
     A 11 11 0 1 0 128.1 66
     Z
-    <!-- Left Client Node Cutout -->
     M 84 124
     A 11 11 0 1 0 84.1 124
     Z
-    <!-- Right Client Node Cutout -->
     M 172 124
     A 11 11 0 1 0 172.1 124
     Z
-    <!-- Bottom Host Node Cutout -->
     M 128 174
     A 11 11 0 1 0 128.1 174
     Z
-    
-    <!-- Negative space routing channels linking nodes to center -->
+
     M 124 77 L 132 77 L 132 108 L 124 108 Z
     M 124 148 L 132 148 L 132 163 L 124 163 Z
     M 95 124 L 108 124 L 108 132 L 95 132 Z
     M 148 124 L 161 124 L 161 132 L 148 132 Z
   " />
-  
+
   <!-- Solid core gateway inside the central negative cutout -->
   <circle cx="128" cy="128" r="10" fill="#000000" />
 </svg>
@@ -152,7 +146,7 @@ concept_b_hex = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
     L 36 178
     L 36 78
     Z
-    
+
     M 128 54
     L 200 94
     L 200 162
@@ -161,17 +155,17 @@ concept_b_hex = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"
     L 56 94
     Z
   " />
-  
+
   <!-- Central Gateway Node with 3 connected satellite devices -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Top Node (Internet / Gateway) -->
   <circle cx="128" cy="84" r="12" fill="#000000" />
   <!-- Bottom-Left Node (Desktop / Server) -->
   <circle cx="90" cy="154" r="12" fill="#000000" />
   <!-- Bottom-Right Node (Mobile / IoT) -->
   <circle cx="166" cy="154" r="12" fill="#000000" />
-  
+
   <!-- Connecting bus traces -->
   <rect x="123" y="84" width="10" height="46" fill="#000000" />
   <path fill="#000000" d="M 124 128 L 90 154 L 96 162 L 130 136 Z" />
@@ -190,7 +184,7 @@ concept_c = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" wid
   <title id="title-c">MyLAN Logo - Discovery Scope</title>
   <!-- Center Core Beacon (local host scanner) -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Reticle Bracket Top-Left -->
   <path fill="#000000" d="
     M 36 112
@@ -235,7 +229,7 @@ concept_c = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" wid
     L 200 144
     Z
   " />
-  
+
   <!-- Inner Discovery Wave Arc (radius 56..70, upper-right sweep) -->
   <path fill="#000000" d="
     M 128 72
@@ -244,7 +238,7 @@ concept_c = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" wid
     A 42 42 0 0 0 128 86
     Z
   " />
-  
+
   <!-- Outer Discovery Wave Arc (radius 78..92, upper-right sweep) -->
   <path fill="#000000" d="
     M 128 48
@@ -253,7 +247,7 @@ concept_c = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" wid
     A 66 66 0 0 0 128 62
     Z
   " />
-  
+
   <!-- Counter-balance pulse blip in lower-left quadrant (discovered device) -->
   <circle cx="84" cy="172" r="10" fill="#000000" />
 </svg>
@@ -264,7 +258,7 @@ concept_c_lens = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
   <title id="title-c">MyLAN Logo - Discovery Scope</title>
   <!-- Central Origin Beacon -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Outer Reticle Ring with 4 Crosshair Breaks -->
   <!-- Top-Right Quadrant -->
   <path fill="#000000" d="
@@ -298,7 +292,7 @@ concept_c_lens = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
     A 86 86 0 0 0 42 118
     Z
   " />
-  
+
   <!-- Inner Discovery Pulse Arc (radius 52..66) -->
   <path fill="#000000" d="
     M 128 68
@@ -307,7 +301,7 @@ concept_c_lens = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256
     A 46 46 0 0 0 128 82
     Z
   " />
-  
+
   <!-- Discovered Node Target -->
   <circle cx="178" cy="78" r="10" fill="#000000" />
 </svg>

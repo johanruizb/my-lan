@@ -115,20 +115,20 @@ concept_b_clean = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 25
     L 80 52
     Z
   " />
-  
+
   <!-- Central Gateway Hub -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- 4 Satellite Client Nodes (Corners) -->
   <circle cx="82" cy="82" r="12" fill="#000000" />
   <circle cx="174" cy="82" r="12" fill="#000000" />
   <circle cx="82" cy="174" r="12" fill="#000000" />
   <circle cx="174" cy="174" r="12" fill="#000000" />
-  
+
   <!-- 4 Diagonal Bus Conduits (thickness 10) -->
   <path fill="#000000" d="M 82 82 L 174 174 L 167 181 L 75 89 Z" />
   <path fill="#000000" d="M 174 82 L 82 174 L 89 181 L 181 89 Z" />
-  
+
   <!-- Corner Anchorage Links to Perimeter Frame -->
   <rect x="52" y="77" width="30" height="10" fill="#000000" />
   <rect x="174" y="77" width="30" height="10" fill="#000000" />
@@ -146,18 +146,18 @@ concept_c_clean = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 25
   <title id="title-c">MyLAN - Discovery Scope Symbol</title>
   <!-- Central Origin Beacon (Host Scanner) -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Outer Circular Scope Frame with 4 Cardinal Reticle Breaks (thickness 16) -->
   <path fill="#000000" d="M 138 28 A 100 100 0 0 1 228 118 L 212 118 A 84 84 0 0 0 138 44 Z" />
   <path fill="#000000" d="M 228 138 A 100 100 0 0 1 138 228 L 138 212 A 84 84 0 0 0 212 138 Z" />
   <path fill="#000000" d="M 118 228 A 100 100 0 0 1 28 138 L 44 138 A 84 84 0 0 0 118 212 Z" />
   <path fill="#000000" d="M 28 118 A 100 100 0 0 1 118 28 L 118 44 A 84 84 0 0 0 44 118 Z" />
-  
+
   <!-- Discovery Pulse Wave 1 (Inner Arc, radius 56..72) in Upper-Right Sector -->
   <path fill="#000000" d="M 128 72 A 56 56 0 0 1 184 128 L 168 128 A 40 40 0 0 0 128 88 Z" />
   <!-- Discovery Pulse Wave 2 (Middle Arc, radius 78..94) in Upper-Right Sector -->
   <path fill="#000000" d="M 128 48 A 80 80 0 0 1 208 128 L 192 128 A 64 64 0 0 0 128 64 Z" />
-  
+
   <!-- Target Blip (Discovered Local Host Device) -->
   <circle cx="86" cy="170" r="11" fill="#000000" />
 </svg>
@@ -173,23 +173,23 @@ wordmark_paths = """
   <path fill="#000000" d="
     M 270 68 L 292 68 L 308 132 L 324 68 L 346 68 L 346 188 L 326 188 L 326 106 L 314 154 L 302 154 L 290 106 L 290 188 L 270 188 Z
   " />
-  
+
   <!-- Letter y (x: 358..408) -->
   <path fill="#000000" d="
     M 358 104 L 378 104 L 388 144 L 398 104 L 418 104 L 394 186 C 390 200 380 208 366 208 L 360 208 L 360 190 L 366 190 C 374 190 378 184 380 176 L 382 168 Z
   " />
-  
+
   <!-- Letter L (x: 434..480) -->
   <path fill="#000000" d="
     M 434 68 L 454 68 L 454 168 L 484 168 L 484 188 L 434 188 Z
   " />
-  
+
   <!-- Letter A (x: 494..556) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 515 68 L 535 68 L 560 188 L 538 188 L 532 158 L 518 158 L 512 188 L 490 188 Z
     M 525 102 L 521 140 L 529 140 Z
   " />
-  
+
   <!-- Letter N (x: 570..626) -->
   <path fill="#000000" d="
     M 570 68 L 590 68 L 610 144 L 610 68 L 630 68 L 630 188 L 610 188 L 590 112 L 590 188 L 570 188 Z

@@ -129,7 +129,7 @@ wordmark_paths = """
     L 272 184
     Z
   " />
-  
+
   <!-- Letter y (x: 366..420, width 54, x-height: 104..184, descender to 206) -->
   <path fill="#000000" d="
     M 366 104
@@ -146,7 +146,7 @@ wordmark_paths = """
     L 388 166
     Z
   " />
-  
+
   <!-- Letter L (x: 442..492, width 50) -->
   <path fill="#000000" d="
     M 442 74
@@ -157,7 +157,7 @@ wordmark_paths = """
     L 442 184
     Z
   " />
-  
+
   <!-- Letter A (x: 508..576, width 68) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 531 74
@@ -174,7 +174,7 @@ wordmark_paths = """
     L 545 138
     Z
   " />
-  
+
   <!-- Letter N (x: 590..650, width 60) -->
   <path fill="#000000" d="
     M 590 74

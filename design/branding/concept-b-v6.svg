@@ -9,7 +9,7 @@
     L 38 176
     L 38 80
     Z
-    
+
     M 128 54
     L 194 92
     L 194 164
@@ -21,13 +21,13 @@
   <!-- Central Local Gateway Hub -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
   <circle cx="128" cy="128" r="10" fill="#ffffff" />
-  
+
   <!-- 4 Orthogonal Satellite Nodes -->
   <circle cx="128" cy="80" r="12" fill="#000000" />
   <circle cx="128" cy="176" r="12" fill="#000000" />
   <circle cx="84" cy="128" r="12" fill="#000000" />
   <circle cx="172" cy="128" r="12" fill="#000000" />
-  
+
   <!-- Bus Conduits -->
   <rect x="123" y="80" width="10" height="96" fill="#000000" />
   <rect x="84" y="123" width="88" height="10" fill="#000000" />

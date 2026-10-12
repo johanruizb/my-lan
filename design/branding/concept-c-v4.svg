@@ -2,7 +2,7 @@
   <title id="title-c">MyLAN Logo - Subnet Scope</title>
   <!-- Center Local Beacon Node -->
   <circle cx="128" cy="128" r="20" fill="#000000" />
-  
+
   <!-- Outer Scope Reticle: 4 corner brackets forming a technical aperture -->
   <!-- Top-Right Reticle -->
   <path fill="#000000" d="
@@ -20,7 +20,7 @@
     A 80 80 0 0 0 128 208
     Z
   " />
-  
+
   <!-- Inner Discovery Wave (radius 52..66) sweeping top-left quadrant -->
   <path fill="#000000" d="
     M 128 64
@@ -29,7 +29,7 @@
     A 50 50 0 0 1 128 78
     Z
   " />
-  
+
   <!-- Subnet target blips (discovered devices on the scope) -->
   <circle cx="184" cy="72" r="10" fill="#000000" />
   <circle cx="72" cy="184" r="8" fill="#000000" />

@@ -139,11 +139,11 @@ concept_b_v3 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
   <circle cx="86" cy="128" r="12" fill="#000000" />
   <!-- Right Node -->
   <circle cx="170" cy="128" r="12" fill="#000000" />
-  
+
   <!-- Interconnecting Traces / Bus lines (thickness 10) -->
   <rect x="123" y="80" width="10" height="96" fill="#000000" />
   <rect x="86" y="123" width="84" height="10" fill="#000000" />
-  
+
   <!-- Perimeter link from Top Node to outer frame -->
   <rect x="124" y="48" width="8" height="34" fill="#000000" />
 </svg>
@@ -165,13 +165,11 @@ concept_b_v4 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     L 32 76
     A 44 44 0 0 1 76 32
     Z
-    
-    <!-- Central Network Node Cutout (negative space circular hub) -->
+
     M 128 98
     A 30 30 0 1 0 128.1 98
     Z
-    
-    <!-- Negative space routing channels -->
+
     M 122 56 L 134 56 L 134 98 L 122 98 Z
     M 122 158 L 134 158 L 134 200 L 122 200 Z
     M 56 122 L 98 122 L 98 134 L 56 134 Z
@@ -198,7 +196,7 @@ concept_c_v4 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
   <title id="title-c">MyLAN Logo - Subnet Scope</title>
   <!-- Center Local Beacon Node -->
   <circle cx="128" cy="128" r="20" fill="#000000" />
-  
+
   <!-- Outer Scope Reticle: 4 corner brackets forming a technical aperture -->
   <!-- Top-Right Reticle -->
   <path fill="#000000" d="
@@ -216,7 +214,7 @@ concept_c_v4 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     A 80 80 0 0 0 128 208
     Z
   " />
-  
+
   <!-- Inner Discovery Wave (radius 52..66) sweeping top-left quadrant -->
   <path fill="#000000" d="
     M 128 64
@@ -225,7 +223,7 @@ concept_c_v4 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     A 50 50 0 0 1 128 78
     Z
   " />
-  
+
   <!-- Subnet target blips (discovered devices on the scope) -->
   <circle cx="184" cy="72" r="10" fill="#000000" />
   <circle cx="72" cy="184" r="8" fill="#000000" />
@@ -237,7 +235,7 @@ concept_c_v5 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
   <title id="title-c">MyLAN Logo - Subnet Scope</title>
   <!-- Central Gateway Hub -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- Tier 1 Subnet Wave: Half ring (top and right) -->
   <path fill="#000000" d="
     M 128 74
@@ -246,7 +244,7 @@ concept_c_v5 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     A 70 70 0 0 0 128 58
     Z
   " />
-  
+
   <!-- Tier 2 Subnet Wave: Stepped quarter ring (top-right further out) -->
   <path fill="#000000" d="
     M 128 38
@@ -255,7 +253,7 @@ concept_c_v5 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     A 106 106 0 0 0 128 22
     Z
   " />
-  
+
   <!-- Tier 3 Counter-Wave / Perimeter Ring (bottom and left) -->
   <path fill="#000000" d="
     M 128 182
@@ -279,7 +277,7 @@ concept_c_v6 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
   <title id="title-c">MyLAN Logo - Subnet Scope</title>
   <!-- Central Origin Beacon -->
   <circle cx="128" cy="128" r="24" fill="#000000" />
-  
+
   <!-- Concentric Scanner Ring 1 (thickness 16) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 62
@@ -288,7 +286,7 @@ concept_c_v6 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     A 50 50 0 1 0 128 78
     Z
   " />
-  
+
   <!-- Outer Concentric Scanner Ring 2 (thickness 16, with 60 deg opening) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 128 24
@@ -297,7 +295,7 @@ concept_c_v6 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     A 88 88 0 1 0 128 40
     Z
   " />
-  
+
   <!-- Discovered Device Node in the scan opening -->
   <circle cx="196" cy="60" r="14" fill="#000000" />
 </svg>

@@ -52,17 +52,17 @@ final_symbol_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 
   <title id="title-symbol">MyLAN - Discovery Scope Symbol</title>
   <!-- Central Local Origin Beacon -->
   <circle cx="128" cy="128" r="22" fill="#000000" />
-  
+
   <!-- 4 Symmetrical Reticle Quadrants (72° arc with 18° cardinal breaks) -->
   <path fill="#000000" d="{q1}" />
   <path fill="#000000" d="{q2}" />
   <path fill="#000000" d="{q3}" />
   <path fill="#000000" d="{q4}" />
-  
+
   <!-- Radar Sweep Waves (sharing exact radial spokes 9° to 81°) -->
   <path fill="#000000" d="{wave1}" />
   <path fill="#000000" d="{wave2}" />
-  
+
   <!-- Discovered Host Blip (positioned exactly at 225° on Range Ring 1) -->
   <circle cx="{blip_x:.2f}" cy="{blip_y:.2f}" r="10" fill="#000000" />
 </svg>
@@ -75,13 +75,13 @@ final_symbol_small_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
   <title id="title-small">MyLAN - Discovery Scope (Small Size Cut)</title>
   <!-- Bolder Central Beacon -->
   <circle cx="128" cy="128" r="26" fill="#000000" />
-  
+
   <!-- 4 Reticle Quadrants -->
   <path fill="#000000" d="{q1}" />
   <path fill="#000000" d="{q2}" />
   <path fill="#000000" d="{q3}" />
   <path fill="#000000" d="{q4}" />
-  
+
   <!-- High-Contrast Single Unified Sweep Wave -->
   <path fill="#000000" d="{small_wave}" />
 </svg>
@@ -93,17 +93,17 @@ final_symbol_color_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
   <rect width="256" height="256" rx="56" fill="#090D16" />
   <!-- Central Local Origin Beacon -->
   <circle cx="128" cy="128" r="22" fill="#06B6D4" />
-  
+
   <!-- 4 Symmetrical Reticle Quadrants -->
   <path fill="#06B6D4" d="{q1}" opacity="0.9" />
   <path fill="#06B6D4" d="{q2}" opacity="0.9" />
   <path fill="#06B6D4" d="{q3}" opacity="0.9" />
   <path fill="#06B6D4" d="{q4}" opacity="0.9" />
-  
+
   <!-- Radar Sweep Waves -->
   <path fill="#06B6D4" d="{wave1}" opacity="0.75" />
   <path fill="#06B6D4" d="{wave2}" opacity="0.5" />
-  
+
   <!-- Discovered Host Blip -->
   <circle cx="{blip_x:.2f}" cy="{blip_y:.2f}" r="10" fill="#38BDF8" />
 </svg>
@@ -114,17 +114,17 @@ final_symbol_dark_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
   <title id="title-dark">MyLAN - Discovery Scope Symbol (Dark Theme)</title>
   <!-- Central Local Origin Beacon -->
   <circle cx="128" cy="128" r="22" fill="#06B6D4" />
-  
+
   <!-- 4 Symmetrical Reticle Quadrants -->
   <path fill="#06B6D4" d="{q1}" />
   <path fill="#06B6D4" d="{q2}" />
   <path fill="#06B6D4" d="{q3}" />
   <path fill="#06B6D4" d="{q4}" />
-  
+
   <!-- Radar Sweep Waves -->
   <path fill="#06B6D4" d="{wave1}" opacity="0.8" />
   <path fill="#06B6D4" d="{wave2}" opacity="0.6" />
-  
+
   <!-- Discovered Host Blip -->
   <circle cx="{blip_x:.2f}" cy="{blip_y:.2f}" r="10" fill="#38BDF8" />
 </svg>
@@ -138,23 +138,23 @@ wordmark_paths = """
   <path fill="#000000" d="
     M 270 74 L 290 74 L 310 134 L 330 74 L 350 74 L 350 184 L 330 184 L 330 110 L 318 146 L 302 146 L 290 110 L 290 184 L 270 184 Z
   " />
-  
+
   <!-- Letter y (x: 364..420, width 56) -->
   <path fill="#000000" d="
     M 364 106 L 384 106 L 396 144 L 408 106 L 428 106 L 404 184 C 398 202 388 214 372 214 L 364 214 L 364 196 L 372 196 C 380 196 386 190 388 180 L 390 170 Z
   " />
-  
+
   <!-- Letter L (x: 434..486, width 52) -->
   <path fill="#000000" d="
     M 434 74 L 454 74 L 454 164 L 486 164 L 486 184 L 434 184 Z
   " />
-  
+
   <!-- Letter A (x: 500..568, width 68) -->
   <path fill="#000000" fill-rule="evenodd" d="
     M 524 74 L 544 74 L 568 184 L 546 184 L 540 156 L 528 156 L 522 184 L 500 184 Z
     M 534 106 L 531 138 L 537 138 Z
   " />
-  
+
   <!-- Letter N (x: 582..644, width 62) -->
   <path fill="#000000" d="
     M 582 74 L 602 74 L 624 146 L 624 74 L 644 74 L 644 184 L 624 184 L 602 112 L 602 184 L 582 184 Z

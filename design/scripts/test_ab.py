@@ -75,38 +75,31 @@ concept_b_v7 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     C 100 210 36 166 36 94
     C 36 44 74 28 128 28
     Z
-    
-    <!-- Negative space Ethernet Bus / Subnet Architecture inside shield -->
-    <!-- Gateway Hub (Top Center) -->
+
     M 128 66
     A 16 16 0 1 0 128.1 66
     Z
-    
-    <!-- Central Drop line from Gateway to Bus -->
+
     M 122 82 L 134 82 L 134 130 L 122 130 Z
-    
-    <!-- Horizontal Subnet Bus Bar -->
+
     M 72 126 L 184 126 L 184 136 L 72 136 Z
-    
-    <!-- Left Client Drop Line and Node -->
+
     M 78 136 L 86 136 L 86 156 L 78 156 Z
     M 82 154
     A 12 12 0 1 0 82.1 154
     Z
-    
-    <!-- Middle Client Drop Line and Node -->
+
     M 124 136 L 132 136 L 132 164 L 124 164 Z
     M 128 162
     A 12 12 0 1 0 128.1 162
     Z
-    
-    <!-- Right Client Drop Line and Node -->
+
     M 170 136 L 178 136 L 178 156 L 170 156 Z
     M 174 154
     A 12 12 0 1 0 174.1 154
     Z
   " />
-  
+
   <!-- Solid Core inside Gateway Hub -->
   <circle cx="128" cy="82" r="7" fill="#000000" />
 </svg>
@@ -127,31 +120,25 @@ concept_b_v8 = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" 
     L 32 80
     A 48 48 0 0 1 80 32
     Z
-    
-    <!-- Gateway Router Node at top -->
+
     M 128 64
     A 18 18 0 1 0 128.1 64
     Z
-    
-    <!-- Drop Trunk from Router to Bus -->
+
     M 122 82 L 134 82 L 134 132 L 122 132 Z
-    
-    <!-- Horizontal LAN Bus -->
+
     M 68 126 L 188 126 L 188 138 L 68 138 Z
-    
-    <!-- Left Device Drop -->
+
     M 74 138 L 84 138 L 84 160 L 74 160 Z
     M 79 160
     A 14 14 0 1 0 79.1 160
     Z
-    
-    <!-- Center Device Drop -->
+
     M 123 138 L 133 138 L 133 168 L 123 168 Z
     M 128 168
     A 14 14 0 1 0 128.1 168
     Z
-    
-    <!-- Right Device Drop -->
+
     M 172 138 L 182 138 L 182 160 L 172 160 Z
     M 177 160
     A 14 14 0 1 0 177.1 160

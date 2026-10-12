@@ -1,0 +1,74 @@
+# =============================================================================
+# Plantilla Rust
+#
+# Composición: base + tooling propio de Rust
+#   base → normalización de texto, sintaxis YAML/JSON/TOML/XML, secretos
+#   esta → cargo fmt (formato), clippy (lint), cargo check (compila)
+#
+# Copia TODO el contenido a .pre-commit-config.yaml en tu proyecto Rust.
+#
+# Requisitos del proyecto:
+#   - Cargo.toml en la raíz y toolchain de Rust instalado (rustup)
+#   - rustfmt y clippy: `rustup component add rustfmt clippy`
+#
+# Nota: los hooks usan `language: system` (binarios locales de cargo),
+# NO descargan una toolchain; requieren que rustc/cargo estén en PATH.
+# ==============================================================================
+
+default_language_version:
+  python: python3
+
+repos:
+  # ---------------------------------------------------------------------------
+  # Base común de normalización (misma que templates/base.yaml)
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # --- Formato / normalización (auto-fix) --------------------------------
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: fix-byte-order-marker
+
+      # --- Validación de sintaxis --------------------------------------------
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+
+      # --- Saneamiento de metadatos / riesgos --------------------------------
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      - id: check-illegal-windows-names
+      - id: check-vcs-permalinks
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: [--branch, main, --branch, master]
+
+  # ---------------------------------------------------------------------------
+  # Secretos
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # ---------------------------------------------------------------------------
+  # Rust: formato, lint, compilación
+  #   fmt:      formatea con rustfmt (auto-fix)
+  #   clippy:   lint estricto; -D warnings convierte cualquier warning en error
+  #   check:    valida que el paquete compila sin generar binarios
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+      - id: clippy
+      - id: cargo-check
