@@ -200,4 +200,68 @@ not an ip        0x1         0x2         aa:bb:cc:dd:ee:ff     *        enp37s0\
     fn empty_input_yields_empty() {
         assert!(parse_arp_table("").is_empty());
     }
+
+    #[test]
+    fn insufficient_fields_ignored() {
+        let text = "192.168.1.1\n\
+192.168.1.1 0x1\n\
+192.168.1.1 0x1 0x2\n";
+        assert!(parse_arp_table(text).is_empty());
+    }
+
+    #[test]
+    fn invalid_ip_addresses_ignored() {
+        let text = "not_an_ip 0x1 0x2 aa:bb:cc:dd:ee:ff * enp37s0\n\
+256.256.256.256 0x1 0x2 aa:bb:cc:dd:ee:ff * enp37s0\n";
+        assert!(parse_arp_table(text).is_empty());
+    }
+
+    #[test]
+    fn parses_ipv6_and_hyphenated_macs() {
+        let text = "fe80::1 0x1 0x2 aa-bb-cc-dd-ee-ff * eth0\n";
+        let entries = parse_arp_table(text);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].ip, ip("fe80::1"));
+        assert_eq!(entries[0].mac, Some(mac("aa:bb:cc:dd:ee:ff")));
+        assert_eq!(entries[0].device, "eth0");
+    }
+
+    #[test]
+    fn rejects_device_heuristically_when_mac_like() {
+        // Line with 4 parts where last part is MAC address with colons
+        let text = "192.168.1.10 0x1 0x2 aa:bb:cc:dd:ee:ff\n";
+        assert!(parse_arp_table(text).is_empty());
+    }
+
+    #[test]
+    fn case_insensitive_header_matching() {
+        let text = "IP ADDRESS       HW TYPE     FLAGS       HW ADDRESS            MASK     DEVICE\n\
+192.168.1.1      0x1         0x2         aa:bb:cc:dd:ee:ff     *        enp37s0\n";
+        let entries = parse_arp_table(text);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].ip, ip("192.168.1.1"));
+    }
+
+    #[test]
+    fn handles_tab_separated_lines() {
+        let text = "192.168.1.1\t0x1\t0x2\taa:bb:cc:dd:ee:ff\t*\tenp37s0\n";
+        let entries = parse_arp_table(text);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].ip, ip("192.168.1.1"));
+        assert_eq!(entries[0].mac, Some(mac("aa:bb:cc:dd:ee:ff")));
+        assert_eq!(entries[0].device, "enp37s0");
+    }
+
+    #[test]
+    fn observations_returns_empty_for_unmatched_iface() {
+        let entries = parse_arp_table(SAMPLE);
+        let obs = arp_entries_to_observations(&entries, Some("nonexistent0"));
+        assert!(obs.is_empty());
+    }
+
+    #[test]
+    fn observations_handles_empty_entries_slice() {
+        let obs = arp_entries_to_observations(&[], Some("enp37s0"));
+        assert!(obs.is_empty());
+    }
 }
