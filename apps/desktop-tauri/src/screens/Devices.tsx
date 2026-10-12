@@ -71,9 +71,10 @@ function useUrlState<T extends string>(
         (next: T) => {
             setSearchParams(
                 (prev) => {
-                    if (next === defaultValue) prev.delete(key);
-                    else prev.set(key, next);
-                    return prev;
+                    const nextParams = new URLSearchParams(prev);
+                    if (next === defaultValue) nextParams.delete(key);
+                    else nextParams.set(key, next);
+                    return nextParams;
                 },
                 { replace: true },
             );
@@ -96,13 +97,18 @@ export function Devices() {
     // Filtros de la lista (AC-14): tipo, estado online y confiable (manual
     // binario via is_trusted, ADR-0006). Por defecto "all" → se ven todos
     // (offline incluidos, AC-15). Sincronizados a URL para deep-linking.
-    const [filterType, setFilterType] = useUrlState("type", "all");
+    const [filterType, setFilterType] = useUrlState<string>("type", "all");
     const [filterOnline, setFilterOnline] = useUrlState<
         "all" | "online" | "offline"
     >("online", "all");
     const [filterTrust, setFilterTrust] = useUrlState<
         "all" | "trusted" | "untrusted"
     >("trust", "all");
+    const [, setSearchParams] = useSearchParams();
+
+    const clearAllFilters = useCallback(() => {
+        setSearchParams({}, { replace: true });
+    }, [setSearchParams]);
 
     async function refresh() {
         setLoading(true);
@@ -417,7 +423,7 @@ export function Devices() {
                         </div>
                     )}
 
-                    {!error && !loading && filtered.length === 0 && (
+                    {!error && !loading && merged.length === 0 && (
                         <EmptyState
                             icon={NetworkIcon}
                             title="Sin dispositivos"
@@ -434,6 +440,31 @@ export function Devices() {
                             }
                         />
                     )}
+
+                    {!error &&
+                        !loading &&
+                        merged.length > 0 &&
+                        filtered.length === 0 && (
+                            <EmptyState
+                                icon={Search}
+                                title="Sin resultados"
+                                description="No se encontraron dispositivos que coincidan con la búsqueda o los filtros aplicados."
+                                action={
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearAllFilters}
+                                        className="gap-1.5"
+                                    >
+                                        <RefreshCw
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                        Limpiar filtros
+                                    </Button>
+                                }
+                            />
+                        )}
 
                     {/* Vista de tarjetas (AC-9). */}
                     {!error &&
