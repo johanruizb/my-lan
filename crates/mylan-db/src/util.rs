@@ -36,6 +36,18 @@ mod tests {
     }
 
     #[test]
+    fn now_rfc3339_parses_as_valid_rfc3339() {
+        let ts = now_rfc3339().expect("now_rfc3339");
+        let parsed = OffsetDateTime::parse(&ts, &Rfc3339)
+            .expect("debe ser un timestamp RFC3339 valido y parseable");
+        assert_eq!(
+            parsed.offset(),
+            time::UtcOffset::UTC,
+            "el offset parseado debe ser UTC"
+        );
+    }
+
+    #[test]
     fn now_rfc3339_has_rfc3339_separators() {
         let ts = now_rfc3339().expect("now_rfc3339");
         assert!(ts.contains('T'), "falta separador 'T': {ts}");
