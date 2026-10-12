@@ -66,7 +66,10 @@ fn bench_device_offline_and_online_diff() {
     let elapsed_offline = start.elapsed();
 
     assert_eq!(events.len(), count);
-    println!("BENCHMARK: 500 devices offline processing took: {:?}", elapsed_offline);
+    println!(
+        "BENCHMARK: 500 devices offline processing took: {:?}",
+        elapsed_offline
+    );
 
     tx.commit().unwrap();
 
@@ -86,11 +89,22 @@ fn bench_device_offline_and_online_diff() {
     }
 
     let start_online = Instant::now();
-    let events_online = run_diff(&tx2, "net-1", "t2", before_devices_2, before_services_2, false).unwrap();
+    let events_online = run_diff(
+        &tx2,
+        "net-1",
+        "t2",
+        before_devices_2,
+        before_services_2,
+        false,
+    )
+    .unwrap();
     let elapsed_online = start_online.elapsed();
 
     assert_eq!(events_online.len(), count);
-    println!("BENCHMARK: 500 devices online returning took: {:?}", elapsed_online);
+    println!(
+        "BENCHMARK: 500 devices online returning took: {:?}",
+        elapsed_online
+    );
 
     tx2.commit().unwrap();
 }

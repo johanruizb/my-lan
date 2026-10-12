@@ -287,9 +287,7 @@ fn update_devices_is_online(
         .map(|i| format!("?{}", i + 2))
         .collect::<Vec<_>>()
         .join(", ");
-    let sql = format!(
-        "UPDATE devices SET is_online = ?1 WHERE id IN ({placeholders})"
-    );
+    let sql = format!("UPDATE devices SET is_online = ?1 WHERE id IN ({placeholders})");
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::with_capacity(1 + device_ids.len());
     params.push(Box::new(is_online_val));
     for id in device_ids {
