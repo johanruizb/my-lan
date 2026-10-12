@@ -66,6 +66,46 @@ mod tests {
 
     #[test]
     fn invalid_prefix_returns_empty() {
+        assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 33).is_empty());
         assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 40).is_empty());
+        assert!(enumerate_hosts("192.168.1.0".parse().unwrap(), 255).is_empty());
+    }
+
+    #[test]
+    fn prefix_30_returns_two_hosts() {
+        let hosts = enumerate_hosts("192.168.1.0".parse().unwrap(), 30);
+        assert_eq!(hosts.len(), 2);
+        assert_eq!(hosts[0], "192.168.1.1".parse::<Ipv4Addr>().unwrap());
+        assert_eq!(hosts[1], "192.168.1.2".parse::<Ipv4Addr>().unwrap());
+    }
+
+    #[test]
+    fn handles_non_network_aligned_ip() {
+        let hosts = enumerate_hosts("192.168.1.45".parse().unwrap(), 24);
+        assert_eq!(hosts.len(), 254);
+        assert_eq!(hosts.first().copied(), Some("192.168.1.1".parse().unwrap()));
+        assert_eq!(
+            hosts.last().copied(),
+            Some("192.168.1.254".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn prefix_0_capped_at_safety_limit() {
+        let hosts = enumerate_hosts("0.0.0.0".parse().unwrap(), 0);
+        assert_eq!(hosts.len(), 4096);
+        assert_eq!(hosts.first().copied(), Some("0.0.0.1".parse().unwrap()));
+    }
+
+    #[test]
+    fn wide_subnet_capped_at_4096_hosts() {
+        // /16 subnet has 65534 hosts, should be capped at 4096
+        let hosts = enumerate_hosts("10.0.0.0".parse().unwrap(), 16);
+        assert_eq!(hosts.len(), 4096);
+        assert_eq!(hosts.first().copied(), Some("10.0.0.1".parse().unwrap()));
+
+        // /20 subnet has 4094 hosts, which is below 4096 and should return all 4094
+        let hosts_20 = enumerate_hosts("10.0.0.0".parse().unwrap(), 20);
+        assert_eq!(hosts_20.len(), 4094);
     }
 }
