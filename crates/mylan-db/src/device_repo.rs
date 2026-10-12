@@ -88,11 +88,6 @@ impl DeviceRow {
     }
 }
 
-const SELECT_COLS: &str =
-    "id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, manufacturer, \
-     model, device_type, os_family, confidence, first_seen_at, last_seen_at, is_trusted, \
-     is_hidden, notes, is_online";
-
 /// Ejecuta una consulta de un único `id` opcional.
 fn query_opt_id(
     conn: &Connection,
@@ -145,8 +140,11 @@ fn find_existing_id(conn: &Connection, device: &Device) -> DbResult<Option<Strin
 }
 
 fn get_device_by_id(conn: &Connection, id: &str) -> DbResult<Option<Device>> {
-    let sql = format!("SELECT {SELECT_COLS} FROM devices WHERE id = ?1 LIMIT 1");
-    match conn.query_row(&sql, [id], DeviceRow::from_row) {
+    let sql = "SELECT id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, \
+               manufacturer, model, device_type, os_family, confidence, first_seen_at, \
+               last_seen_at, is_trusted, is_hidden, notes, is_online \
+               FROM devices WHERE id = ?1 LIMIT 1";
+    match conn.query_row(sql, [id], DeviceRow::from_row) {
         Ok(row) => Ok(Some(row.decode()?)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
         Err(e) => Err(map_sqlite(e)),
@@ -342,10 +340,11 @@ pub fn update_device_fields(
 }
 
 pub fn list_devices(conn: &Connection, network_id: &str) -> DbResult<Vec<Device>> {
-    let sql = format!(
-        "SELECT {SELECT_COLS} FROM devices WHERE network_id = ?1 ORDER BY last_seen_at DESC"
-    );
-    let mut stmt = conn.prepare(&sql).map_err(map_sqlite)?;
+    let sql = "SELECT id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, \
+               manufacturer, model, device_type, os_family, confidence, first_seen_at, \
+               last_seen_at, is_trusted, is_hidden, notes, is_online \
+               FROM devices WHERE network_id = ?1 ORDER BY last_seen_at DESC";
+    let mut stmt = conn.prepare(sql).map_err(map_sqlite)?;
     let rows = stmt
         .query_map([network_id], DeviceRow::from_row)
         .map_err(map_sqlite)?;
@@ -361,11 +360,12 @@ pub fn get_device_by_ip(
     network_id: &str,
     ip_addr: IpAddr,
 ) -> DbResult<Option<Device>> {
-    let sql = format!(
-        "SELECT {SELECT_COLS} FROM devices WHERE network_id = ?1 AND primary_ip = ?2 LIMIT 1"
-    );
+    let sql = "SELECT id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, \
+               manufacturer, model, device_type, os_family, confidence, first_seen_at, \
+               last_seen_at, is_trusted, is_hidden, notes, is_online \
+               FROM devices WHERE network_id = ?1 AND primary_ip = ?2 LIMIT 1";
     let result = conn.query_row(
-        &sql,
+        sql,
         rusqlite::params![network_id, ip_addr.to_string()],
         DeviceRow::from_row,
     );
@@ -865,5 +865,34 @@ mod tests {
             "router descubierto tras cambio de IP NO se marca confiable \
              (UPDATE path preserva existing.is_trusted=false)"
         );
+    }
+
+    #[test]
+    fn get_device_handles_sql_injection_payload() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "sqli");
+        let m = mac("aa:bb:cc:dd:ee:30");
+        let d = device("dev-1", Some(m), Some(ip("192.168.1.100")), "t0");
+        upsert_device(&conn, &d).unwrap();
+
+        // SQL injection payload attempting to match any row or execute statements
+        let sqli_payloads = [
+            "' OR '1'='1",
+            "dev-1' OR '1'='1",
+            "'; DROP TABLE devices; --",
+            "1 UNION SELECT * FROM devices --",
+        ];
+
+        for payload in sqli_payloads {
+            let res = get_device(&conn, payload).unwrap();
+            assert!(
+                res.is_none(),
+                "payload {payload:?} should return None and not exploit query"
+            );
+        }
+
+        // Confirm table is still intact and original device is present
+        let existing = get_device(&conn, "dev-1").unwrap();
+        assert!(existing.is_some(), "table and data remained intact");
     }
 }
