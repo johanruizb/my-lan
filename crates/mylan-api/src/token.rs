@@ -90,7 +90,8 @@ fn read_token(path: &Path) -> Result<Option<String>> {
 }
 
 /// Escribe `token` en `path` con permisos `0600` en Unix (ACL-restricted en
-/// Windows — TODO v0.6). Trunca si existe.
+/// Windows — TODO v0.6). Trunca el fichero si ya existe (cross-platform vía
+/// `OpenOptions::truncate`).
 fn write_token_file(path: &Path, token: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {
@@ -198,5 +199,23 @@ mod tests {
         std::fs::write(&path, "   ").unwrap();
         let t = load_or_create_token(&path).unwrap();
         assert!(!t.trim().is_empty());
+    }
+
+    #[test]
+    fn write_token_file_truncates_existing_longer_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("api-token");
+        std::fs::write(&path, "A".repeat(200)).unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap().len(), 200);
+
+        let new_token = rotate_token(&path).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+
+        assert_eq!(content, new_token);
+        assert_eq!(
+            content.len(),
+            43,
+            "el archivo debe haber sido truncado a los 43 caracteres del token"
+        );
     }
 }

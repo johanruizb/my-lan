@@ -27,6 +27,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn now_rfc3339_parses_as_valid_rfc3339() {
+        let ts = now_rfc3339().expect("now_rfc3339 should return Ok");
+        let parsed = OffsetDateTime::parse(&ts, &Rfc3339)
+            .expect("now_rfc3339 output should be parseable as RFC3339");
+        assert_eq!(
+            parsed.offset(),
+            time::UtcOffset::UTC,
+            "parsed datetime offset should be UTC"
+        );
+    }
+
+    #[test]
     fn now_rfc3339_is_utc() {
         let ts = now_rfc3339().expect("now_rfc3339");
         assert!(
@@ -34,6 +46,7 @@ mod tests {
             "esperaba sufijo 'Z' (UTC); obtenido: {ts}"
         );
     }
+
 
     #[test]
     fn now_rfc3339_has_rfc3339_separators() {
