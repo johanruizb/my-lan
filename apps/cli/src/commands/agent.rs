@@ -134,11 +134,10 @@ fn is_process_alive(pid: i32) -> bool {
         return false;
     }
     let nix_pid = nix::unistd::Pid::from_raw(pid);
-    match nix::sys::signal::kill(nix_pid, None) {
-        Ok(_) => true,
-        Err(nix::errno::Errno::EPERM) => true,
-        _ => false,
-    }
+    matches!(
+        nix::sys::signal::kill(nix_pid, None),
+        Ok(_) | Err(nix::errno::Errno::EPERM)
+    )
 }
 
 #[cfg(not(unix))]
