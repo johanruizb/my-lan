@@ -51,3 +51,16 @@ fn rotate_reasserts_0600_after_external_chmod() {
     let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
     assert_eq!(mode, 0o600, "rotate reafirma 0600");
 }
+
+#[test]
+fn rotate_truncates_existing_longer_token_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("api-token");
+    std::fs::write(&path, "X".repeat(150)).unwrap();
+    assert_eq!(std::fs::read_to_string(&path).unwrap().len(), 150);
+
+    let token = rotate_token(&path).unwrap();
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert_eq!(content, token);
+    assert_eq!(content.len(), 43, "fichero truncado correctamente");
+}
