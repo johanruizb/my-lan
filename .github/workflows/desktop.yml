@@ -112,8 +112,13 @@ jobs:
       # de Windows valida el cfg-gate del Paso 0 + la herencia workspace de los
       # path deps en MSVC.
       - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop-tauri
+          args: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY == '' && '--no-sign' || '' }}
 
       # Adjunta los artefactos del bundle al run del workflow (AC-15:
       # artefactos de ambos OS disponibles para descarga independientemente
