@@ -84,6 +84,29 @@ try {
     );
     assert.deepStrictEqual(written, manifest);
 
+    // Caso 2: Sin AppImage (únicamente deb + tar.gz + windows setup)
+    const tempDirReduced = mkdtempSync(join(tmpdir(), "mylan-reduced-test-"));
+    try {
+        writeFileSync(join(tempDirReduced, "MyLAN_0.6.1_amd64.deb"), "fake-deb");
+        writeFileSync(join(tempDirReduced, "MyLAN_0.6.1_amd64.deb.sig"), debSig);
+        writeFileSync(join(tempDirReduced, "MyLAN_0.6.1_amd64.tar.gz"), "fake-tar");
+        writeFileSync(join(tempDirReduced, "MyLAN_0.6.1_x64-setup.exe"), "fake-exe");
+        writeFileSync(join(tempDirReduced, "MyLAN_0.6.1_x64-setup.exe.sig"), windowsSig);
+
+        const manifestReduced = generateManifest({
+            version: "0.6.1",
+            dir: tempDirReduced,
+            repo: "johanruizb/my-lan",
+        });
+
+        assert.strictEqual(manifestReduced.platforms["linux-x86_64"].signature, debSig);
+        assert.strictEqual(manifestReduced.platforms["linux-x86_64-deb"].signature, debSig);
+        assert.strictEqual(manifestReduced.platforms["windows-x86_64"].signature, windowsSig);
+        assert.strictEqual(manifestReduced.platforms["linux-x86_64-appimage"], undefined);
+    } finally {
+        rmSync(tempDirReduced, { recursive: true, force: true });
+    }
+
     console.log("✓ Todos los tests de generate-updater-manifest pasaron!");
 } finally {
     rmSync(tempDir, { recursive: true, force: true });

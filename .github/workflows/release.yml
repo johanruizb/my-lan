@@ -167,9 +167,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          find apps/desktop-tauri/src-tauri/target/release/bundle \
-            -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name '*.sig' \) \
+
+          # Copiar exclusivamente el paquete .deb y su firma generados por Tauri
+          find apps/desktop-tauri/src-tauri/target/release/bundle/deb \
+            -maxdepth 1 -type f \( -name '*.deb' -o -name '*.deb.sig' \) \
             -exec cp {} release-assets/ \;
+
+          # Generar paquete portable .tar.gz con el binario de escritorio
+          tar_name="MyLAN_${{ inputs.version }}_amd64.tar.gz"
+          tar -czf "release-assets/$tar_name" \
+            -C apps/desktop-tauri/src-tauri/target/release mylan-desktop
+
           test "$(find release-assets -type f | wc -l)" -gt 0
 
       - name: Collect desktop artifacts (Windows)
@@ -177,7 +185,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release-assets | Out-Null
-          Get-ChildItem -Path apps\desktop-tauri\src-tauri\target\release\bundle -Recurse -File -Include *.msi,*.exe,*.sig,*.zip |
+          Get-ChildItem -Path apps\desktop-tauri\src-tauri\target\release\bundle\nsis -Recurse -File -Include *-setup.exe,*.sig |
             Copy-Item -Destination release-assets
           if (-not (Get-ChildItem release-assets -File)) {
             throw "No Windows desktop artifacts were generated"

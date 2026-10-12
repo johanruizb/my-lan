@@ -48,12 +48,11 @@ export function generateManifest({ version, dir, repo, notes, output }) {
     const files = readdirSync(assetsDir);
     const platforms = {};
 
-    // 1. Linux AppImage (AppImage o tar.gz)
+    // 1. Linux AppImage (si está presente)
     const linuxAppImageSig = files.find(
         (f) =>
             (f.endsWith(".AppImage.sig") ||
-                f.endsWith(".AppImage.tar.gz.sig") ||
-                (f.endsWith(".tar.gz.sig") && !f.includes("cli"))) &&
+                f.endsWith(".AppImage.tar.gz.sig")) &&
             !f.includes("cli"),
     );
 
