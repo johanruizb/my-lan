@@ -37,7 +37,7 @@ fn setup_db(dir: &std::path::Path, count: usize) -> rusqlite::Connection {
     .expect("upsert_network");
 
     for i in 0..count {
-        let mut dev = Device::new(&format!("dev-{i}"), "net-1", "t0");
+        let mut dev = Device::new(format!("dev-{i}"), "net-1", "t0");
         dev.primary_mac = Some(mac(i));
         dev.primary_ip = Some(ip(i));
         dev.is_online = true;
@@ -82,7 +82,7 @@ fn bench_device_offline_and_online_diff() {
 
     // Re-upsert all 500 devices as seen in "t2" scan
     for i in 0..count {
-        let mut dev = Device::new(&format!("dev-{i}"), "net-1", "t2");
+        let mut dev = Device::new(format!("dev-{i}"), "net-1", "t2");
         dev.primary_mac = Some(mac(i));
         dev.primary_ip = Some(ip(i));
         upsert_device(&tx2, &dev).expect("upsert_device");
