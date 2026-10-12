@@ -235,7 +235,8 @@ not an ip        0x1         0x2         aa:bb:cc:dd:ee:ff     *        enp37s0\
 
     #[test]
     fn case_insensitive_header_matching() {
-        let text = "IP ADDRESS       HW TYPE     FLAGS       HW ADDRESS            MASK     DEVICE\n\
+        let text =
+            "IP ADDRESS       HW TYPE     FLAGS       HW ADDRESS            MASK     DEVICE\n\
 192.168.1.1      0x1         0x2         aa:bb:cc:dd:ee:ff     *        enp37s0\n";
         let entries = parse_arp_table(text);
         assert_eq!(entries.len(), 1);
