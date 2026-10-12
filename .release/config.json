@@ -1,0 +1,17 @@
+{
+  "conventions": {
+    "versionFile": "Cargo.toml",
+    "changelog": "CHANGELOG.md",
+    "changelogLinks": "inline",
+    "commitStyle": "conventional",
+    "tagPrefix": "v",
+    "branchPrefix": "release/",
+    "githubReleases": true
+  },
+  "lastRelease": {
+    "version": "0.6.0",
+    "tag": "v0.6.0",
+    "branch": "release/v0.6.0",
+    "date": "2026-10-12"
+  }
+}

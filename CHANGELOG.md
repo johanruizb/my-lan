@@ -6,13 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [0.6.0] - 2026-10-12 (873ad28)
 
-- **Identidad de marca oficial (Discovery Scope)** (`design/branding`, `apps/desktop-tauri`): diseño de identidad visual técnica vectorial, despliegue de iconos nativos en la app de escritorio Tauri (Linux, Windows, macOS), favicon web, corte óptico (16–32 px), paleta Electric Cyan, manual de marca (`BRAND_GUIDELINES.md`), banner responsivo en README y paquete completo de exportaciones SVG/PNG/web-icons.
-- **Auto-actualización in-app** (`apps/desktop-tauri`): comprobación, descarga e instalación de nuevas versiones directamente desde la aplicación usando GitHub Releases como backend (sin costes ni servidores S3 externos).
-  - Integración de `tauri-plugin-updater` y `tauri-plugin-process` en Tauri v2 con verificación criptográfica Ed25519.
-  - UI interactiva en *Acerca de* y *Ajustes*, con opción de búsqueda silenciosa al arrancar y badge en la barra lateral.
-  - Automatización en CI/CD (`release.yml`) para compilar y publicar el manifiesto `latest.json` en cada lanzamiento.
+### Added
+- **Identidad de marca oficial (Discovery Scope)**: identidad visual técnica vectorial táctica con símbolo de retícula sonar/radar, corte óptico para tamaños pequeños (16–32 px), paleta Electric Cyan (`#06B6D4`) sobre fondo Deep Void Navy (`#090D16`), y despliegue del set completo de iconos nativos en Tauri (`.icns` para macOS, `.ico` para Windows, `.png` para Linux).
+- **Auto-actualización in-app**: comprobación, descarga e instalación desatendida de nuevas versiones directamente desde la aplicación de escritorio usando GitHub Releases con verificación criptográfica Ed25519 (`tauri-plugin-updater`), interfaz de usuario interactiva en Ajustes y Acerca de, y notificación en la barra lateral.
+- **Banner responsivo en documentación**: integración de cabecera con elemento `<picture>` de conmutación automática entre modo claro y modo oscuro en `README.md`.
+
+### Changed
+- **Actualización por lotes en SQLite**: optimización en `mylan-db` para consolidar actualizaciones de estado online/offline de dispositivos durante el diff de escaneo en una sola transacción por lotes, reduciendo escrituras y bloqueos en disco.
+- **Persistencia asíncrona de ajustes**: migración del guardado de configuración en Tauri a operaciones asíncronas con `tokio::fs` en lugar de bloqueos síncronos de E/S.
+- **Mejoras de robustez y resiliencia**: eliminación sistemática de `unwrap` en el parseo de direcciones MAC e IP, verificación segura de truncamiento de ficheros de tokens y cobertura extendida de pruebas unitarias para utilidades de CLI, DB y frontend.
+- **Experiencia de usuario en filtros**: mejora en estados vacíos (*EmptyState*) cuando los filtros no arrojan resultados, con acción directa para restaurarlos.
+
+**Full changelog:** https://github.com/johanruizb/my-lan/compare/v0.5.9...v0.6.0
 
 ## [0.5.0] — 2026-07-03
 
