@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo - Discovery Scope</title>
+  <!-- Center Core Beacon (local host scanner) -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  
+  <!-- Reticle Bracket Top-Left -->
+  <path fill="#000000" d="
+    M 36 112
+    L 36 56
+    A 20 20 0 0 1 56 36
+    L 112 36
+    L 112 56
+    L 56 56
+    L 56 112
+    Z
+  " />
+  <!-- Reticle Bracket Top-Right -->
+  <path fill="#000000" d="
+    M 220 112
+    L 220 56
+    A 20 20 0 0 0 200 36
+    L 144 36
+    L 144 56
+    L 200 56
+    L 200 112
+    Z
+  " />
+  <!-- Reticle Bracket Bottom-Left -->
+  <path fill="#000000" d="
+    M 36 144
+    L 36 200
+    A 20 20 0 0 0 56 220
+    L 112 220
+    L 112 200
+    L 56 200
+    L 56 144
+    Z
+  " />
+  <!-- Reticle Bracket Bottom-Right -->
+  <path fill="#000000" d="
+    M 220 144
+    L 220 200
+    A 20 20 0 0 1 200 220
+    L 144 220
+    L 144 200
+    L 200 200
+    L 200 144
+    Z
+  " />
+  
+  <!-- Inner Discovery Wave Arc (radius 56..70, upper-right sweep) -->
+  <path fill="#000000" d="
+    M 128 72
+    A 56 56 0 0 1 184 128
+    L 170 128
+    A 42 42 0 0 0 128 86
+    Z
+  " />
+  
+  <!-- Outer Discovery Wave Arc (radius 78..92, upper-right sweep) -->
+  <path fill="#000000" d="
+    M 128 48
+    A 80 80 0 0 1 208 128
+    L 194 128
+    A 66 66 0 0 0 128 62
+    Z
+  " />
+  
+  <!-- Counter-balance pulse blip in lower-left quadrant (discovered device) -->
+  <circle cx="84" cy="172" r="10" fill="#000000" />
+</svg>

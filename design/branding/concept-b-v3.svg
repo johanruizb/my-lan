@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">MyLAN Logo - Local Perimeter</title>
+  <!-- Outer Shield Boundary with negative space channel -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 28
+    L 216 78
+    L 216 178
+    L 128 228
+    L 40 178
+    L 40 78
+    Z
+    M 128 52
+    L 196 90
+    L 196 166
+    L 128 204
+    L 60 166
+    L 60 90
+    Z
+  " />
+  <!-- Central Gateway Hub -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  <!-- Connected LAN Nodes at cardinal vertices of the inner space -->
+  <!-- Top Gateway Node -->
+  <circle cx="128" cy="80" r="12" fill="#000000" />
+  <!-- Bottom Node -->
+  <circle cx="128" cy="176" r="12" fill="#000000" />
+  <!-- Left Node -->
+  <circle cx="86" cy="128" r="12" fill="#000000" />
+  <!-- Right Node -->
+  <circle cx="170" cy="128" r="12" fill="#000000" />
+  
+  <!-- Interconnecting Traces / Bus lines (thickness 10) -->
+  <rect x="123" y="80" width="10" height="96" fill="#000000" />
+  <rect x="86" y="123" width="84" height="10" fill="#000000" />
+  
+  <!-- Perimeter link from Top Node to outer frame -->
+  <rect x="124" y="48" width="8" height="34" fill="#000000" />
+</svg>

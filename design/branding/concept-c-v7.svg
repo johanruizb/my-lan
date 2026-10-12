@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo - Discovery Scope</title>
+  <!-- Central Local Beacon Node -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  
+  <!-- Viewfinder Frame Brackets (thickness 18, radius 16) -->
+  <!-- Top-Left -->
+  <path fill="#000000" d="M 36 104 L 36 56 A 20 20 0 0 1 56 36 L 104 36 L 104 54 L 56 54 A 2 2 0 0 0 54 56 L 54 104 Z" />
+  <!-- Top-Right -->
+  <path fill="#000000" d="M 220 104 L 220 56 A 20 20 0 0 0 200 36 L 152 36 L 152 54 L 200 54 A 2 2 0 0 1 202 56 L 202 104 Z" />
+  <!-- Bottom-Left -->
+  <path fill="#000000" d="M 36 152 L 36 200 A 20 20 0 0 0 56 220 L 104 220 L 104 202 L 56 202 A 2 2 0 0 1 54 200 L 54 152 Z" />
+  <!-- Bottom-Right -->
+  <path fill="#000000" d="M 220 152 L 220 200 A 20 20 0 0 1 200 220 L 152 220 L 152 202 L 200 202 A 2 2 0 0 0 202 200 L 202 152 Z" />
+  
+  <!-- Inner Discovery Wave (radius 50..66) in upper-right quadrant -->
+  <path fill="#000000" d="
+    M 128 70
+    A 58 58 0 0 1 186 128
+    L 170 128
+    A 42 42 0 0 0 128 86
+    Z
+  " />
+  <!-- Outer Discovery Wave (radius 78..94) in upper-right quadrant -->
+  <path fill="#000000" d="
+    M 128 44
+    A 84 84 0 0 1 212 128
+    L 196 128
+    A 68 68 0 0 0 128 60
+    Z
+  " />
+  
+  <!-- Discovered Device Node in lower-left sector -->
+  <circle cx="86" cy="170" r="12" fill="#000000" />
+</svg>

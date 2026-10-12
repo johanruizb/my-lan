@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo Concept A - Nexus M</title>
+  <g fill="#000000">
+    <!-- Left vertical bar with chamfered top -->
+    <path d="M 36 68 L 56 48 L 72 48 L 72 208 L 36 208 Z" />
+    <!-- Right vertical bar with chamfered top -->
+    <path d="M 184 48 L 200 48 L 220 68 L 220 208 L 184 208 Z" />
+    <!-- Center chevron -->
+    <path d="M 86 64 L 128 118 L 170 64 L 184 82 L 138 140 L 138 152 L 118 152 L 118 140 L 72 82 Z" />
+    <!-- Core Host Node -->
+    <circle cx="128" cy="188" r="16" />
+    <!-- Bridge link from chevron to node -->
+    <rect x="123" y="152" width="10" height="24" rx="2" />
+  </g>
+</svg>

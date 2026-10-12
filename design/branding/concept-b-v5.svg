@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">MyLAN Logo - Subnet Shield</title>
+  <!-- Outer Shield Boundary -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 30
+    C 180 30 218 46 218 96
+    C 218 164 154 208 128 226
+    C 102 208 38 164 38 96
+    C 38 46 76 30 128 30
+    Z
+    
+    M 128 54
+    C 88 54 60 66 60 102
+    C 60 152 110 188 128 202
+    C 146 188 196 152 196 102
+    C 196 66 168 54 128 54
+    Z
+  " />
+  <!-- Central Gateway Hub -->
+  <circle cx="128" cy="116" r="22" fill="#000000" />
+  <!-- Local Subnet Satellite Nodes -->
+  <circle cx="128" cy="74" r="11" fill="#000000" />
+  <circle cx="86" cy="148" r="11" fill="#000000" />
+  <circle cx="170" cy="148" r="11" fill="#000000" />
+  
+  <!-- Network Bus Lines -->
+  <rect x="123" y="74" width="10" height="44" fill="#000000" />
+  <path fill="#000000" d="M 124 116 L 86 148 L 93 156 L 131 124 Z" />
+  <path fill="#000000" d="M 132 116 L 170 148 L 163 156 L 125 124 Z" />
+</svg>

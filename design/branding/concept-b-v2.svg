@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">MyLAN Logo Concept B - Hex Perimeter</title>
+  <!-- Hexagonal outer boundary shielding a private local network -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 28
+    L 214 78
+    L 214 178
+    L 128 228
+    L 42 178
+    L 42 78 Z
+    
+    M 128 56
+    L 66 92
+    L 66 164
+    L 128 200
+    L 190 164
+    L 190 92 Z
+  " />
+  <!-- Central Gateway Hub -->
+  <circle cx="128" cy="128" r="24" fill="#000000" />
+  <!-- Radiating 3-way distribution to vertices (Y-network) -->
+  <path fill="#000000" d="
+    M 121 128 L 121 68 L 135 68 L 135 128 Z
+    M 128 124 L 176 152 L 169 164 L 121 136 Z
+    M 128 124 L 80 152 L 87 164 L 135 136 Z
+  " />
+  <circle cx="128" cy="68" r="10" fill="#000000" />
+  <circle cx="176" cy="154" r="10" fill="#000000" />
+  <circle cx="80" cy="154" r="10" fill="#000000" />
+</svg>

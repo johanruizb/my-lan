@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo - Discovery Scope</title>
+  <!-- Central Origin Beacon -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  
+  <!-- Outer Reticle Ring with 4 Crosshair Breaks -->
+  <!-- Top-Right Quadrant -->
+  <path fill="#000000" d="
+    M 138 28
+    A 100 100 0 0 1 228 118
+    L 214 118
+    A 86 86 0 0 0 138 42
+    Z
+  " />
+  <!-- Bottom-Right Quadrant -->
+  <path fill="#000000" d="
+    M 228 138
+    A 100 100 0 0 1 138 228
+    L 138 214
+    A 86 86 0 0 0 214 138
+    Z
+  " />
+  <!-- Bottom-Left Quadrant -->
+  <path fill="#000000" d="
+    M 118 228
+    A 100 100 0 0 1 28 138
+    L 42 138
+    A 86 86 0 0 0 118 214
+    Z
+  " />
+  <!-- Top-Left Quadrant -->
+  <path fill="#000000" d="
+    M 28 118
+    A 100 100 0 0 1 118 28
+    L 118 42
+    A 86 86 0 0 0 42 118
+    Z
+  " />
+  
+  <!-- Inner Discovery Pulse Arc (radius 52..66) -->
+  <path fill="#000000" d="
+    M 128 68
+    A 60 60 0 0 1 188 128
+    L 174 128
+    A 46 46 0 0 0 128 82
+    Z
+  " />
+  
+  <!-- Discovered Node Target -->
+  <circle cx="178" cy="78" r="10" fill="#000000" />
+</svg>

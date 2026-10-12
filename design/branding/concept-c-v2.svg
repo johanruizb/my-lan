@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
+  <!-- Central Local Host Node -->
+  <circle cx="128" cy="128" r="24" fill="#000000" />
+  
+  <!-- First Concentric Discovery Wave (Radius 58..76, 3 quadrants) -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 52
+    A 76 76 0 1 1 52 128
+    L 70 128
+    A 58 58 0 1 0 128 70
+    Z
+  " />
+  
+  <!-- Second Concentric Discovery Wave (Radius 94..112, diagonal sweep from 45 deg to 225 deg) -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 16
+    A 112 112 0 0 1 240 128
+    L 222 128
+    A 94 94 0 0 0 128 34
+    Z
+  " />
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 222
+    A 94 94 0 0 0 34 128
+    L 16 128
+    A 112 112 0 0 1 128 240
+    Z
+  " />
+</svg>

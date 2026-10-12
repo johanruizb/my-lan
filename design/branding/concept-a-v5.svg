@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo - Nexus M</title>
+  <!-- Three precision vertical pillars with 45-deg angled cross-links -->
+  <!-- Left Pillar -->
+  <path fill="#000000" d="M 40 48 L 76 48 L 76 208 L 40 208 Z" />
+  <!-- Right Pillar -->
+  <path fill="#000000" d="M 180 48 L 216 48 L 216 208 L 180 208 Z" />
+  <!-- Center Diagonal Beams meeting at a crisp apex -->
+  <path fill="#000000" d="
+    M 76 68
+    L 128 120
+    L 180 68
+    L 180 104
+    L 128 156
+    L 76 104
+    Z
+  " />
+  <!-- Floating bottom node / anchor -->
+  <polygon fill="#000000" points="128,172 146,190 128,208 110,190" />
+</svg>

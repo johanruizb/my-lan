@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo Concept C - Subnet Scope</title>
+  <!-- Central host beacon -->
+  <circle cx="128" cy="128" r="20" fill="#000000" />
+  
+  <!-- Arc 1: Inner scan ring (r=52, stroke 16) -> drawn as path -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 68
+    A 60 60 0 1 1 68 128
+    L 84 128
+    A 44 44 0 1 0 128 84
+    Z
+  " />
+  
+  <!-- Arc 2: Middle discovery wave (r=86, stroke 16) -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 34
+    A 94 94 0 0 1 222 128
+    L 206 128
+    A 78 78 0 0 0 128 50
+    Z
+  " />
+  
+  <!-- Arc 3: Outer perimeter bracket (r=118, stroke 16) -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 10
+    A 118 118 0 0 1 246 128
+    L 230 128
+    A 102 102 0 0 0 128 26
+    Z
+  " />
+  
+  <!-- Lower left pulse arc -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 50 128
+    A 78 78 0 0 0 128 206
+    L 128 222
+    A 94 94 0 0 1 34 128
+    Z
+  " />
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">MyLAN Logo - Subnet Shield</title>
+  <!-- Outer Shield Silhouette with negative-space local network mesh inside -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 32
+    C 176 32 216 46 216 94
+    C 216 162 154 206 128 224
+    C 102 206 40 162 40 94
+    C 40 46 80 32 128 32
+    Z
+    
+    <!-- Central Gateway Node Cutout (negative space) -->
+    M 128 108
+    A 20 20 0 1 0 128.1 108
+    Z
+    
+    <!-- Top Client Node Cutout -->
+    M 128 66
+    A 11 11 0 1 0 128.1 66
+    Z
+    <!-- Left Client Node Cutout -->
+    M 84 124
+    A 11 11 0 1 0 84.1 124
+    Z
+    <!-- Right Client Node Cutout -->
+    M 172 124
+    A 11 11 0 1 0 172.1 124
+    Z
+    <!-- Bottom Host Node Cutout -->
+    M 128 174
+    A 11 11 0 1 0 128.1 174
+    Z
+    
+    <!-- Negative space routing channels linking nodes to center -->
+    M 124 77 L 132 77 L 132 108 L 124 108 Z
+    M 124 148 L 132 148 L 132 163 L 124 163 Z
+    M 95 124 L 108 124 L 108 132 L 95 132 Z
+    M 148 124 L 161 124 L 161 132 L 148 132 Z
+  " />
+  
+  <!-- Solid core gateway inside the central negative cutout -->
+  <circle cx="128" cy="128" r="10" fill="#000000" />
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo - Nexus M</title>
+  <!-- Main architectural M formed by precision polygonal geometry -->
+  <path fill="#000000" d="
+    M 40 52
+    L 76 52
+    L 76 136
+    L 128 84
+    L 180 136
+    L 180 52
+    L 216 52
+    L 216 204
+    L 180 204
+    L 180 176
+    L 128 124
+    L 76 176
+    L 76 204
+    L 40 204
+    Z
+  " />
+  <!-- Central Local Host / Router Gateway Node -->
+  <circle cx="128" cy="180" r="16" fill="#000000" />
+  <!-- Connecting data conduit between M and core node -->
+  <rect x="122" y="140" width="12" height="28" fill="#000000" rx="3" />
+</svg>

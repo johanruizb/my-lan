@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo - Discovery Scope</title>
+  <!-- Central Origin Node -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  
+  <!-- Outer Circular Scope Frame with 4 Crosshair Breaks -->
+  <path fill="#000000" d="M 138 28 A 100 100 0 0 1 228 118 L 212 118 A 84 84 0 0 0 138 44 Z" />
+  <path fill="#000000" d="M 228 138 A 100 100 0 0 1 138 228 L 138 212 A 84 84 0 0 0 212 138 Z" />
+  <path fill="#000000" d="M 118 228 A 100 100 0 0 1 28 138 L 44 138 A 84 84 0 0 0 118 212 Z" />
+  <path fill="#000000" d="M 28 118 A 100 100 0 0 1 118 28 L 118 44 A 84 84 0 0 0 44 118 Z" />
+  
+  <!-- Wave 1 (Inner Scan Arc) -->
+  <path fill="#000000" d="M 128 72 A 56 56 0 0 1 184 128 L 168 128 A 40 40 0 0 0 128 88 Z" />
+  <!-- Wave 2 (Outer Scan Arc) -->
+  <path fill="#000000" d="M 128 48 A 80 80 0 0 1 208 128 L 192 128 A 64 64 0 0 0 128 64 Z" />
+  
+  <!-- Target Blip (Detected Subnet Device) -->
+  <circle cx="86" cy="170" r="11" fill="#000000" />
+</svg>

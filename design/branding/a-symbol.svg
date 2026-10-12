@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN - Nexus M Symbol</title>
+  <!-- Left Pillar (Baseline 204, Topline 48) -->
+  <rect x="36" y="48" width="32" height="156" fill="#000000" />
+  <!-- Right Pillar (Baseline 204, Topline 48) -->
+  <rect x="188" y="48" width="32" height="156" fill="#000000" />
+  <!-- 45-degree Routing Chevron & Concentric Gateway Hub -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 68 48
+    L 128 108
+    L 188 48
+    L 188 92
+    L 140 140
+    L 140 164
+    A 20 20 0 1 1 116 164
+    L 116 140
+    L 68 92
+    Z
+    M 128 180
+    A 9 9 0 1 0 128.1 180
+    Z
+  " />
+</svg>

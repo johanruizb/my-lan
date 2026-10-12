@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">MyLAN Logo - Subnet Shield</title>
+  <!-- Solid Shield Silhouette -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 128 28
+    C 182 28 220 44 220 94
+    C 220 166 156 210 128 228
+    C 100 210 36 166 36 94
+    C 36 44 74 28 128 28
+    Z
+    
+    <!-- Negative space Ethernet Bus / Subnet Architecture inside shield -->
+    <!-- Gateway Hub (Top Center) -->
+    M 128 66
+    A 16 16 0 1 0 128.1 66
+    Z
+    
+    <!-- Central Drop line from Gateway to Bus -->
+    M 122 82 L 134 82 L 134 130 L 122 130 Z
+    
+    <!-- Horizontal Subnet Bus Bar -->
+    M 72 126 L 184 126 L 184 136 L 72 136 Z
+    
+    <!-- Left Client Drop Line and Node -->
+    M 78 136 L 86 136 L 86 156 L 78 156 Z
+    M 82 154
+    A 12 12 0 1 0 82.1 154
+    Z
+    
+    <!-- Middle Client Drop Line and Node -->
+    M 124 136 L 132 136 L 132 164 L 124 164 Z
+    M 128 162
+    A 12 12 0 1 0 128.1 162
+    Z
+    
+    <!-- Right Client Drop Line and Node -->
+    M 170 136 L 178 136 L 178 156 L 170 156 Z
+    M 174 154
+    A 12 12 0 1 0 174.1 154
+    Z
+  " />
+  
+  <!-- Solid Core inside Gateway Hub -->
+  <circle cx="128" cy="82" r="7" fill="#000000" />
+</svg>

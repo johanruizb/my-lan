@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo Concept A - Nexus M</title>
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 36 48 L 72 48 L 72 152 L 128 88 L 184 152 L 184 48 L 220 48 L 220 208 L 184 208 L 128 144 L 72 208 L 36 208 Z
+    M 128 180 A 14 14 0 1 1 127.9 180 Z
+  " />
+</svg>

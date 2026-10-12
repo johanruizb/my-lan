@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo - Nexus M</title>
+  <!-- Left Pillar -->
+  <rect x="38" y="48" width="34" height="160" rx="3" fill="#000000" />
+  <!-- Right Pillar -->
+  <rect x="184" y="48" width="34" height="160" rx="3" fill="#000000" />
+  <!-- Center Chevron descending from top corners -->
+  <path fill="#000000" d="
+    M 72 48
+    L 128 114
+    L 184 48
+    L 184 84
+    L 136 140
+    L 136 164
+    A 20 20 0 1 1 120 164
+    L 120 140
+    L 72 84
+    Z
+  " />
+  <!-- Negative space core in the node -->
+  <circle cx="128" cy="180" r="8" fill="#ffffff" />
+</svg>

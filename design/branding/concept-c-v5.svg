@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">MyLAN Logo - Subnet Scope</title>
+  <!-- Central Gateway Hub -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  
+  <!-- Tier 1 Subnet Wave: Half ring (top and right) -->
+  <path fill="#000000" d="
+    M 128 74
+    A 54 54 0 0 1 182 128
+    L 198 128
+    A 70 70 0 0 0 128 58
+    Z
+  " />
+  
+  <!-- Tier 2 Subnet Wave: Stepped quarter ring (top-right further out) -->
+  <path fill="#000000" d="
+    M 128 38
+    A 90 90 0 0 1 218 128
+    L 234 128
+    A 106 106 0 0 0 128 22
+    Z
+  " />
+  
+  <!-- Tier 3 Counter-Wave / Perimeter Ring (bottom and left) -->
+  <path fill="#000000" d="
+    M 128 182
+    A 54 54 0 0 1 74 128
+    L 58 128
+    A 70 70 0 0 0 128 198
+    Z
+  " />
+  <path fill="#000000" d="
+    M 128 218
+    A 90 90 0 0 1 38 128
+    L 22 128
+    A 106 106 0 0 0 128 234
+    Z
+  " />
+</svg>

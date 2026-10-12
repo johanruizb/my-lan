@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-symbol">
+  <title id="title-symbol">MyLAN - Discovery Scope Symbol</title>
+  <!-- Central Local Origin Beacon -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  
+  <!-- 4 Symmetrical Reticle Quadrants (72° arc with 18° cardinal breaks) -->
+  <path fill="#000000" d="M 144.58 23.31 A 106 106 0 0 1 232.69 111.42 L 216.89 113.92 A 90 90 0 0 0 142.08 39.11 Z" />
+  <path fill="#000000" d="M 23.31 111.42 A 106 106 0 0 1 111.42 23.31 L 113.92 39.11 A 90 90 0 0 0 39.11 113.92 Z" />
+  <path fill="#000000" d="M 111.42 232.69 A 106 106 0 0 1 23.31 144.58 L 39.11 142.08 A 90 90 0 0 0 113.92 216.89 Z" />
+  <path fill="#000000" d="M 232.69 144.58 A 106 106 0 0 1 144.58 232.69 L 142.08 216.89 A 90 90 0 0 0 216.89 142.08 Z" />
+  
+  <!-- Radar Sweep Waves (sharing exact radial spokes 9° to 81°) -->
+  <path fill="#000000" d="M 137.70 66.76 A 62 62 0 0 1 189.24 118.30 L 173.43 120.80 A 46 46 0 0 0 135.20 82.57 Z" />
+  <path fill="#000000" d="M 141.14 45.03 A 84 84 0 0 1 210.97 114.86 L 195.16 117.36 A 68 68 0 0 0 138.64 60.84 Z" />
+  
+  <!-- Discovered Host Blip (positioned exactly at 225° on Range Ring 1) -->
+  <circle cx="89.82" cy="166.18" r="10" fill="#000000" />
+</svg>

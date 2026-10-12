@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo - Nexus M</title>
+  <g fill="#000000">
+    <!-- Left Pillar -->
+    <path d="M 38 52 L 74 52 L 74 204 L 38 204 Z" />
+    <!-- Right Pillar -->
+    <path d="M 182 52 L 218 52 L 218 204 L 182 204 Z" />
+    <!-- Center Chevron routing path -->
+    <path d="
+      M 74 72
+      L 128 122
+      L 182 72
+      L 182 104
+      L 128 154
+      L 74 104
+      Z
+    " />
+    <!-- Gateway Hub Node in negative space valley -->
+    <circle cx="128" cy="184" r="16" />
+    <!-- Conduit trace connecting chevron to hub -->
+    <rect x="123" y="152" width="10" height="20" rx="2" />
+  </g>
+</svg>

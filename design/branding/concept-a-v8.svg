@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo - Nexus M</title>
+  <!-- Symmetrical geometric M with continuous routing lines -->
+  <path fill="#000000" d="
+    M 38 48
+    L 76 48
+    L 76 116
+    L 128 168
+    L 180 116
+    L 180 48
+    L 218 48
+    L 218 208
+    L 180 208
+    L 180 156
+    L 128 208
+    L 76 156
+    L 76 208
+    L 38 208
+    Z
+  " />
+  <!-- Central Local Gateway Hub in the upper valley -->
+  <circle cx="128" cy="92" r="18" fill="#000000" />
+</svg>

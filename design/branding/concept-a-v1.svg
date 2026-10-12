@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">MyLAN Logo Concept A - Nexus M</title>
+  <!-- Left Pillar -->
+  <path fill="#000000" d="M 36 56 L 68 56 L 68 200 L 36 200 Z" />
+  <!-- Right Pillar -->
+  <path fill="#000000" d="M 188 56 L 220 56 L 220 200 L 188 200 Z" />
+  <!-- Central Chevron / Routing apex -->
+  <path fill="#000000" d="M 82 56 L 128 116 L 174 56 L 198 56 L 138 134 L 138 148 L 118 148 L 118 134 L 58 56 Z" />
+  <!-- Nexus Hub Node (Gateway core) -->
+  <circle cx="128" cy="184" r="16" fill="#000000" />
+</svg>

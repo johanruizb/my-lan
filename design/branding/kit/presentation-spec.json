@@ -1,0 +1,59 @@
+{
+  "brand": "MyLAN",
+  "tagline": "Tu red, bajo control.",
+  "brief": "App open-source, local-first y de alto rendimiento en Rust + Tauri para descubrir, mapear y proteger dispositivos en redes locales sin depender de la nube.",
+  "adjectives": [
+    "preciso",
+    "autónomo",
+    "ligero",
+    "táctico",
+    "confiable"
+  ],
+  "criteria": "Éxito: reconocimiento instantáneo a 16 px, identidad técnica y limpia (sin clichés genéricos de escáneres comerciales), coherencia con modo oscuro y terminal.",
+  "industry": "software",
+  "mockups": [
+    "readme",
+    "terminal",
+    "app-icon",
+    "website",
+    "sticker",
+    "social"
+  ],
+  "nav": [
+    "Descubrimiento",
+    "Diagnóstico",
+    "Puertos",
+    "Docs",
+    "GitHub"
+  ],
+  "brand_color": "#06B6D4",
+  "tile_color": "#090D16",
+  "greyscale": false,
+  "final": true,
+  "designer": "Antigravity Identity Studio",
+  "round": 2,
+  "concepts": [
+    {
+      "name": "Discovery Scope",
+      "symbol": "final-symbol.svg",
+      "lockup": "final-horizontal.svg",
+      "stacked": "final-stacked.svg",
+      "symbol_on_tile": "final-symbol-color.svg",
+      "symbol_on_dark": "final-symbol-dark.svg",
+      "lockup_on_dark": "final-horizontal-color.svg",
+      "idea": "Retícula táctica con apertura cardinal, ondas concéntricas de escaneo y dispositivo local detectado en cuadrante de exploración.",
+      "rationale": [
+        "Captura la esencia de MyLAN: escaneo activo ARP, sondeo de puertos y visibilidad de red en tiempo real.",
+        "Geometría estrictamente simétrica y concéntrica sobre cuadrícula de 256 px, con ranuras cardinales de 18°.",
+        "Corte óptico optimizado para 16 px (favicon y dock de la app) que mantiene contraste sin empastar trazos.",
+        "Paleta Electric Cyan (#06B6D4) sobre Deep Void Navy (#090D16) alineada con el stack visual de la Desktop UI."
+      ]
+    }
+  ],
+  "recommendation": "Discovery Scope es el símbolo definitivo de MyLAN: identidad reconocible, lenguaje de monitoreo en tiempo real y compatibilidad multiplataforma.",
+  "next_steps": [
+    "Integración en apps/desktop-tauri/src-tauri/icons y public/favicon.svg",
+    "Actualización de encabezado de README.md y documentación",
+    "Uso de paleta y tokens en la UI de Tauri y el CLI de Rust"
+  ]
+}

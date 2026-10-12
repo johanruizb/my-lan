@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">MyLAN Logo Concept B - Local Perimeter</title>
+  <!-- Outer perimeter squircle with clean rounded corners -->
+  <path fill="#000000" fill-rule="evenodd" d="
+    M 80 32
+    L 176 32
+    A 48 48 0 0 1 224 80
+    L 224 176
+    A 48 48 0 0 1 176 224
+    L 80 224
+    A 48 48 0 0 1 32 176
+    L 32 80
+    A 48 48 0 0 1 80 32 Z
+    
+    M 84 56
+    A 28 28 0 0 0 56 84
+    L 56 172
+    A 28 28 0 0 0 84 200
+    L 172 200
+    A 28 28 0 0 0 200 172
+    L 200 84
+    A 28 28 0 0 0 172 56
+    L 84 56 Z
+  " />
+  <!-- Internal Constellation / Central Gateway with 4 subnet branches -->
+  <!-- Center Core Node -->
+  <circle cx="128" cy="128" r="22" fill="#000000" />
+  <!-- Cross Connectors -->
+  <rect x="121" y="80" width="14" height="96" rx="4" fill="#000000" />
+  <rect x="80" y="121" width="96" height="14" rx="4" fill="#000000" />
+  <!-- Subnet satellite nodes -->
+  <circle cx="128" cy="76" r="12" fill="#000000" />
+  <circle cx="128" cy="180" r="12" fill="#000000" />
+  <circle cx="76" cy="128" r="12" fill="#000000" />
+  <circle cx="180" cy="128" r="12" fill="#000000" />
+</svg>
