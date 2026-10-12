@@ -173,15 +173,24 @@ pub fn run_diff(
 
     // device_offline: in before is_online==1, no in after. Suprimido en cold_start.
     if !cold_start {
-        for before in &before_devices {
-            if before.is_online && !after_by_id.contains_key(before.id.as_str()) {
-                tx.execute(
-                    "UPDATE devices SET is_online = 0 WHERE id = ?1",
-                    rusqlite::params![before.id],
-                )?;
+        let offline_ids: Vec<&str> = before_devices
+            .iter()
+            .filter(|b| b.is_online && !after_by_id.contains_key(b.id.as_str()))
+            .map(|b| b.id.as_str())
+            .collect();
+
+        if !offline_ids.is_empty() {
+            let placeholders = (0..offline_ids.len())
+                .map(|i| format!("?{}", i + 1))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let sql = format!("UPDATE devices SET is_online = 0 WHERE id IN ({placeholders})");
+            tx.execute(&sql, params_from_iter(offline_ids.iter()))?;
+
+            for id in offline_ids {
                 events.push(make_event(
                     network_id,
-                    Some(&before.id),
+                    Some(id),
                     EventType::DeviceOffline,
                     Severity::Warning,
                     Some("Device offline".to_string()),
@@ -196,15 +205,24 @@ pub fn run_diff(
     // (upsert ya fijó is_online=1 vía merge incoming.is_online||existing; la
     // escritura aquí es idempotente y por contrato del plan.)
     if !cold_start {
-        for before in &before_devices {
-            if !before.is_online && after_by_id.contains_key(before.id.as_str()) {
-                tx.execute(
-                    "UPDATE devices SET is_online = 1 WHERE id = ?1",
-                    rusqlite::params![before.id],
-                )?;
+        let online_ids: Vec<&str> = before_devices
+            .iter()
+            .filter(|b| !b.is_online && after_by_id.contains_key(b.id.as_str()))
+            .map(|b| b.id.as_str())
+            .collect();
+
+        if !online_ids.is_empty() {
+            let placeholders = (0..online_ids.len())
+                .map(|i| format!("?{}", i + 1))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let sql = format!("UPDATE devices SET is_online = 1 WHERE id IN ({placeholders})");
+            tx.execute(&sql, params_from_iter(online_ids.iter()))?;
+
+            for id in online_ids {
                 events.push(make_event(
                     network_id,
-                    Some(&before.id),
+                    Some(id),
                     EventType::DeviceOnline,
                     Severity::Info,
                     Some("Device back online".to_string()),
