@@ -182,8 +182,8 @@ jobs:
             if (Test-Path $tokenFile) {
               $token = (Get-Content $tokenFile -Raw).Trim()
               if ($token) {
-                $res = curl.exe -s -o $null -w "%{http_code}" -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status
-                if ($res -eq "200") {
+                & curl.exe -sf -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status | Out-Null
+                if ($LASTEXITCODE -eq 0) {
                   $ok = $true
                   break
                 }
