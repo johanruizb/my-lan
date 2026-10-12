@@ -37,8 +37,13 @@ import {
     Loader2,
     ChevronDown,
     RotateCcw,
+    RotateCw,
+    RefreshCw,
+    Download,
+    CheckCircle2,
     Settings as SettingsIcon,
 } from "lucide-react";
+import { useUpdater } from "@/components/updater-provider";
 import {
     dbPath,
     getSettings,
@@ -55,6 +60,15 @@ export function Settings() {
     const [settings, setSettingsState] = useState<SettingsDto | null>(null);
     const [dbPathValue, setDbPathValue] = useState("");
     const [saving, setSaving] = useState(false);
+
+    const {
+        status,
+        updateInfo,
+        progress,
+        checkForUpdates,
+        downloadAndInstall,
+        restartApp,
+    } = useUpdater();
 
     // Aviso de cambios sin guardar: db_path modificado pero no guardado.
     // theme y censorship se aplican inmediatamente (no necesitan guardado).
@@ -90,6 +104,8 @@ export function Settings() {
                 default_profile: settings.default_profile,
                 theme,
                 censorship_enabled: censorshipEnabled,
+                check_updates_on_startup:
+                    settings.check_updates_on_startup ?? true,
             };
             await setSettings(next);
             setSettingsState(next);
@@ -296,6 +312,156 @@ export function Settings() {
                                 </div>
                             </CollapsibleContent>
                         </Collapsible>
+                    </section>
+
+                    <div className="h-px bg-border" role="separator" />
+
+                    <section className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-0.5">
+                            <h2 className="text-sm font-medium">
+                                Actualizaciones de la aplicación
+                            </h2>
+                            <p className="text-xs text-muted-foreground">
+                                Comprueba e instala nuevas versiones desde
+                                GitHub Releases sin intermediarios ni descargas
+                                manuales.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 p-3">
+                            <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-medium">
+                                    Buscar al iniciar
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    Comprobar en segundo plano si hay nuevas
+                                    versiones al abrir MyLAN.
+                                </span>
+                            </div>
+                            <Switch
+                                checked={
+                                    settings.check_updates_on_startup ?? true
+                                }
+                                onCheckedChange={async (checked) => {
+                                    const next = {
+                                        ...settings,
+                                        check_updates_on_startup: checked,
+                                    };
+                                    setSettingsState(next);
+                                    try {
+                                        await setSettings(next);
+                                    } catch (e) {
+                                        toast(`Error: ${e}`, "error");
+                                    }
+                                }}
+                                aria-label="Buscar actualizaciones automáticamente al iniciar"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                    Estado:
+                                </span>
+                                {status === "checking" && (
+                                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Loader2
+                                            className="h-3 w-3 animate-spin text-primary"
+                                            aria-hidden
+                                        />
+                                        Buscando...
+                                    </span>
+                                )}
+                                {status === "available" && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                                        v{updateInfo?.version} disponible
+                                    </span>
+                                )}
+                                {status === "downloading" && (
+                                    <span className="flex items-center gap-1 text-xs text-primary">
+                                        Descargando...{" "}
+                                        {progress?.percent != null
+                                            ? `${progress.percent}%`
+                                            : ""}
+                                    </span>
+                                )}
+                                {status === "ready" && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                        Lista para reiniciar
+                                    </span>
+                                )}
+                                {status === "up-to-date" && (
+                                    <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                                        <CheckCircle2
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                        Al día
+                                    </span>
+                                )}
+                                {status === "idle" && (
+                                    <span className="text-xs text-muted-foreground">
+                                        Sin comprobar
+                                    </span>
+                                )}
+                                {status === "error" && (
+                                    <span className="text-xs text-destructive">
+                                        Error al comprobar
+                                    </span>
+                                )}
+                            </div>
+
+                            {status === "available" ? (
+                                <Button
+                                    size="sm"
+                                    onClick={() => void downloadAndInstall()}
+                                    className="h-7 gap-1.5 text-xs"
+                                >
+                                    <Download
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                    Descargar e instalar
+                                </Button>
+                            ) : status === "ready" ? (
+                                <Button
+                                    size="sm"
+                                    onClick={() => void restartApp()}
+                                    className="h-7 gap-1.5 text-xs"
+                                >
+                                    <RotateCw
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                    Reiniciar MyLAN
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        void checkForUpdates({
+                                            silent: false,
+                                        })
+                                    }
+                                    disabled={
+                                        status === "checking" ||
+                                        status === "downloading"
+                                    }
+                                    className="h-7 gap-1.5 text-xs"
+                                >
+                                    <RefreshCw
+                                        className={cn(
+                                            "h-3 w-3",
+                                            status === "checking" &&
+                                                "animate-spin",
+                                        )}
+                                        aria-hidden
+                                    />
+                                    Comprobar ahora
+                                </Button>
+                            )}
+                        </div>
                     </section>
 
                     <Button

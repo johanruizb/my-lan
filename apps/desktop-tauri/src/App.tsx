@@ -31,6 +31,7 @@ import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { CensorshipProvider } from "@/components/censorship-provider";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
+import { UpdaterProvider, useUpdater } from "@/components/updater-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Device, ScanOutcomeDto, UnlistenFn } from "@/lib/tauri";
@@ -249,6 +250,7 @@ function Sidebar() {
 // persiste una etiqueta de usuario, y la fila de meta (versión + Acerca de).
 function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
     const { name, cidr, editName } = useNetworkName();
+    const { status, updateInfo } = useUpdater();
     const [version, setVersion] = useState("");
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState("");
@@ -340,9 +342,34 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                 )}
             </div>
             <div className="flex items-center justify-between px-1">
-                <p className="text-[10px] text-muted-foreground" translate="no">
-                    MyLAN v{version || "…"}
-                </p>
+                <div className="flex items-center gap-1.5">
+                    <p
+                        className="text-[10px] text-muted-foreground"
+                        translate="no"
+                    >
+                        MyLAN v{version || "…"}
+                    </p>
+                    {status === "available" && (
+                        <button
+                            type="button"
+                            onClick={onOpenAbout}
+                            className="inline-flex items-center rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary transition-colors hover:bg-primary/30"
+                            title={`Nueva versión v${updateInfo?.version} disponible`}
+                        >
+                            Update
+                        </button>
+                    )}
+                    {status === "ready" && (
+                        <button
+                            type="button"
+                            onClick={onOpenAbout}
+                            className="inline-flex items-center rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 transition-colors hover:bg-emerald-500/30"
+                            title="Actualización lista para reiniciar"
+                        >
+                            Reiniciar
+                        </button>
+                    )}
+                </div>
                 <button
                     type="button"
                     onClick={onOpenAbout}
@@ -610,7 +637,9 @@ function App() {
             <CensorshipProvider>
                 <TooltipProvider delayDuration={200}>
                     <ToastProviderApp>
-                        <AppInner />
+                        <UpdaterProvider>
+                            <AppInner />
+                        </UpdaterProvider>
                     </ToastProviderApp>
                 </TooltipProvider>
             </CensorshipProvider>

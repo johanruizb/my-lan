@@ -193,6 +193,9 @@ pub struct Settings {
     /// sin el campo deserialicen a `true` (AC-6).
     #[serde(default = "default_true")]
     pub censorship_enabled: bool,
+    /// Búsqueda automática de actualizaciones al arrancar la app.
+    #[serde(default = "default_true")]
+    pub check_updates_on_startup: bool,
 }
 
 impl Default for Settings {
@@ -202,6 +205,7 @@ impl Default for Settings {
             default_profile: "normal".to_string(),
             theme: "light".to_string(),
             censorship_enabled: true,
+            check_updates_on_startup: true,
         }
     }
 }

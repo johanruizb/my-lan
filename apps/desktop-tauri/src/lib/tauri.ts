@@ -171,6 +171,8 @@ export interface Settings {
     theme: string;
     /** Modo censura: enmascara identificadores en UI y exports (AC-1/AC-2). */
     censorship_enabled: boolean;
+    /** Búsqueda automática de actualizaciones al arrancar la app. */
+    check_updates_on_startup?: boolean;
 }
 
 // --- Wrappers tipados de invoke ---------------------------------------------

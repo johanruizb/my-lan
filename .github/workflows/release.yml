@@ -155,6 +155,10 @@ jobs:
             build-essential
 
       - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop-tauri
 
@@ -164,7 +168,7 @@ jobs:
           set -euo pipefail
           mkdir -p release-assets
           find apps/desktop-tauri/src-tauri/target/release/bundle \
-            -type f \( -name '*.AppImage' -o -name '*.deb' \) \
+            -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name '*.sig' \) \
             -exec cp {} release-assets/ \;
           test "$(find release-assets -type f | wc -l)" -gt 0
 
@@ -173,7 +177,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release-assets | Out-Null
-          Get-ChildItem -Path apps\desktop-tauri\src-tauri\target\release\bundle -Recurse -File -Include *.msi,*.exe |
+          Get-ChildItem -Path apps\desktop-tauri\src-tauri\target\release\bundle -Recurse -File -Include *.msi,*.exe,*.sig,*.zip |
             Copy-Item -Destination release-assets
           if (-not (Get-ChildItem release-assets -File)) {
             throw "No Windows desktop artifacts were generated"
@@ -191,11 +195,20 @@ jobs:
     needs: [validate, build-cli, build-desktop]
     runs-on: ubuntu-22.04
     steps:
+      - uses: actions/checkout@v5
+
       - name: Download release artifacts
         uses: actions/download-artifact@v7
         with:
           path: release-assets
           merge-multiple: true
+
+      - name: Generate updater manifest
+        run: |
+          set -euo pipefail
+          node scripts/generate-updater-manifest.mjs \
+            --version "${{ inputs.version }}" \
+            --dir release-assets
 
       - name: Generate checksums
         run: |
