@@ -47,7 +47,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn now_rfc3339_has_rfc3339_separators() {
         let ts = now_rfc3339().expect("now_rfc3339");

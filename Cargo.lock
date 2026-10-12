@@ -1510,6 +1510,7 @@ dependencies = [
  "mylan-discovery",
  "mylan-fingerprint",
  "mylan-scanner",
+ "nix",
  "rusqlite",
  "serde_json",
  "tempfile",
