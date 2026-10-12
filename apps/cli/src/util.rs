@@ -37,7 +37,9 @@ mod tests {
         let output = String::from_utf8(buf).expect("output must be valid UTF-8");
 
         assert!(
-            output.contains("[mylan] Nota de redacción: la salida incluye MACs/IPs reales de tu red."),
+            output.contains(
+                "[mylan] Nota de redacción: la salida incluye MACs/IPs reales de tu red."
+            ),
             "La nota debe indicar el prefijo e advertencia de redacción"
         );
         assert!(
