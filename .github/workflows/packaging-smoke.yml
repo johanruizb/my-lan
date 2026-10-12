@@ -171,12 +171,29 @@ jobs:
           profile = "quick"
           "@ | Out-File -FilePath $cfgPath -Encoding utf8
           $proc = Start-Process -FilePath $bin -ArgumentList "--serve-api","--config",$cfgPath -PassThru -RedirectStandardError $errLog
-          Start-Sleep -Seconds 10
-          if ($proc.HasExited) {
-            Write-Error "Agent exited (code $($proc.ExitCode)) before serving. stderr:"
-            if (Test-Path $errLog) { Get-Content $errLog -Raw | Write-Error }
-            throw "agent crashed before serving"
+          $tokenFile = Join-Path $cfgDir "api-token"
+          $ok = $false
+          for ($i = 1; $i -le 30; $i++) {
+            if ($proc.HasExited) {
+              Write-Error "Agent exited (code $($proc.ExitCode)) before serving. stderr:"
+              if (Test-Path $errLog) { Get-Content $errLog -Raw | Write-Error }
+              throw "agent crashed before serving"
+            }
+            if (Test-Path $tokenFile) {
+              $token = (Get-Content $tokenFile -Raw).Trim()
+              if ($token) {
+                $res = curl.exe -s -o $null -w "%{http_code}" -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status
+                if ($res -eq "200") {
+                  $ok = $true
+                  break
+                }
+              }
+            }
+            Start-Sleep -Seconds 1
           }
-          $token = Get-Content (Join-Path $cfgDir "api-token") -Raw
-          curl.exe -sf -H "Authorization: Bearer $token" http://127.0.0.1:43117/api/v1/status
+          if (-not $ok) {
+            Write-Error "API no lista tras 30s. stderr:"
+            if (Test-Path $errLog) { Get-Content $errLog -Raw | Write-Error }
+            throw "API did not become ready in 30s"
+          }
           Stop-Process -Id $proc.Id -Force
