@@ -28,15 +28,23 @@ pub struct DesktopState {
     pub scan_tokens: Mutex<HashMap<String, CancellationToken>>,
     /// Settings persistidas (AC-9).
     pub settings: RwLock<Settings>,
+    /// Gestor del monitor continuo en segundo plano.
+    pub monitor: std::sync::Arc<crate::monitor::BackgroundMonitor>,
 }
 
 impl DesktopState {
-    pub fn new(db: Connection, db_path: String, settings: Settings) -> Self {
+    pub fn new(
+        db: Connection,
+        db_path: String,
+        settings: Settings,
+        monitor: std::sync::Arc<crate::monitor::BackgroundMonitor>,
+    ) -> Self {
         Self {
             db: Mutex::new(db),
             db_path,
             scan_tokens: Mutex::new(HashMap::new()),
             settings: RwLock::new(settings),
+            monitor,
         }
     }
 }

@@ -71,4 +71,9 @@ export const defaultSettings: Settings = {
     default_profile: "normal",
     theme: "light",
     censorship_enabled: true,
+    check_updates_on_startup: true,
+    background_monitoring_enabled: true,
+    monitoring_interval_secs: 300,
+    minimize_to_tray: true,
+    autostart_enabled: false,
 };

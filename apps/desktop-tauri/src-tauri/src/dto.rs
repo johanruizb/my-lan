@@ -176,6 +176,26 @@ fn default_true() -> bool {
     true
 }
 
+fn default_false() -> bool {
+    false
+}
+
+fn default_monitoring_interval() -> u64 {
+    300
+}
+
+/// Estado actual del monitoreo continuo en segundo plano emitido al frontend.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MonitoringStatusDto {
+    pub enabled: bool,
+    pub paused: bool,
+    pub is_scanning: bool,
+    pub interval_secs: u64,
+    pub last_scan_at: Option<String>,
+    pub next_scan_in_secs: Option<u64>,
+    pub current_network: Option<String>,
+}
+
 /// Configuración persistida de la app (AC-9). Vive en
 /// `app_data_dir/mylan-desktop.json`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -196,6 +216,18 @@ pub struct Settings {
     /// Búsqueda automática de actualizaciones al arrancar la app.
     #[serde(default = "default_true")]
     pub check_updates_on_startup: bool,
+    /// Monitoreo continuo en segundo plano activo.
+    #[serde(default = "default_true")]
+    pub background_monitoring_enabled: bool,
+    /// Intervalo de monitoreo continuo en segundos (por defecto 300s / 5min).
+    #[serde(default = "default_monitoring_interval")]
+    pub monitoring_interval_secs: u64,
+    /// Minimizar a la bandeja del sistema en lugar de cerrar la app al hacer clic en X.
+    #[serde(default = "default_true")]
+    pub minimize_to_tray: bool,
+    /// Autoarranque con el sistema operativo.
+    #[serde(default = "default_false")]
+    pub autostart_enabled: bool,
 }
 
 impl Default for Settings {
@@ -206,6 +238,10 @@ impl Default for Settings {
             theme: "light".to_string(),
             censorship_enabled: true,
             check_updates_on_startup: true,
+            background_monitoring_enabled: true,
+            monitoring_interval_secs: 300,
+            minimize_to_tray: true,
+            autostart_enabled: false,
         }
     }
 }
@@ -229,4 +265,55 @@ pub fn parse_profile(s: &str) -> Result<ScanProfile, String> {
 pub fn parse_ip(s: &str) -> Result<IpAddr, String> {
     s.parse::<IpAddr>()
         .map_err(|e| format!("IP inválida '{s}': {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_legacy_settings_deserialization_gets_correct_defaults() {
+        // Simula un archivo JSON antiguo de v0.4 sin los campos de monitoreo continuo
+        let legacy_json = r#"{
+            "db_path": "/home/user/.local/share/mylan/mylan.db",
+            "default_profile": "normal",
+            "theme": "dark",
+            "censorship_enabled": true
+        }"#;
+
+        let parsed: Settings = serde_json::from_str(legacy_json).expect("should deserialize");
+        assert_eq!(parsed.db_path, "/home/user/.local/share/mylan/mylan.db");
+        assert_eq!(parsed.default_profile, "normal");
+        assert_eq!(parsed.theme, "dark");
+        assert!(parsed.censorship_enabled);
+        assert!(parsed.check_updates_on_startup);
+        assert!(parsed.background_monitoring_enabled);
+        assert_eq!(parsed.monitoring_interval_secs, 300);
+        assert!(parsed.minimize_to_tray);
+        assert!(!parsed.autostart_enabled);
+    }
+
+    #[test]
+    fn test_custom_settings_roundtrip() {
+        let original = Settings {
+            db_path: "/tmp/custom.db".to_string(),
+            default_profile: "quick".to_string(),
+            theme: "light".to_string(),
+            censorship_enabled: false,
+            check_updates_on_startup: false,
+            background_monitoring_enabled: false,
+            monitoring_interval_secs: 600,
+            minimize_to_tray: false,
+            autostart_enabled: true,
+        };
+
+        let json = serde_json::to_string(&original).expect("serialize");
+        let restored: Settings = serde_json::from_str(&json).expect("deserialize");
+
+        assert_eq!(restored.db_path, original.db_path);
+        assert_eq!(restored.background_monitoring_enabled, false);
+        assert_eq!(restored.monitoring_interval_secs, 600);
+        assert_eq!(restored.minimize_to_tray, false);
+        assert_eq!(restored.autostart_enabled, true);
+    }
 }

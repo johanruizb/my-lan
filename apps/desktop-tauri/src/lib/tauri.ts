@@ -173,6 +173,25 @@ export interface Settings {
     censorship_enabled: boolean;
     /** Búsqueda automática de actualizaciones al arrancar la app. */
     check_updates_on_startup?: boolean;
+    /** Monitoreo continuo en segundo plano activo. */
+    background_monitoring_enabled?: boolean;
+    /** Intervalo de escaneo continuo en segundos (1m, 2m, 5m, 10m, 15m, 30m). */
+    monitoring_interval_secs?: number;
+    /** Minimizar a la bandeja del sistema en lugar de cerrar la app. */
+    minimize_to_tray?: boolean;
+    /** Autoarranque con el sistema operativo al iniciar sesión. */
+    autostart_enabled?: boolean;
+}
+
+/** Estado en vivo del monitoreo continuo en segundo plano. */
+export interface MonitoringStatusDto {
+    enabled: boolean;
+    paused: boolean;
+    is_scanning: boolean;
+    interval_secs: number;
+    last_scan_at: string | null;
+    next_scan_in_secs: number | null;
+    current_network: string | null;
 }
 
 // --- Wrappers tipados de invoke ---------------------------------------------
@@ -316,4 +335,21 @@ export function onDbImported(cb: () => void): Promise<UnlistenFn> {
 // La lógica de timing (race listener/timeout, cleanup) queda en el consumidor.
 export function onCensorshipFresh(cb: () => void): Promise<UnlistenFn> {
     return listen("censorship:fresh", () => cb());
+}
+
+// --- Monitoreo continuo 24/7 (Fase 5: Desktop Watch) -------------------------
+
+export const getMonitoringStatus = () =>
+    invoke<MonitoringStatusDto>("get_monitoring_status_cmd");
+
+export const toggleMonitoringPause = () =>
+    invoke<boolean>("toggle_monitoring_pause_cmd");
+
+export const triggerBackgroundScan = () =>
+    invoke<void>("trigger_background_scan_cmd");
+
+export function onMonitoringStatus(
+    cb: (status: MonitoringStatusDto) => void,
+): Promise<UnlistenFn> {
+    return listen<MonitoringStatusDto>("monitoring:status", (e) => cb(e.payload));
 }

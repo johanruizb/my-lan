@@ -85,9 +85,13 @@ async fn ping_icmp(
     req_type: u8,
     reply_type: u8,
 ) -> PingResult {
-    // El id demuxa las respuestas a nivel kernel (SOCK_DGRAM ICMP). Usar el pid
-    // reduce colisiones entre procesos concurrentes.
-    let id = (std::process::id() as u16).wrapping_add(1);
+    // En Linux SOCK_DGRAM ICMP, el kernel asigna un puerto efímero al socket
+    // y sobrescribe el id del paquete con ese puerto. Usar sock.local_addr().port()
+    // garantiza coincidencia exacta con las respuestas.
+    let id = sock
+        .local_addr()
+        .map(|a| a.port())
+        .unwrap_or_else(|_| (std::process::id() as u16).wrapping_add(1));
     let dest = SocketAddr::new(target, 0);
     let mut received = 0u32;
     let mut latencies: Vec<u64> = Vec::new();
@@ -105,9 +109,11 @@ async fn ping_icmp(
             }
             match tokio::time::timeout(remaining, sock.recv_from(&mut buf)).await {
                 Ok(Ok((n, _from))) => {
+                    let recv_id = id_for(&buf[..n]);
+                    let id_matches = recv_id == Some(id) || id == 0;
                     if n >= 8
                         && buf[0] == reply_type
-                        && id_for(&buf[..n]) == Some(id)
+                        && id_matches
                         && seq_for(&buf[..n]) == Some(seq as u16)
                     {
                         latencies.push(start.elapsed().as_millis() as u64);

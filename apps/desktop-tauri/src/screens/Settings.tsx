@@ -36,6 +36,12 @@ import {
     Download,
     CheckCircle2,
     AlertCircle,
+    Activity,
+    Clock,
+    Minimize2,
+    Power,
+    Play,
+    Pause,
 } from "lucide-react";
 import { useUpdater } from "@/components/updater-provider";
 import { PROFILES } from "@/lib/profiles";
@@ -43,6 +49,11 @@ import {
     dbPath,
     getSettings,
     setSettings,
+    getMonitoringStatus,
+    toggleMonitoringPause,
+    triggerBackgroundScan,
+    onMonitoringStatus,
+    type MonitoringStatusDto,
     type Settings as SettingsDto,
 } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
@@ -56,6 +67,15 @@ const CENSORED_FIELDS = [
     { label: "DNS", glossaryKey: "dns" },
 ] as const;
 
+const MONITORING_INTERVALS = [
+    { label: "1 min", value: 60 },
+    { label: "2 min", value: 120 },
+    { label: "5 min", value: 300, recommended: true },
+    { label: "10 min", value: 600 },
+    { label: "15 min", value: 900 },
+    { label: "30 min", value: 1800 },
+] as const;
+
 export function Settings() {
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
@@ -63,6 +83,7 @@ export function Settings() {
     const [settings, setSettingsState] = useState<SettingsDto | null>(null);
     const [dbPathValue, setDbPathValue] = useState("");
     const [saving, setSaving] = useState(false);
+    const [monitoringStatus, setMonitoringStatus] = useState<MonitoringStatusDto | null>(null);
 
     const {
         status,
@@ -97,6 +118,21 @@ export function Settings() {
                 setDbPathValue(p || s.db_path);
             })
             .catch((e) => toast(`Error: ${e}`, "error"));
+
+        getMonitoringStatus()
+            .then(setMonitoringStatus)
+            .catch(() => {});
+
+        let unlisten: (() => void) | undefined;
+        onMonitoringStatus((s) => {
+            setMonitoringStatus(s);
+        }).then((u) => {
+            unlisten = u;
+        });
+
+        return () => {
+            if (unlisten) unlisten();
+        };
     }, [toast]);
 
     async function persistPatch(patch: Partial<SettingsDto>) {
@@ -108,6 +144,14 @@ export function Settings() {
             censorship_enabled: censorshipEnabled,
             check_updates_on_startup:
                 settings.check_updates_on_startup ?? true,
+            background_monitoring_enabled:
+                settings.background_monitoring_enabled ?? true,
+            monitoring_interval_secs:
+                settings.monitoring_interval_secs ?? 300,
+            minimize_to_tray:
+                settings.minimize_to_tray ?? true,
+            autostart_enabled:
+                settings.autostart_enabled ?? false,
             ...patch,
         };
         setSettingsState(next);
@@ -129,6 +173,14 @@ export function Settings() {
                 censorship_enabled: censorshipEnabled,
                 check_updates_on_startup:
                     settings.check_updates_on_startup ?? true,
+                background_monitoring_enabled:
+                    settings.background_monitoring_enabled ?? true,
+                monitoring_interval_secs:
+                    settings.monitoring_interval_secs ?? 300,
+                minimize_to_tray:
+                    settings.minimize_to_tray ?? true,
+                autostart_enabled:
+                    settings.autostart_enabled ?? false,
             };
             await setSettings(next);
             setSettingsState(next);
@@ -137,6 +189,26 @@ export function Settings() {
             toast(`Error guardando: ${e}`, "error");
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleTogglePause() {
+        try {
+            const paused = await toggleMonitoringPause();
+            toast(paused ? "Monitoreo en pausa." : "Monitoreo reanudado.", "info");
+            const s = await getMonitoringStatus();
+            setMonitoringStatus(s);
+        } catch (e) {
+            toast(`Error: ${e}`, "error");
+        }
+    }
+
+    async function handleTriggerScan() {
+        try {
+            await triggerBackgroundScan();
+            toast("Escaneo en segundo plano iniciado.", "info");
+        } catch (e) {
+            toast(`Error: ${e}`, "error");
         }
     }
 
@@ -248,6 +320,227 @@ export function Settings() {
                                     );
                                 })}
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Monitoreo continuo 24/7 y bandeja (Fase 5: Desktop Watch) */}
+                    <Card>
+                        <CardHeader className="p-5 pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Activity
+                                    className="h-4 w-4 text-primary"
+                                    aria-hidden
+                                />
+                                Monitoreo continuo 24/7 y bandeja
+                            </CardTitle>
+                            <CardDescription>
+                                Supervisa la red en segundo plano para alertarte de cambios y nuevos
+                                dispositivos sin necesidad de mantener la ventana abierta.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4 p-5 pt-2">
+                            {/* Switch Maestro */}
+                            <div className="flex items-center justify-between gap-4 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-medium">
+                                        Monitoreo en segundo plano
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Ejecuta barridos periódicos rápidos (ARP/ping) para vigilar la presencia de hosts.
+                                    </span>
+                                </div>
+                                <Switch
+                                    checked={settings.background_monitoring_enabled ?? true}
+                                    onCheckedChange={(checked) =>
+                                        void persistPatch({
+                                            background_monitoring_enabled: checked,
+                                        })
+                                    }
+                                    aria-label="Activar monitoreo en segundo plano"
+                                />
+                            </div>
+
+                            {/* Frecuencia de escaneo */}
+                            {(settings.background_monitoring_enabled ?? true) && (
+                                <div className="flex flex-col gap-2 rounded-lg border bg-background/40 p-3.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                                            <span className="text-xs font-medium text-foreground">
+                                                Frecuencia de escaneo
+                                            </span>
+                                        </div>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            Perfil rápido (Quick)
+                                        </span>
+                                    </div>
+                                    <div
+                                        role="radiogroup"
+                                        aria-label="Intervalo de monitoreo"
+                                        className="grid grid-cols-3 gap-2 sm:grid-cols-6"
+                                    >
+                                        {MONITORING_INTERVALS.map((item) => {
+                                            const active =
+                                                (settings.monitoring_interval_secs ?? 300) === item.value;
+                                            return (
+                                                <button
+                                                    key={item.value}
+                                                    type="button"
+                                                    role="radio"
+                                                    aria-checked={active}
+                                                    onClick={() =>
+                                                        void persistPatch({
+                                                            monitoring_interval_secs: item.value,
+                                                        })
+                                                    }
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center rounded-md border py-2 px-1 text-center text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                        active
+                                                            ? "border-primary bg-primary/15 font-semibold text-primary"
+                                                            : "border-border bg-background/60 hover:border-border/80 hover:bg-muted/40 text-muted-foreground",
+                                                    )}
+                                                >
+                                                    <span>{item.label}</span>
+                                                    {"recommended" in item && (
+                                                        <span className="text-[9px] text-primary/80">Rec.</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Minimizar a bandeja */}
+                            <div className="flex items-center justify-between gap-4 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="flex items-center gap-1.5 text-sm font-medium">
+                                        <Minimize2 className="h-3.5 w-3.5 text-primary" aria-hidden />
+                                        Minimizar a la bandeja al cerrar
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Al pulsar el botón cerrar (X), MyLAN continúa activo en el System Tray.
+                                    </span>
+                                </div>
+                                <Switch
+                                    checked={settings.minimize_to_tray ?? true}
+                                    onCheckedChange={(checked) =>
+                                        void persistPatch({
+                                            minimize_to_tray: checked,
+                                        })
+                                    }
+                                    aria-label="Minimizar a la bandeja al cerrar"
+                                />
+                            </div>
+
+                            {/* Autoarranque con el SO */}
+                            <div className="flex items-center justify-between gap-4 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="flex items-center gap-1.5 text-sm font-medium">
+                                        <Power className="h-3.5 w-3.5 text-primary" aria-hidden />
+                                        Iniciar con el sistema operativo
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Arranca MyLAN en segundo plano minimizado en la bandeja al encender el equipo.
+                                    </span>
+                                </div>
+                                <Switch
+                                    checked={settings.autostart_enabled ?? false}
+                                    onCheckedChange={(checked) =>
+                                        void persistPatch({
+                                            autostart_enabled: checked,
+                                        })
+                                    }
+                                    aria-label="Iniciar automáticamente con el sistema operativo"
+                                />
+                            </div>
+
+                            {/* Panel de estado en vivo */}
+                            {monitoringStatus && (
+                                <div className="flex flex-col gap-2.5 rounded-lg border border-border/80 bg-muted/20 p-3.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={cn(
+                                                    "h-2 w-2 rounded-full",
+                                                    !monitoringStatus.enabled
+                                                        ? "bg-muted-foreground"
+                                                        : monitoringStatus.paused
+                                                        ? "bg-amber-500 animate-pulse"
+                                                        : monitoringStatus.is_scanning
+                                                        ? "bg-blue-500 animate-ping"
+                                                        : "bg-emerald-500",
+                                                )}
+                                                aria-hidden
+                                            />
+                                            <span className="text-xs font-semibold">
+                                                {!monitoringStatus.enabled
+                                                    ? "Monitoreo desactivado"
+                                                    : monitoringStatus.paused
+                                                    ? "Monitoreo en pausa"
+                                                    : monitoringStatus.is_scanning
+                                                    ? "Escaneo en curso…"
+                                                    : "Monitoreando activamente"}
+                                            </span>
+                                        </div>
+                                        {monitoringStatus.current_network && (
+                                            <span className="rounded bg-background px-2 py-0.5 font-mono text-[11px] text-muted-foreground border">
+                                                {monitoringStatus.current_network}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground border-t border-border/60 pt-2">
+                                        <span>
+                                            {monitoringStatus.last_scan_at
+                                                ? `Último análisis: ${new Date(monitoringStatus.last_scan_at).toLocaleTimeString()}`
+                                                : "Aún no ha escaneado"}
+                                        </span>
+                                        {monitoringStatus.next_scan_in_secs != null && (
+                                            <span>
+                                                Próximo en: ~{Math.max(1, Math.ceil(monitoringStatus.next_scan_in_secs / 60))} min
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-2 pt-1">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleTogglePause}
+                                            className="h-7 text-xs gap-1"
+                                        >
+                                            {monitoringStatus.paused ? (
+                                                <>
+                                                    <Play className="h-3 w-3" aria-hidden />
+                                                    Reanudar
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Pause className="h-3 w-3" aria-hidden />
+                                                    Pausar
+                                                </>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={monitoringStatus.is_scanning || !monitoringStatus.enabled}
+                                            onClick={handleTriggerScan}
+                                            className="h-7 text-xs gap-1"
+                                        >
+                                            {monitoringStatus.is_scanning ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                                            ) : (
+                                                <RotateCw className="h-3 w-3" aria-hidden />
+                                            )}
+                                            Escanear ahora
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

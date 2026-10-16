@@ -11,12 +11,20 @@ import { defaultSettings } from "../fixtures";
 const getSettingsMock = vi.fn();
 const setSettingsMock = vi.fn();
 const dbPathMock = vi.fn();
+const getMonitoringStatusMock = vi.fn();
+const toggleMonitoringPauseMock = vi.fn();
+const triggerBackgroundScanMock = vi.fn();
+const onMonitoringStatusMock = vi.fn();
 let currentMockTheme: "light" | "dark" = "light";
 
 vi.mock("@/lib/tauri", () => ({
     getSettings: () => getSettingsMock(),
     setSettings: (settings: unknown) => setSettingsMock(settings),
     dbPath: () => dbPathMock(),
+    getMonitoringStatus: () => getMonitoringStatusMock(),
+    toggleMonitoringPause: () => toggleMonitoringPauseMock(),
+    triggerBackgroundScan: () => triggerBackgroundScanMock(),
+    onMonitoringStatus: (cb: unknown) => onMonitoringStatusMock(cb),
 }));
 
 vi.mock("@/components/censorship-provider", () => ({
@@ -84,6 +92,22 @@ describe("Settings screen (AC-22)", () => {
         getSettingsMock.mockResolvedValue(defaultSettings);
         setSettingsMock.mockResolvedValue(undefined);
         dbPathMock.mockResolvedValue("/tmp/mylan.db");
+        getMonitoringStatusMock.mockReset();
+        toggleMonitoringPauseMock.mockReset();
+        triggerBackgroundScanMock.mockReset();
+        onMonitoringStatusMock.mockReset();
+        getMonitoringStatusMock.mockResolvedValue({
+            enabled: true,
+            paused: false,
+            is_scanning: false,
+            interval_secs: 300,
+            last_scan_at: "2026-10-16T10:00:00Z",
+            next_scan_in_secs: 180,
+            current_network: "Wi-Fi Test",
+        });
+        toggleMonitoringPauseMock.mockResolvedValue(true);
+        triggerBackgroundScanMock.mockResolvedValue(undefined);
+        onMonitoringStatusMock.mockResolvedValue(() => {});
     });
 
     it("renderiza el título 'Ajustes' y los selectores de tema y censura", async () => {
@@ -167,5 +191,48 @@ describe("Settings screen (AC-22)", () => {
         expect(darkSvg).not.toBeNull();
         expect(darkSvg?.querySelector("rect")?.getAttribute("fill")).toBe("#090D16");
         expect(darkSvg?.querySelector("circle")?.getAttribute("fill")).toBe("#06B6D4");
+    });
+
+    it("renderiza la sección de monitoreo continuo 24/7 y permite conmutar pausas y frecuencias", async () => {
+        renderWithProviders(<Settings />);
+
+        await waitFor(() => {
+            expect(
+                screen.getByText("Monitoreo continuo 24/7 y bandeja"),
+            ).toBeInTheDocument();
+        });
+
+        expect(
+            screen.getByText("Monitoreando activamente"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("Wi-Fi Test")).toBeInTheDocument();
+
+        // Pulsar botón de pausar
+        const pauseBtn = screen.getByRole("button", { name: /pausar/i });
+        fireEvent.click(pauseBtn);
+        expect(toggleMonitoringPauseMock).toHaveBeenCalled();
+
+        // Cambiar frecuencia a 10 min
+        const intervalBtn = screen.getByRole("radio", { name: /10 min/i });
+        fireEvent.click(intervalBtn);
+        expect(setSettingsMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                monitoring_interval_secs: 600,
+            }),
+        );
+    });
+
+    it("permite disparar un escaneo en segundo plano desde el botón 'Escanear ahora'", async () => {
+        renderWithProviders(<Settings />);
+
+        await waitFor(() => {
+            expect(
+                screen.getByText("Monitoreo continuo 24/7 y bandeja"),
+            ).toBeInTheDocument();
+        });
+
+        const scanNowBtn = screen.getByRole("button", { name: /escanear ahora/i });
+        fireEvent.click(scanNowBtn);
+        expect(triggerBackgroundScanMock).toHaveBeenCalled();
     });
 });

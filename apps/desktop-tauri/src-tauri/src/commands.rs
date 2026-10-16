@@ -706,7 +706,60 @@ pub async fn set_settings_cmd(
     tokio::fs::write(&path, json)
         .await
         .map_err(|e| format!("no se pudo escribir {:?}: {e}", path))?;
-    *state.settings.write().await = settings;
+
+    // Sincronizar autostart con el sistema operativo
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        let autostart_mgr = app.autolaunch();
+        if settings.autostart_enabled {
+            let _ = autostart_mgr.enable();
+        } else {
+            let _ = autostart_mgr.disable();
+        }
+    }
+
+    *state.settings.write().await = settings.clone();
+
+    // Actualizar tray reflejando si el monitoreo está pausado o activado
+    state.monitor.update_tray(&app, state.monitor.is_paused());
+
+    // Emitir estado actualizado de monitoreo
+    let status = state.monitor.get_status(&settings).await;
+    let _ = app.emit("monitoring:status", &status);
+
+    Ok(())
+}
+
+/// Obtiene el estado detallado del monitoreo continuo en segundo plano.
+#[tauri::command]
+pub async fn get_monitoring_status_cmd(
+    state: State<'_, DesktopState>,
+) -> Result<crate::dto::MonitoringStatusDto, String> {
+    let settings = state.settings.read().await.clone();
+    Ok(state.monitor.get_status(&settings).await)
+}
+
+/// Alterna la pausa del monitoreo continuo en segundo plano y devuelve el nuevo estado.
+#[tauri::command]
+pub async fn toggle_monitoring_pause_cmd(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<bool, String> {
+    let is_paused = state.monitor.toggle_pause();
+    state.monitor.update_tray(&app, is_paused);
+    let settings = state.settings.read().await.clone();
+    let status = state.monitor.get_status(&settings).await;
+    let _ = app.emit("monitoring:status", &status);
+    Ok(is_paused)
+}
+
+/// Dispara un escaneo inmediato de monitoreo en segundo plano.
+#[tauri::command]
+pub async fn trigger_background_scan_cmd(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<(), String> {
+    state.monitor.trigger_scan(app).await;
     Ok(())
 }
 

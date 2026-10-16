@@ -9,7 +9,9 @@
 mod censor;
 mod commands;
 mod dto;
+mod monitor;
 mod state;
+mod tray;
 
 use std::path::Path;
 use std::time::Duration;
@@ -68,6 +70,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
@@ -104,12 +110,47 @@ pub fn run() {
                 let _ = app.emit("censorship:fresh", &());
             }
 
+            // Gestor del monitor continuo en segundo plano
+            let monitor = std::sync::Arc::new(crate::monitor::BackgroundMonitor::new());
+
+            // Configurar System Tray
+            if let Ok((_tray, tray_handles)) = crate::tray::setup_tray(app.handle()) {
+                let m = monitor.clone();
+                tauri::async_runtime::block_on(async move {
+                    m.set_tray_handles(tray_handles).await;
+                });
+            }
+
+            // Iniciar bucle de fondo de monitoreo continuo
+            monitor.clone().start_loop(app.handle().clone());
+
             app.manage(DesktopState::new(
                 conn,
                 db_path.to_string_lossy().to_string(),
                 settings,
+                monitor,
             ));
+
+            // Si se arrancó con bandera --minimized (p.ej. desde autoarranque con el sistema),
+            // ocultar la ventana principal en lugar de mostrarla.
+            if std::env::args().any(|arg| arg == "--minimized") {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle();
+                let state = app.state::<DesktopState>();
+                let minimize = state.settings.blocking_read().minimize_to_tray;
+                if minimize {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::detect_interface_cmd,
@@ -129,6 +170,9 @@ pub fn run() {
             commands::get_settings_cmd,
             commands::set_settings_cmd,
             commands::notify_scan_finished_cmd,
+            commands::get_monitoring_status_cmd,
+            commands::toggle_monitoring_pause_cmd,
+            commands::trigger_background_scan_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
