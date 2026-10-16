@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Sincronización Serverless Zero-Knowledge con Google Drive**: respaldo y sincronización cifrada de extremo a extremo (Argon2id + XChaCha20-Poly1305) en la carpeta privada `appDataFolder` de Google Drive sin servidor intermedio, con frase de recuperación mnemónica de 12 palabras (BIP-39), resolución de conflictos con respaldo preventivo y gestión de credenciales en el llavero seguro del sistema operativo.
+- **Espacios de trabajo multi-sitio y reportes ejecutivos en PDF**: partición lógica de inventarios por ubicación física o cliente en la misma base de datos, con selector rápido en la barra lateral y exportación de informes ejecutivos de red y seguridad en formato PDF y JSON con enmascaramiento estricto de Modo Censura.
+- **Test de velocidad Cloudflare y monitor de salud de red**: medición continua de latencia, jitter y pérdida de paquetes hacia gateway y DNS con sondeo ICMP/UDP sin privilegios, combinado con test de ancho de banda y bufferbloat bajo demanda contra `speed.cloudflare.com`.
+- **Motor de auditoría de seguridad pasiva y evaluación de riesgos**: evaluación automatizada de riesgos en la red basada en 8 reglas de seguridad (SEC-001..008), asignación de puntuación de seguridad ponderada (0-100) y panel interactivo con estados de hallazgos.
+- **Suite interactiva de herramientas de red**: pantalla de utilidades integrada con Ping continuo, Traceroute visual con saltos interactivos, DNS Lookup multidominio, Wake-on-LAN y comprobador rápido de puertos (Port Checker) con streaming en tiempo real.
+- **Alertas y notificaciones nativas de escritorio**: notificaciones integradas del sistema operativo para detección de dispositivos desconocidos, alteraciones de IP/MAC en equipos de confianza, caída de gateway o puertos críticos abiertos.
+- **Monitoreo continuo 24/7 en segundo plano**: runner periódico configurable en Desktop con minimización a la bandeja del sistema (System Tray) y soporte de inicio automático con el sistema operativo.
 - **Componente Alert de shadcn/ui**: integración oficial del componente `Alert` (`Alert`, `AlertTitle`, `AlertDescription`) en la interfaz de escritorio y porteo de avisos de error y advertencia en vistas de red, escaneos, ajustes y acerca de junto con iconos de Lucide.
 
 ### Changed
