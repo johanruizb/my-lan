@@ -341,14 +341,14 @@ mod tests {
         let restored: Settings = serde_json::from_str(&json).expect("deserialize");
 
         assert_eq!(restored.db_path, original.db_path);
-        assert_eq!(restored.background_monitoring_enabled, false);
+        assert!(!restored.background_monitoring_enabled);
         assert_eq!(restored.monitoring_interval_secs, 600);
-        assert_eq!(restored.minimize_to_tray, false);
-        assert_eq!(restored.autostart_enabled, true);
-        assert_eq!(restored.notifications_enabled, false);
-        assert_eq!(restored.notify_untrusted_devices, false);
-        assert_eq!(restored.notify_trusted_device_tampered, true);
-        assert_eq!(restored.notify_gateway_down, false);
-        assert_eq!(restored.notify_critical_ports, true);
+        assert!(!restored.minimize_to_tray);
+        assert!(restored.autostart_enabled);
+        assert!(!restored.notifications_enabled);
+        assert!(!restored.notify_untrusted_devices);
+        assert!(restored.notify_trusted_device_tampered);
+        assert!(!restored.notify_gateway_down);
+        assert!(restored.notify_critical_ports);
     }
 }

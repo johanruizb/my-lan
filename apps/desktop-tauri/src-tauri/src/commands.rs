@@ -31,7 +31,7 @@ use crate::state::DesktopState;
 
 /// Replica la query `latest_network_id` del CLI (`apps/cli/src/commands/mod.rs`):
 /// el `network_id` del escaneo más reciente. `None` si el inventario está vacío.
-fn latest_network_id(conn: &rusqlite::Connection) -> Result<Option<String>, String> {
+pub(crate) fn latest_network_id(conn: &rusqlite::Connection) -> Result<Option<String>, String> {
     let result = conn.query_row(
         "SELECT network_id FROM scans ORDER BY started_at DESC LIMIT 1",
         [],

@@ -24,11 +24,13 @@
 pub(crate) mod arp;
 pub mod dns;
 pub(crate) mod error;
+pub mod health;
 pub(crate) mod icmp;
 pub mod iface;
 pub(crate) mod mdns;
 pub(crate) mod netutil;
 pub mod ping;
+pub mod speedtest;
 pub(crate) mod ssdp;
 pub(crate) mod ssid;
 pub(crate) mod sudo;
@@ -45,9 +47,11 @@ pub use dns::{
     resolver_for_provider,
 };
 pub use error::DiscoveryError;
+pub use health::{probe_network_health, probe_target_health};
 pub use iface::{detect_interface, gateway_observations, LanInterface};
 pub use netutil::enumerate_hosts;
 pub use ping::{ping_host, ping_stream, PingPacket, PingStreamSummary};
+pub use speedtest::{lookup_colo_city, parse_cf_trace, run_cloudflare_speedtest, CloudflareTrace};
 pub use ssid::detect_ssid;
 #[cfg(target_os = "linux")]
 pub use traceroute::{traceroute_host, traceroute_stream};

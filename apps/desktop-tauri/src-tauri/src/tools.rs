@@ -277,6 +277,156 @@ pub async fn check_port_cmd(
     }
 }
 
+/// Evento emitido durante el progreso del Speed Test.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SpeedTestProgressEvent {
+    pub session_id: String,
+    pub progress: mylan_core::SpeedTestProgress,
+}
+
+/// Evento emitido al finalizar o fallar un Speed Test.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SpeedTestDoneEvent {
+    pub session_id: String,
+    pub result: Option<mylan_core::SpeedTestResult>,
+    pub error: Option<String>,
+}
+
+/// Inicia un Speed Test interactivo con streaming de progreso hacia la UI.
+#[tauri::command]
+pub async fn start_speed_test_cmd(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    session_id: String,
+    network_id: Option<String>,
+) -> Result<(), String> {
+    let cancel_token = CancellationToken::new();
+    {
+        let mut tokens = state.tool_tokens.lock().map_err(|e| e.to_string())?;
+        tokens.insert(session_id.clone(), cancel_token.clone());
+    }
+
+    let app_clone = app.clone();
+    let session_id_clone = session_id.clone();
+    let cancel_token_clone = cancel_token.clone();
+    let net_id_clone = network_id.clone();
+
+    tokio::spawn(async move {
+        let sid = session_id_clone.clone();
+        let app_emit = app_clone.clone();
+
+        let res = mylan_discovery::run_cloudflare_speedtest(
+            net_id_clone,
+            cancel_token_clone,
+            move |progress| {
+                let _ = app_emit.emit(
+                    "tool:speedtest_progress",
+                    SpeedTestProgressEvent {
+                        session_id: sid.clone(),
+                        progress,
+                    },
+                );
+            },
+        )
+        .await;
+
+        let (final_result, err_msg) = match res {
+            Ok(test_result) => {
+                let state_ref = app_clone.state::<DesktopState>();
+                if let Ok(conn) = state_ref.db.lock() {
+                    let _ = mylan_db::insert_speed_test(&conn, &test_result);
+                }
+                (Some(test_result), None)
+            }
+            Err(e) => (None, Some(e.to_string())),
+        };
+
+        let _ = app_clone.emit(
+            "tool:speedtest_done",
+            SpeedTestDoneEvent {
+                session_id: session_id_clone.clone(),
+                result: final_result,
+                error: err_msg,
+            },
+        );
+
+        {
+            let state_ref = app_clone.state::<DesktopState>();
+            if let Ok(mut tokens) = state_ref.tool_tokens.lock() {
+                tokens.remove(&session_id_clone);
+            };
+        }
+    });
+
+    Ok(())
+}
+
+/// Obtiene el historial de pruebas de velocidad.
+#[tauri::command]
+pub fn get_recent_speed_tests_cmd(
+    state: State<'_, DesktopState>,
+    network_id: Option<String>,
+    limit: Option<usize>,
+) -> Result<Vec<mylan_core::SpeedTestResult>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::list_speed_tests(&conn, network_id.as_deref(), limit.unwrap_or(20))
+        .map_err(|e| e.to_string())
+}
+
+/// Obtiene el historial reciente de muestras de salud de la red.
+#[tauri::command]
+pub fn get_network_health_samples_cmd(
+    state: State<'_, DesktopState>,
+    network_id: Option<String>,
+    limit: Option<usize>,
+) -> Result<Vec<mylan_core::NetworkHealthSample>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let net_id = match network_id {
+        Some(id) if !id.is_empty() => id,
+        _ => match crate::commands::latest_network_id(&conn)? {
+            Some(id) => id,
+            None => return Ok(Vec::new()),
+        },
+    };
+    mylan_db::list_health_samples(&conn, &net_id, limit.unwrap_or(30)).map_err(|e| e.to_string())
+}
+
+/// Ejecuta un sondeo de salud bajo demanda hacia el Gateway y DNS de la red activa.
+#[tauri::command]
+pub async fn run_health_probe_cmd(
+    state: State<'_, DesktopState>,
+    network_id: Option<String>,
+) -> Result<Vec<mylan_core::NetworkHealthSample>, String> {
+    let (net_id, gw_ip, dns_ips) = {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        let net_id = match network_id {
+            Some(id) if !id.is_empty() => id,
+            _ => {
+                crate::commands::latest_network_id(&conn)?.unwrap_or_else(|| "default".to_string())
+            }
+        };
+        let (gw, dns) = if let Ok(Some(net)) = mylan_db::network_repo::get_network(&conn, &net_id) {
+            (net.gateway_ip, net.dns_servers)
+        } else if let Ok(iface) = mylan_discovery::detect_interface(None) {
+            (iface.gateway_ip, iface.dns_servers)
+        } else {
+            (None, Vec::new())
+        };
+        (net_id, gw, dns)
+    };
+
+    let samples = mylan_discovery::probe_network_health(&net_id, gw_ip, &dns_ips).await;
+
+    {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        for s in &samples {
+            let _ = mylan_db::insert_health_sample(&conn, s);
+        }
+    }
+
+    Ok(samples)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

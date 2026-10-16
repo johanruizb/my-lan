@@ -48,12 +48,14 @@ import {
 } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 import { SECTION_GAP } from "@/lib/design-tokens";
+import { SpeedTestPanel } from "@/components/speed-test-panel";
 
-type ToolTab = "ping" | "traceroute" | "dns" | "wol" | "ports";
+type ToolTab = "ping" | "traceroute" | "dns" | "wol" | "ports" | "speed";
 
 function parseToolTab(val: string | null): ToolTab {
     if (!val) return "ping";
     const v = val.toLowerCase();
+    if (v === "speed" || v === "speedtest" || v === "health") return "speed";
     if (v === "ports" || v === "port") return "ports";
     if (v === "traceroute" || v === "trace") return "traceroute";
     if (v === "dns") return "dns";
@@ -434,6 +436,19 @@ export function Tools() {
                 >
                     <Power className="h-3.5 w-3.5" aria-hidden />
                     Wake-on-LAN
+                </Button>
+                <Button
+                    type="button"
+                    variant={activeTab === "speed" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                        setActiveTab("speed");
+                        setSearchParams({ tool: "speed" });
+                    }}
+                    className="gap-1.5 text-xs h-8"
+                >
+                    <Zap className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+                    Velocidad y Salud
                 </Button>
             </div>
 
@@ -1028,6 +1043,8 @@ export function Tools() {
                     </Card>
                 </div>
             )}
+
+            {activeTab === "speed" && <SpeedTestPanel />}
         </div>
     );
 }

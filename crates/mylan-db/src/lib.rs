@@ -21,6 +21,7 @@ pub mod diff;
 pub mod error;
 pub mod events_repo;
 pub mod findings_repo;
+pub mod health_repo;
 pub mod migrations;
 pub mod network_repo;
 pub mod pipeline;
@@ -36,6 +37,10 @@ pub use events_repo::{insert_event, list_events, list_events_since};
 pub use findings_repo::{
     calculate_network_score, get_finding_by_id, list_findings_by_device, list_findings_by_network,
     update_finding_status, upsert_finding,
+};
+pub use health_repo::{
+    get_latest_health_sample, get_latest_speed_test, insert_health_sample, insert_speed_test,
+    list_health_samples, list_speed_tests, prune_health_and_speed_data,
 };
 pub use pipeline::{
     run_scan_pipeline, run_scan_pipeline_at, run_scan_pipeline_at_in_tx,

@@ -185,6 +185,10 @@ pub fn run() {
             tools::dns_lookup_cmd,
             tools::send_wol_cmd,
             tools::check_port_cmd,
+            tools::start_speed_test_cmd,
+            tools::get_recent_speed_tests_cmd,
+            tools::get_network_health_samples_cmd,
+            tools::run_health_probe_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

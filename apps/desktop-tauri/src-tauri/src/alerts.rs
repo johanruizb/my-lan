@@ -293,8 +293,10 @@ mod tests {
 
     #[test]
     fn test_alert_untrusted_device_with_censorship() {
-        let mut settings = Settings::default();
-        settings.censorship_enabled = true;
+        let settings = Settings {
+            censorship_enabled: true,
+            ..Default::default()
+        };
         let conn = setup_test_db();
 
         let net = mylan_core::Network {
@@ -407,8 +409,10 @@ mod tests {
 
     #[test]
     fn test_trusted_device_identity_tampered_triggers_alert() {
-        let mut settings = Settings::default();
-        settings.censorship_enabled = false;
+        let settings = Settings {
+            censorship_enabled: false,
+            ..Default::default()
+        };
         let conn = setup_test_db();
 
         let net = mylan_core::Network {

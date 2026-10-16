@@ -32,6 +32,9 @@ pub enum DiscoveryError {
     /// `traceroute` fuera de Linux: requiere `IP_RECVERR` + `nix`).
     #[error("plataforma no soportada")]
     UnsupportedPlatform,
+    /// La operación fue cancelada por el usuario o token cooperativo.
+    #[error("operación cancelada")]
+    Cancelled,
 }
 
 impl From<String> for DiscoveryError {

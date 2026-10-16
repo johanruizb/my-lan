@@ -30,7 +30,8 @@ pub use enums::{
 pub use identity::DeviceIdentity;
 pub use mac::MacAddr;
 pub use models::{
-    Device, DeviceAddress, DnsRecord, Event, EventType, Network, PingMethod, PingResult, Scan,
-    ScanSummary, SecurityFinding, Service, Severity, TraceHop,
+    Device, DeviceAddress, DnsRecord, Event, EventType, Network, NetworkHealthSample, PingMethod,
+    PingResult, Scan, ScanSummary, SecurityFinding, Service, Severity, SpeedTestProgress,
+    SpeedTestResult, TraceHop,
 };
 pub use observation::{aggregate, Observation, Source};

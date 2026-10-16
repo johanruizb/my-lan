@@ -83,6 +83,7 @@ const SENSITIVE_FIELDS = new Set<string>([
     "mac",
     "device_ip",
     "evidence",
+    "target_ip",
 ]);
 
 /** Enmascara IPs y MACs contenidas en texto de evidencia técnica. */

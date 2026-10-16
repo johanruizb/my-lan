@@ -22,13 +22,25 @@ interface CensorshipContextValue {
 
 const CensorshipContext = createContext<CensorshipContextValue | null>(null);
 
-export function CensorshipProvider({ children }: { children: ReactNode }) {
-    // Default true hasta que se cargue `Settings` (AC-1: ON por defecto).
-    const [censorshipEnabled, setCensorshipState] = useState(true);
+export function CensorshipProvider({
+    children,
+    initialEnabled,
+}: {
+    children: ReactNode;
+    initialEnabled?: boolean;
+}) {
+    // Default true hasta que se cargue `Settings` (AC-1: ON por defecto),
+    // o initialEnabled si se especifica explícitamente (ej. tests).
+    const [censorshipEnabled, setCensorshipState] = useState(
+        initialEnabled ?? true,
+    );
 
     // Carga inicial: lee `Settings.censorship_enabled`, default true si falta
     // (backward-compat con `mylan-desktop.json` antiguos, AC-6).
     useEffect(() => {
+        if (initialEnabled !== undefined) {
+            return;
+        }
         getSettings()
             .then((s) => {
                 setCensorshipState(s.censorship_enabled ?? true);
@@ -36,7 +48,7 @@ export function CensorshipProvider({ children }: { children: ReactNode }) {
             .catch(() => {
                 // Si falla la lectura, mantiene el default ON.
             });
-    }, []);
+    }, [initialEnabled]);
 
     const persist = useCallback(async (next: boolean) => {
         setCensorshipState(next);

@@ -580,3 +580,89 @@ export const runSecurityAudit = (networkId?: string) =>
     invoke<SecurityAuditReport>("run_security_audit_cmd", {
         networkId: networkId ?? null,
     });
+
+// Phase 9: Speed Test & Network Health
+export interface NetworkHealthSample {
+    id: string;
+    network_id: string;
+    target_type: "gateway" | "dns" | "internet" | string;
+    target_ip: string;
+    rtt_ms: number | null;
+    jitter_ms: number;
+    loss_pct: number;
+    sample_count: number;
+    probes_failed: number;
+    method: string;
+    created_at: string;
+}
+
+export interface SpeedTestResult {
+    id: string;
+    network_id: string | null;
+    server_name: string;
+    server_host: string;
+    server_city: string | null;
+    server_country: string | null;
+    download_mbps: number;
+    upload_mbps: number;
+    latency_ms: number;
+    jitter_ms: number;
+    bufferbloat_ms: number | null;
+    retransmits: number | null;
+    protocol: string;
+    created_at: string;
+}
+
+export interface SpeedTestProgress {
+    phase: "init" | "latency" | "download" | "upload" | "finished" | "error" | string;
+    progress_pct: number;
+    current_mbps: number;
+    bytes_transferred: number;
+    total_bytes: number;
+    latency_ms: number | null;
+    jitter_ms: number | null;
+    server_info: string | null;
+    error_message: string | null;
+}
+
+export interface SpeedTestProgressEvent {
+    session_id: string;
+    progress: SpeedTestProgress;
+}
+
+export interface SpeedTestDoneEvent {
+    session_id: string;
+    result: SpeedTestResult | null;
+    error: string | null;
+}
+
+export const startSpeedTest = (sessionId: string, networkId?: string) =>
+    invoke<void>("start_speed_test_cmd", {
+        sessionId,
+        networkId: networkId ?? null,
+    });
+
+export const getRecentSpeedTests = (params?: { networkId?: string; limit?: number }) =>
+    invoke<SpeedTestResult[]>("get_recent_speed_tests_cmd", {
+        networkId: params?.networkId ?? null,
+        limit: params?.limit ?? null,
+    });
+
+export const getNetworkHealthSamples = (networkId?: string, limit?: number) =>
+    invoke<NetworkHealthSample[]>("get_network_health_samples_cmd", {
+        networkId: networkId ?? null,
+        limit: limit ?? null,
+    });
+
+export const runHealthProbe = (networkId?: string) =>
+    invoke<NetworkHealthSample[]>("run_health_probe_cmd", {
+        networkId: networkId ?? null,
+    });
+
+export const onSpeedTestProgress = (
+    cb: (event: SpeedTestProgressEvent) => void,
+) => listen<SpeedTestProgressEvent>("tool:speedtest_progress", (e) => cb(e.payload));
+
+export const onSpeedTestDone = (
+    cb: (event: SpeedTestDoneEvent) => void,
+) => listen<SpeedTestDoneEvent>("tool:speedtest_done", (e) => cb(e.payload));

@@ -381,7 +381,19 @@ impl BackgroundMonitor {
             // 9. Ejecutar auditoría pasiva de seguridad en segundo plano
             let _ = mylan_db::security::run_full_security_audit(&conn, &network.id);
 
-            // 9. Notificar al frontend que terminó un escaneo de fondo
+            // 10. Sondeo de salud de red hacia Gateway y DNS (Fase 9: Salud de Red)
+            let dns_ips: Vec<std::net::IpAddr> = iface.dns_servers.clone();
+            let health_samples = tokio::runtime::Handle::current().block_on(
+                mylan_discovery::probe_network_health(&network.id, iface.gateway_ip, &dns_ips),
+            );
+            for sample in &health_samples {
+                let _ = mylan_db::insert_health_sample(&conn, sample);
+            }
+
+            // 11. Purga periódica de muestras antiguas (retención rodante 30 días)
+            let _ = mylan_db::prune_health_and_speed_data(&conn, 30);
+
+            // 12. Notificar al frontend que terminó un escaneo de fondo
             let _ = app_clone.emit(
                 "scan:finished",
                 &ScanFinished {

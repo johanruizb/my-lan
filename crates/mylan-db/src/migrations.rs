@@ -17,6 +17,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (4, MIGRATION_V4),
     (5, MIGRATION_V5),
     (6, MIGRATION_V6),
+    (7, MIGRATION_V7),
 ];
 
 /// Esquema inicial completo del plan §8.
@@ -216,6 +217,51 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_findings_network_device_rule
   ON security_findings(network_id, coalesce(device_id, ''), rule_id);
 ";
 
+/// v7 — Tablas de salud continua y mediciones de velocidad (Pilar 5 / Fase 9).
+const MIGRATION_V7: &str = "\
+CREATE TABLE IF NOT EXISTS network_health_samples (
+  id TEXT PRIMARY KEY,
+  network_id TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_ip TEXT NOT NULL,
+  rtt_ms INTEGER,
+  jitter_ms REAL NOT NULL,
+  loss_pct REAL NOT NULL,
+  sample_count INTEGER NOT NULL,
+  probes_failed INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(network_id) REFERENCES networks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_health_network_created
+  ON network_health_samples(network_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS speed_tests (
+  id TEXT PRIMARY KEY,
+  network_id TEXT,
+  server_name TEXT NOT NULL,
+  server_host TEXT NOT NULL,
+  server_city TEXT,
+  server_country TEXT,
+  download_mbps REAL NOT NULL,
+  upload_mbps REAL NOT NULL,
+  latency_ms INTEGER NOT NULL,
+  jitter_ms REAL NOT NULL,
+  bufferbloat_ms INTEGER,
+  retransmits INTEGER,
+  protocol TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(network_id) REFERENCES networks(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_speed_created
+  ON speed_tests(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_speed_network_created
+  ON speed_tests(network_id, created_at DESC);
+";
+
 fn current_version(conn: &Connection) -> DbResult<u32> {
     let v: i64 = conn
         .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -291,10 +337,12 @@ mod tests {
             "device_addresses",
             "devices",
             "events",
+            "network_health_samples",
             "networks",
             "scans",
             "security_findings",
             "services",
+            "speed_tests",
         ] {
             assert!(
                 tables.iter().any(|t| t == expected),

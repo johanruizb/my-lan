@@ -336,6 +336,74 @@ pub struct SecurityFinding {
     pub resolved_at: Option<String>,
 }
 
+/// Muestra puntual de salud y calidad de red (Pilar 5: Speed Test y Salud de Red).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NetworkHealthSample {
+    pub id: String,
+    pub network_id: String,
+    /// Tipo de destino: "gateway", "dns", "internet".
+    pub target_type: String,
+    /// Dirección IP de destino comprobada.
+    pub target_ip: String,
+    /// RTT medio en milisegundos (si fue alcanzable).
+    pub rtt_ms: Option<u64>,
+    /// Jitter inter-llegada estimado bajo algoritmo RFC 3550 (en ms).
+    pub jitter_ms: f64,
+    /// Porcentaje de paquetes perdidos (0.0 a 100.0).
+    pub loss_pct: f32,
+    /// Cantidad de sondas enviadas en la ráfaga.
+    pub sample_count: u32,
+    /// Cantidad de sondas fallidas/sin respuesta.
+    pub probes_failed: u32,
+    /// Método de sondeo empleado: "icmp", "dns_udp", "tcp_connect".
+    pub method: String,
+    /// Fecha/hora de la muestra en formato RFC3339.
+    pub created_at: String,
+}
+
+/// Resultado consolidado de un test de velocidad bajo demanda.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpeedTestResult {
+    pub id: String,
+    pub network_id: Option<String>,
+    pub server_name: String,
+    pub server_host: String,
+    pub server_city: Option<String>,
+    pub server_country: Option<String>,
+    pub download_mbps: f64,
+    pub upload_mbps: f64,
+    pub latency_ms: u64,
+    pub jitter_ms: f64,
+    pub bufferbloat_ms: Option<u64>,
+    pub retransmits: Option<u32>,
+    /// Protocolo utilizado ("cloudflare" o "ndt7").
+    pub protocol: String,
+    pub created_at: String,
+}
+
+/// Evento de progreso en streaming emitido durante un test de velocidad activo.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpeedTestProgress {
+    /// Fase activa: "init", "latency", "download", "upload", "finished", "error".
+    pub phase: String,
+    /// Porcentaje de progreso global (0.0 a 100.0).
+    pub progress_pct: f32,
+    /// Ancho de banda actual estimado en Mbps.
+    pub current_mbps: f64,
+    /// Bytes totales transferidos en la fase actual.
+    pub bytes_transferred: u64,
+    /// Bytes totales presupuestados/estimados en la fase.
+    pub total_bytes: u64,
+    /// Latencia RTT observada (en ms).
+    pub latency_ms: Option<u64>,
+    /// Jitter observado (en ms).
+    pub jitter_ms: Option<f64>,
+    /// Información del servidor/PoP detectado.
+    pub server_info: Option<String>,
+    /// Mensaje de error si la fase falló.
+    pub error_message: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -562,5 +630,45 @@ mod tests {
             serde_json::to_string(&Severity::Critical).expect("ser"),
             "\"critical\""
         );
+    }
+
+    #[test]
+    fn health_sample_and_speed_test_serde_round_trip() {
+        let sample = NetworkHealthSample {
+            id: "health-1".to_string(),
+            network_id: "net-1".to_string(),
+            target_type: "gateway".to_string(),
+            target_ip: "192.168.1.1".to_string(),
+            rtt_ms: Some(4),
+            jitter_ms: 1.25,
+            loss_pct: 0.0,
+            sample_count: 5,
+            probes_failed: 0,
+            method: "icmp".to_string(),
+            created_at: "2026-10-16T12:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&sample).expect("ser");
+        let back: NetworkHealthSample = serde_json::from_str(&json).expect("de");
+        assert_eq!(sample, back);
+
+        let speed = SpeedTestResult {
+            id: "speed-1".to_string(),
+            network_id: Some("net-1".to_string()),
+            server_name: "Cloudflare (BOG)".to_string(),
+            server_host: "speed.cloudflare.com".to_string(),
+            server_city: Some("Bogotá".to_string()),
+            server_country: Some("CO".to_string()),
+            download_mbps: 185.4,
+            upload_mbps: 45.2,
+            latency_ms: 12,
+            jitter_ms: 1.8,
+            bufferbloat_ms: Some(15),
+            retransmits: Some(0),
+            protocol: "cloudflare".to_string(),
+            created_at: "2026-10-16T12:05:00Z".to_string(),
+        };
+        let speed_json = serde_json::to_string(&speed).expect("ser");
+        let speed_back: SpeedTestResult = serde_json::from_str(&speed_json).expect("de");
+        assert_eq!(speed, speed_back);
     }
 }
