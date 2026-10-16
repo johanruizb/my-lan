@@ -23,11 +23,14 @@ mod observation;
 
 pub use confidence::Confidence;
 pub use enrich::{noop_enricher, Enricher};
-pub use enums::{DeviceType, Protocol, ScanKind, ScanProfile, ScanStatus, ServiceState};
+pub use enums::{
+    DeviceType, FindingStatus, Protocol, RiskSeverity, ScanKind, ScanProfile, ScanStatus,
+    ServiceState,
+};
 pub use identity::DeviceIdentity;
 pub use mac::MacAddr;
 pub use models::{
     Device, DeviceAddress, DnsRecord, Event, EventType, Network, PingMethod, PingResult, Scan,
-    ScanSummary, Service, Severity, TraceHop,
+    ScanSummary, SecurityFinding, Service, Severity, TraceHop,
 };
 pub use observation::{aggregate, Observation, Source};

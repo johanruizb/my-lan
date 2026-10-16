@@ -526,3 +526,57 @@ export function onToolTraceDone(
 ): Promise<UnlistenFn> {
     return listen<TraceDoneEvent>("tool:trace_done", (e) => cb(e.payload));
 }
+
+// --- Seguridad y Auditoría de Riesgos (§4) ---------------------------------
+
+export type RiskSeverity = "low" | "medium" | "high" | "critical";
+export type FindingStatus = "open" | "acknowledged" | "ignored" | "resolved";
+
+export interface SecurityFinding {
+    id: string;
+    device_id: string | null;
+    network_id: string;
+    rule_id: string;
+    severity: RiskSeverity;
+    title: string;
+    description: string;
+    evidence: string | null;
+    remediation_advice: string | null;
+    status: FindingStatus;
+    first_seen_at: string;
+    last_seen_at: string;
+    resolved_at: string | null;
+}
+
+export interface SecurityAuditReport {
+    network_id: string;
+    score: number;
+    total_findings: number;
+    critical_count: number;
+    high_count: number;
+    medium_count: number;
+    low_count: number;
+    findings: SecurityFinding[];
+}
+
+export const getSecurityFindings = (params?: { networkId?: string; deviceId?: string }) =>
+    invoke<SecurityFinding[]>("get_security_findings_cmd", {
+        networkId: params?.networkId ?? null,
+        deviceId: params?.deviceId ?? null,
+    });
+
+export const updateFindingStatus = (findingId: string, status: FindingStatus) =>
+    invoke<boolean>("update_finding_status_cmd", {
+        findingId,
+        status,
+    });
+
+export const getSecurityScore = (networkId?: string) =>
+    invoke<number>("get_security_score_cmd", {
+        networkId: networkId ?? null,
+    });
+
+export const runSecurityAudit = (networkId?: string) =>
+    invoke<SecurityAuditReport>("run_security_audit_cmd", {
+        networkId: networkId ?? null,
+    });

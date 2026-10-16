@@ -620,11 +620,12 @@ pub async fn scan_ports_cmd(
     let conn = clone_for_blocking(&state)?;
     let services_to_persist: Vec<Service> = services.clone();
     let now_for_persist = now.clone();
+    let device_id_for_persist = device_id.clone();
     tokio::task::spawn_blocking(move || {
         for svc in &services_to_persist {
             if let Err(e) = mylan_db::service_repo::upsert_service(
                 &conn,
-                &fill_service(svc, &device_id, &now_for_persist),
+                &fill_service(svc, &device_id_for_persist, &now_for_persist),
             ) {
                 eprintln!(
                     "[mylan-desktop] upsert_service falló (puerto {}): {e}",
@@ -654,6 +655,17 @@ pub async fn scan_ports_cmd(
             &now,
             Some(&summary),
         );
+
+        // Evalúa y actualiza los hallazgos de seguridad para este dispositivo
+        if let Ok(Some(net_id)) = latest_network_id(&conn) {
+            if let Ok(Some(network)) = mylan_db::network_repo::get_network(&conn, &net_id) {
+                if let Ok(Some(device)) = mylan_db::device_repo::get_device(&conn, &device_id) {
+                    let _ = mylan_db::evaluate_and_persist_device(
+                        &conn, &network, &device, &services, &now,
+                    );
+                }
+            }
+        }
     }
 
     let _ = timeout; // ya aplicado por scan_target vía options.scan_timeout
@@ -1044,4 +1056,70 @@ pub fn notify_scan_finished_cmd(app: AppHandle, title: String, body: String) -> 
         .body(&body)
         .show()
         .map_err(|e| format!("notificación OS: {e}"))
+}
+
+/// Obtiene los hallazgos de seguridad para un dispositivo o para toda la red.
+#[tauri::command]
+pub fn get_security_findings_cmd(
+    network_id: Option<String>,
+    device_id: Option<String>,
+    state: State<'_, DesktopState>,
+) -> Result<Vec<mylan_core::SecurityFinding>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    if let Some(dev_id) = device_id {
+        mylan_db::findings_repo::list_findings_by_device(&conn, &dev_id).map_err(|e| e.to_string())
+    } else {
+        let net_id = match network_id {
+            Some(nid) => nid,
+            None => latest_network_id(&conn)?
+                .ok_or_else(|| "No hay inventario; ejecuta un escaneo primero.".to_string())?,
+        };
+        mylan_db::findings_repo::list_findings_by_network(&conn, &net_id).map_err(|e| e.to_string())
+    }
+}
+
+/// Actualiza el estado del ciclo de vida de un hallazgo (open, acknowledged, ignored, resolved).
+#[tauri::command]
+pub fn update_finding_status_cmd(
+    finding_id: String,
+    status: String,
+    state: State<'_, DesktopState>,
+) -> Result<bool, String> {
+    let new_status = mylan_core::FindingStatus::parse_str(&status)
+        .ok_or_else(|| format!("Estado de hallazgo no válido: '{status}'"))?;
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::findings_repo::update_finding_status(&conn, &finding_id, new_status)
+        .map_err(|e| e.to_string())
+}
+
+/// Obtiene el Score de Seguridad Global (0–100) para la red activa.
+#[tauri::command]
+pub fn get_security_score_cmd(
+    network_id: Option<String>,
+    state: State<'_, DesktopState>,
+) -> Result<u32, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let net_id = match network_id {
+        Some(nid) => nid,
+        None => match latest_network_id(&conn)? {
+            Some(id) => id,
+            None => return Ok(100),
+        },
+    };
+    mylan_db::findings_repo::calculate_network_score(&conn, &net_id).map_err(|e| e.to_string())
+}
+
+/// Ejecuta una re-auditoría completa de seguridad sobre toda la red.
+#[tauri::command]
+pub fn run_security_audit_cmd(
+    network_id: Option<String>,
+    state: State<'_, DesktopState>,
+) -> Result<mylan_db::SecurityAuditReport, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let net_id = match network_id {
+        Some(nid) => nid,
+        None => latest_network_id(&conn)?
+            .ok_or_else(|| "No hay inventario; ejecuta un escaneo primero.".to_string())?,
+    };
+    mylan_db::security::run_full_security_audit(&conn, &net_id).map_err(|e| e.to_string())
 }

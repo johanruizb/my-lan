@@ -9,7 +9,10 @@ use std::net::IpAddr;
 use serde::{Deserialize, Serialize};
 
 use crate::confidence::Confidence;
-use crate::enums::{DeviceType, Protocol, ScanKind, ScanProfile, ScanStatus, ServiceState};
+use crate::enums::{
+    DeviceType, FindingStatus, Protocol, RiskSeverity, ScanKind, ScanProfile, ScanStatus,
+    ServiceState,
+};
 use crate::identity::DeviceIdentity;
 use crate::mac::MacAddr;
 use crate::observation::Observation;
@@ -300,6 +303,37 @@ pub struct DnsRecord {
     pub value: String,
     /// TTL en segundos.
     pub ttl: u32,
+}
+
+/// Hallazgo de seguridad o riesgo de red pasivo/defensivo (§4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SecurityFinding {
+    /// Identificador único (UUID v4).
+    pub id: String,
+    /// Dispositivo asociado (`None` si es un riesgo a nivel de Gateway/Red).
+    pub device_id: Option<String>,
+    /// Red a la que pertenece el hallazgo.
+    pub network_id: String,
+    /// Código único de la regla (p.ej. `SEC-001-TELNET-OPEN`).
+    pub rule_id: String,
+    /// Severidad del riesgo (Critical, High, Medium, Low).
+    pub severity: RiskSeverity,
+    /// Título descriptivo corto del riesgo.
+    pub title: String,
+    /// Explicación clara sin jerga innecesaria.
+    pub description: String,
+    /// Detalle técnico observado (puerto, banner, IP).
+    pub evidence: Option<String>,
+    /// Guía paso a paso sobre cómo mitigar o corregir el problema.
+    pub remediation_advice: Option<String>,
+    /// Estado del ciclo de vida (`open`, `acknowledged`, `ignored`, `resolved`).
+    pub status: FindingStatus,
+    /// Fecha de primera detección en formato RFC3339.
+    pub first_seen_at: String,
+    /// Fecha de última detección en formato RFC3339.
+    pub last_seen_at: String,
+    /// Fecha de resolución en formato RFC3339 (si `status == resolved`).
+    pub resolved_at: Option<String>,
 }
 
 #[cfg(test)]

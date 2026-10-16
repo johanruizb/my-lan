@@ -20,10 +20,12 @@ pub mod device_repo;
 pub mod diff;
 pub mod error;
 pub mod events_repo;
+pub mod findings_repo;
 pub mod migrations;
 pub mod network_repo;
 pub mod pipeline;
 pub mod scan_repo;
+pub mod security;
 pub mod service_repo;
 pub mod util;
 
@@ -31,9 +33,17 @@ pub mod util;
 pub use diff::{run_diff, snapshot_devices_before, snapshot_services_before};
 pub use error::{DbError, DbResult};
 pub use events_repo::{insert_event, list_events, list_events_since};
+pub use findings_repo::{
+    calculate_network_score, get_finding_by_id, list_findings_by_device, list_findings_by_network,
+    update_finding_status, upsert_finding,
+};
 pub use pipeline::{
     run_scan_pipeline, run_scan_pipeline_at, run_scan_pipeline_at_in_tx,
     run_scan_pipeline_with_diff, ScanOutcome,
+};
+pub use security::{
+    evaluate_and_persist_device, evaluate_device_rules, evaluate_network_rules,
+    run_full_security_audit, SecurityAuditReport,
 };
 
 #[cfg(test)]

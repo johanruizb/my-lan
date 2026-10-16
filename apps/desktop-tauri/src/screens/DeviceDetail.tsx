@@ -48,6 +48,8 @@ import {
     CircleX,
     CircleSlash,
     ShieldAlert,
+    ShieldCheck,
+    AlertTriangle,
     Cpu,
     Settings,
     ChevronDown,
@@ -58,6 +60,7 @@ import {
     Route,
     CheckCircle2,
     Zap,
+    RefreshCw,
 } from "lucide-react";
 import {
     Table,
@@ -71,15 +74,20 @@ import {
     cancelScan,
     exportServices,
     getDevice,
+    getSecurityFindings,
     notifyScanFinished,
     onScanCancelled,
     onScanFinished,
     onScanHeartbeat,
     onScanProgress,
+    runSecurityAudit,
     scanPorts,
     updateDevice,
+    updateFindingStatus,
     type DeviceDetailDto,
+    type FindingStatus,
     type ScanProgress,
+    type SecurityFinding,
     type UnlistenFn,
 } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
@@ -144,6 +152,86 @@ function ServiceStateBadge({ state }: { state: string }) {
     );
 }
 
+function RiskSeverityBadge({ severity }: { severity: string }) {
+    switch (severity.toLowerCase()) {
+        case "critical":
+            return (
+                <Badge variant="destructive" className="gap-1 h-5 px-2 text-[10px] font-bold">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    Crítico (-25 pts)
+                </Badge>
+            );
+        case "high":
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 h-5 px-2 text-[10px] font-semibold text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/10"
+                >
+                    Alto (-15 pts)
+                </Badge>
+            );
+        case "medium":
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 h-5 px-2 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400 border-yellow-500/40 bg-yellow-500/10"
+                >
+                    Medio (-5 pts)
+                </Badge>
+            );
+        default:
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 h-5 px-2 text-[10px] font-semibold text-blue-600 dark:text-blue-400 border-blue-500/40 bg-blue-500/10"
+                >
+                    Bajo (-1 pt)
+                </Badge>
+            );
+    }
+}
+
+function FindingStatusBadge({ status }: { status: string }) {
+    switch (status.toLowerCase()) {
+        case "acknowledged":
+            return (
+                <Badge
+                    variant="outline"
+                    className="h-5 px-2 text-[10px] font-medium border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10"
+                >
+                    Riesgo aceptado
+                </Badge>
+            );
+        case "ignored":
+            return (
+                <Badge
+                    variant="outline"
+                    className="h-5 px-2 text-[10px] font-medium text-muted-foreground border-border bg-muted/40"
+                >
+                    Ignorado
+                </Badge>
+            );
+        case "resolved":
+            return (
+                <Badge
+                    variant="outline"
+                    className="h-5 px-2 text-[10px] font-medium border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                >
+                    Resuelto
+                </Badge>
+            );
+        default:
+            return (
+                <Badge
+                    variant="outline"
+                    className="h-5 px-2 text-[10px] font-semibold border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10"
+                >
+                    Activo
+                </Badge>
+            );
+    }
+}
+
 export function DeviceDetail() {
     const { ip = "" } = useParams();
     const { toast } = useToast();
@@ -170,6 +258,63 @@ export function DeviceDetail() {
     const [notes, setNotes] = useState(detail?.device.notes ?? "");
     const [saving, setSaving] = useState(false);
     const [editing, setEditing] = useState(false);
+
+    const [rightTab, setRightTab] = useState<"services" | "security">("services");
+    const [findings, setFindings] = useState<SecurityFinding[]>([]);
+    const [loadingFindings, setLoadingFindings] = useState(false);
+    const [reloadingAudit, setReloadingAudit] = useState(false);
+
+    const loadFindings = useCallback(async (devId?: string) => {
+        const id = devId ?? detail?.device.id;
+        if (!id) return;
+        try {
+            setLoadingFindings(true);
+            const list =
+                typeof getSecurityFindings === "function"
+                    ? await getSecurityFindings({ deviceId: id }).catch(() => [])
+                    : [];
+            setFindings(list);
+        } catch {
+            // Silencioso
+        } finally {
+            setLoadingFindings(false);
+        }
+    }, [detail?.device.id]);
+
+    useEffect(() => {
+        if (detail?.device.id) {
+            loadFindings(detail.device.id);
+        }
+    }, [detail?.device.id, loadFindings]);
+
+    const handleStatusUpdate = async (findingId: string, newStatus: FindingStatus) => {
+        try {
+            await updateFindingStatus(findingId, newStatus);
+            await loadFindings();
+            const msg =
+                newStatus === "acknowledged"
+                    ? "Riesgo aceptado. No penalizará el score global."
+                    : newStatus === "ignored"
+                      ? "Hallazgo ignorado y silenciado."
+                      : "Estado del hallazgo actualizado.";
+            toast(msg, "success");
+        } catch (e) {
+            toast(`Error: ${e}`, "error");
+        }
+    };
+
+    const handleReauditDevice = async () => {
+        try {
+            setReloadingAudit(true);
+            await runSecurityAudit();
+            await loadFindings();
+            toast("Auditoría de seguridad completada.", "success");
+        } catch (e) {
+            toast(`Error al auditar: ${e}`, "error");
+        } finally {
+            setReloadingAudit(false);
+        }
+    };
 
     // Aviso de cambios sin guardar: si el usuario edita display_name o notes
     // y navega away sin Guardar, useBlocker muestra un dialog de confirmación
@@ -257,7 +402,10 @@ export function DeviceDetail() {
                     ).catch(() => {});
                 }
                 getDevice(decodeURIComponent(ip))
-                    .then(setDetail)
+                    .then((d) => {
+                        setDetail(d);
+                        if (d?.device.id) loadFindings(d.device.id);
+                    })
                     .catch(() => {});
             }
         }).then((u) => unlisteners.push(u));
@@ -339,7 +487,10 @@ export function DeviceDetail() {
                 "success",
             );
             getDevice(decodeURIComponent(ip))
-                .then(setDetail)
+                .then((d) => {
+                    setDetail(d);
+                    if (d?.device.id) loadFindings(d.device.id);
+                })
                 .catch(() => {});
         } catch {
             setIsTrusted(prev);
@@ -417,6 +568,7 @@ export function DeviceDetail() {
     const closedOrFilteredServices = detail.services.filter(
         (s) => s.state.toLowerCase() !== "open",
     );
+    const openFindingsCount = findings.filter((f) => f.status === "open").length;
 
     return (
         <div
@@ -799,9 +951,50 @@ export function DeviceDetail() {
                     </Card>
                 </div>
 
-                {/* Columna derecha: Consola unificada de Escaneo de Puertos y Servicios */}
+                {/* Columna derecha: Consola unificada de Servicios y Seguridad */}
                 <div className="flex flex-col gap-4 lg:col-span-7">
-                    <Card>
+                    {/* Switcher de pestañas Servicios / Seguridad */}
+                    <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                        <div className="flex items-center gap-1.5">
+                            <Button
+                                variant={rightTab === "services" ? "secondary" : "ghost"}
+                                size="sm"
+                                onClick={() => setRightTab("services")}
+                                className="h-8 gap-2 text-xs font-semibold"
+                            >
+                                <Server className="h-3.5 w-3.5 text-primary" />
+                                Servicios ({openServices.length})
+                            </Button>
+                            <Button
+                                variant={rightTab === "security" ? "secondary" : "ghost"}
+                                size="sm"
+                                onClick={() => setRightTab("security")}
+                                className="h-8 gap-2 text-xs font-semibold"
+                            >
+                                <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
+                                Seguridad y Riesgos
+                                {openFindingsCount > 0 ? (
+                                    <Badge
+                                        variant="destructive"
+                                        className="h-4 px-1.5 text-[10px] font-bold"
+                                    >
+                                        {openFindingsCount}
+                                    </Badge>
+                                ) : findings.length > 0 ? (
+                                    <Badge
+                                        variant="outline"
+                                        className="h-4 px-1.5 text-[10px] font-medium text-emerald-600 border-emerald-500/30"
+                                    >
+                                        {findings.length}
+                                    </Badge>
+                                ) : null}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {rightTab === "services" ? (
+                        <>
+                            <Card>
                         <CardHeader className="px-5 py-4 border-b border-border/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-col gap-0.5">
                                 <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
@@ -1175,6 +1368,144 @@ export function DeviceDetail() {
                                 </div>
                             </CollapsibleContent>
                         </Collapsible>
+                    )}
+                        </>
+                    ) : (
+                        <Card>
+                            <CardHeader className="px-5 py-4 border-b border-border/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex flex-col gap-0.5">
+                                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                        <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" aria-hidden />
+                                        Auditoría de Seguridad del Dispositivo ({findings.length})
+                                    </CardTitle>
+                                    <p className="text-xs text-muted-foreground">
+                                        Evaluación pasiva de vulnerabilidades y exposición de servicios en este host.
+                                    </p>
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleReauditDevice}
+                                    disabled={reloadingAudit || loadingFindings}
+                                    className="h-8 gap-1.5 text-xs font-medium shrink-0"
+                                >
+                                    {reloadingAudit ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                    )}
+                                    Re-auditar
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="p-5 flex flex-col gap-4">
+                                {loadingFindings ? (
+                                    <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Cargando hallazgos…
+                                    </div>
+                                ) : findings.length === 0 ? (
+                                    <EmptyState
+                                        icon={ShieldCheck}
+                                        title="Sin vulnerabilidades conocidas detectadas"
+                                        description="No se han identificado puertos inseguros (Telnet, FTP en texto claro, SMB no confiable) ni configuraciones de riesgo en este host."
+                                    />
+                                ) : (
+                                    <div className="flex flex-col gap-3">
+                                        {findings.map((f) => (
+                                            <div
+                                                key={f.id}
+                                                className="rounded-lg border border-border/70 bg-card p-4 flex flex-col gap-3 shadow-2xs transition-colors hover:border-border"
+                                            >
+                                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                                    <div className="flex flex-col gap-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <RiskSeverityBadge severity={f.severity} />
+                                                            <FindingStatusBadge status={f.status} />
+                                                            <span className="font-mono text-[11px] text-muted-foreground font-semibold">
+                                                                {f.rule_id}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="text-sm font-semibold text-foreground pt-1">
+                                                            {f.title}
+                                                        </h4>
+                                                    </div>
+
+                                                    {/* Botones de acción según status */}
+                                                    <div className="flex items-center gap-1.5 shrink-0 pt-1 sm:pt-0">
+                                                        {f.status === "open" ? (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleStatusUpdate(f.id, "acknowledged")}
+                                                                    className="h-7 px-2.5 text-xs gap-1"
+                                                                    title="Aceptar este riesgo intencionalmente. Ya no restará puntos al score global."
+                                                                >
+                                                                    Aceptar riesgo
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleStatusUpdate(f.id, "ignored")}
+                                                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                                                    title="Ignorar y silenciar este hallazgo."
+                                                                >
+                                                                    Ignorar
+                                                                </Button>
+                                                            </>
+                                                        ) : f.status === "acknowledged" || f.status === "ignored" ? (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleStatusUpdate(f.id, "open")}
+                                                                className="h-7 px-2.5 text-xs gap-1"
+                                                                title="Reabrir este hallazgo como activo."
+                                                            >
+                                                                Reabrir
+                                                            </Button>
+                                                        ) : (
+                                                            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                                                Resuelto
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-xs text-foreground/85 leading-relaxed">
+                                                    {f.description}
+                                                </p>
+
+                                                {/* Evidencia técnica con Modo Censura estricto */}
+                                                {f.evidence && (
+                                                    <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-2 flex flex-col gap-1 text-xs">
+                                                        <span className="text-[11px] font-medium text-muted-foreground">
+                                                            Evidencia observada:
+                                                        </span>
+                                                        <div className="font-mono text-xs font-medium text-foreground/90">
+                                                            <MaskedValue field="evidence" value={f.evidence} mono />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Panel colapsable de remediación / solución */}
+                                                {f.remediation_advice && (
+                                                    <Collapsible className="rounded-md border border-border/40 bg-muted/10 overflow-hidden">
+                                                        <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-primary hover:bg-muted/30 transition-colors [&[data-state=open]>svg]:rotate-180">
+                                                            <span>¿Cómo solucionar este problema?</span>
+                                                            <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200" />
+                                                        </CollapsibleTrigger>
+                                                        <CollapsibleContent className="px-3 pb-3 pt-1 text-xs text-muted-foreground leading-relaxed border-t border-border/40">
+                                                            {f.remediation_advice}
+                                                        </CollapsibleContent>
+                                                    </Collapsible>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
             </div>

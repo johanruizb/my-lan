@@ -90,6 +90,79 @@ pub enum ScanStatus {
     Failed,
 }
 
+/// Severidad de un hallazgo de seguridad según la taxonomía de 4 niveles (§4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RiskSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+impl RiskSeverity {
+    /// Puntos de penalización en el Score de Seguridad global (0-100).
+    pub fn penalty_points(&self) -> u32 {
+        match self {
+            Self::Critical => 25,
+            Self::High => 15,
+            Self::Medium => 5,
+            Self::Low => 1,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+            Self::Critical => "critical",
+        }
+    }
+
+    pub fn parse_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "low" => Some(Self::Low),
+            "medium" => Some(Self::Medium),
+            "high" => Some(Self::High),
+            "critical" => Some(Self::Critical),
+            _ => None,
+        }
+    }
+}
+
+/// Estado del ciclo de vida de un hallazgo de seguridad (`security_findings`).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FindingStatus {
+    #[default]
+    Open,
+    Acknowledged,
+    Ignored,
+    Resolved,
+}
+
+impl FindingStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Acknowledged => "acknowledged",
+            Self::Ignored => "ignored",
+            Self::Resolved => "resolved",
+        }
+    }
+
+    pub fn parse_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "open" => Some(Self::Open),
+            "acknowledged" => Some(Self::Acknowledged),
+            "ignored" => Some(Self::Ignored),
+            "resolved" => Some(Self::Resolved),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

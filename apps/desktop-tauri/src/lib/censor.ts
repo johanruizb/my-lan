@@ -82,7 +82,15 @@ const SENSITIVE_FIELDS = new Set<string>([
     "ip",
     "mac",
     "device_ip",
+    "evidence",
 ]);
+
+/** Enmascara IPs y MACs contenidas en texto de evidencia técnica. */
+export function maskEvidence(text: string): string {
+    const macRegex = /\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b/g;
+    const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
+    return text.replace(macRegex, "••••").replace(ipRegex, (ip) => maskIp(ip));
+}
 
 /** true si el campo es un identificador estricto que debe enmascararse. */
 export function isSensitive(field: string): boolean {
@@ -108,6 +116,8 @@ export function maskValue(field: string, value: string): string {
         case "mac":
         case "gateway_mac":
             return maskMac();
+        case "evidence":
+            return maskEvidence(value);
         case "dns_servers":
             // dns_servers llega como string plano o separado por comas.
             return maskDns(value.split(",").map((s) => s.trim()));

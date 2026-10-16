@@ -378,6 +378,9 @@ impl BackgroundMonitor {
                 *gw_guard = Some(is_reachable);
             }
 
+            // 9. Ejecutar auditoría pasiva de seguridad en segundo plano
+            let _ = mylan_db::security::run_full_security_audit(&conn, &network.id);
+
             // 9. Notificar al frontend que terminó un escaneo de fondo
             let _ = app_clone.emit(
                 "scan:finished",

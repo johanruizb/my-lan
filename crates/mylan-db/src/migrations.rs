@@ -16,6 +16,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (3, MIGRATION_V3),
     (4, MIGRATION_V4),
     (5, MIGRATION_V5),
+    (6, MIGRATION_V6),
 ];
 
 /// Esquema inicial completo del plan §8.
@@ -185,6 +186,36 @@ SET is_online = (
 /// `Option::<String>::None`. Sólo corre si `user_version < 5` (idempotente).
 const MIGRATION_V5: &str = "ALTER TABLE scans ADD COLUMN target_ip TEXT;";
 
+/// v6 — Tabla de hallazgos de seguridad y auditoría pasiva (§4).
+const MIGRATION_V6: &str = "\
+CREATE TABLE IF NOT EXISTS security_findings (
+  id TEXT PRIMARY KEY,
+  device_id TEXT,
+  network_id TEXT NOT NULL,
+  rule_id TEXT NOT NULL,
+  severity TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  evidence TEXT,
+  remediation_advice TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  resolved_at TEXT,
+  FOREIGN KEY(device_id) REFERENCES devices(id),
+  FOREIGN KEY(network_id) REFERENCES networks(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_findings_network_status
+  ON security_findings(network_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_findings_device
+  ON security_findings(device_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_findings_network_device_rule
+  ON security_findings(network_id, coalesce(device_id, ''), rule_id);
+";
+
 fn current_version(conn: &Connection) -> DbResult<u32> {
     let v: i64 = conn
         .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -262,6 +293,7 @@ mod tests {
             "events",
             "networks",
             "scans",
+            "security_findings",
             "services",
         ] {
             assert!(

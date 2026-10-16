@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NetworkHeader } from "@/components/network-header";
+import { SecurityScoreCard } from "@/components/security-score-card";
 import { Devices } from "@/screens/Devices";
 import { getSettings } from "@/lib/tauri";
 import { SECTION_GAP } from "@/lib/design-tokens";
@@ -21,6 +22,7 @@ export function Dashboard() {
     return (
         <div className={cn("flex flex-col", SECTION_GAP)}>
             <NetworkHeader profile={profile} onProfileChange={setProfile} />
+            <SecurityScoreCard />
             <Devices variant="preview" />
         </div>
     );

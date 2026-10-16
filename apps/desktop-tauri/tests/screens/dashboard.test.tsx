@@ -18,6 +18,10 @@ vi.mock("@/lib/tauri", () => ({
     listDevices: () => listDevicesMock(),
     getSettings: () => getSettingsMock(),
     getNetworkName: (cidr: string) => getNetworkNameMock(cidr),
+    getSecurityScore: vi.fn().mockResolvedValue(100),
+    getSecurityFindings: vi.fn().mockResolvedValue([]),
+    runSecurityAudit: vi.fn().mockResolvedValue({ score: 100, findings: [] }),
+    onScanFinished: vi.fn().mockResolvedValue(() => {}),
 }));
 
 vi.mock("@/App", () => ({
