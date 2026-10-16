@@ -7,7 +7,7 @@
 
 ## Gotchas
 - Always run `node scripts/sync-version.mjs` after editing `Cargo.toml`, and verify with `node scripts/sync-version.mjs --check`.
-- The CI release workflow (`release.yml`) builds Linux and Windows binaries on `workflow_dispatch` with input `version` (e.g. `0.6.0`), and verifies that the tag does NOT yet exist on origin before building assets and creating the GitHub Release. Push `main` and `release/v<version>` first, trigger the workflow, and let it create/tag the release.
+- The CI release workflow (`release.yml`) builds Linux and Windows binaries on `workflow_dispatch` with input `version` (e.g. `0.6.0`), extracts release notes from `CHANGELOG.md`, verifies that the tag does NOT yet exist on origin before building assets, and publishes the GitHub Release directly as latest (non-draft). Push `main` and `release/v<version>` first, trigger the workflow, and let it create/tag the release.
 - Desktop tests require passing `npx vitest run` and `npm run build` in `apps/desktop-tauri` prior to cutting the release.
 
 ## Preferences

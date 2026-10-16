@@ -10,9 +10,9 @@ on:
         required: true
         type: string
       prerelease:
-        description: "Mark the draft release as a prerelease"
-        required: true
-        default: true
+        description: "Mark the release as a prerelease"
+        required: false
+        default: false
         type: boolean
 
 permissions:
@@ -57,6 +57,9 @@ jobs:
             echo "release ${tag} already exists"
             exit 1
           fi
+
+          # Validate that CHANGELOG.md contains notes for this version
+          node scripts/extract-changelog.mjs --version "$VERSION" >/dev/null
 
   build-cli:
     name: CLI (${{ matrix.target }})
@@ -199,7 +202,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Create draft release
+    name: Publish GitHub release
     needs: [validate, build-cli, build-desktop]
     runs-on: ubuntu-22.04
     steps:
@@ -211,12 +214,20 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Extract release notes from CHANGELOG
+        run: |
+          set -euo pipefail
+          node scripts/extract-changelog.mjs \
+            --version "${{ inputs.version }}" \
+            --output release-notes.md
+
       - name: Generate updater manifest
         run: |
           set -euo pipefail
           node scripts/generate-updater-manifest.mjs \
             --version "${{ inputs.version }}" \
-            --dir release-assets
+            --dir release-assets \
+            --notes-file release-notes.md
 
       - name: Generate checksums
         run: |
@@ -226,7 +237,7 @@ jobs:
             sort -z |
             xargs -0 sha256sum > SHA256SUMS
 
-      - name: Create draft GitHub release
+      - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v${{ inputs.version }}
@@ -240,14 +251,15 @@ jobs:
 
           release_flags=(
             --repo "$GITHUB_REPOSITORY"
-            --draft
-            --generate-notes
+            --notes-file release-notes.md
             --target "$GITHUB_SHA"
             --title "MyLAN ${TAG}"
           )
 
           if [[ "${{ inputs.prerelease }}" == "true" ]]; then
             release_flags+=(--prerelease)
+          else
+            release_flags+=(--latest)
           fi
 
           gh release create "$TAG" "${assets[@]}" "${release_flags[@]}"

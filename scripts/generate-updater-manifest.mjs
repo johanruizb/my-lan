@@ -23,6 +23,9 @@ function parseArgs() {
             options.repo = args[++i];
         } else if (arg === "--notes" && i + 1 < args.length) {
             options.notes = args[++i];
+        } else if (arg === "--notes-file" && i + 1 < args.length) {
+            const notesFilePath = resolve(args[++i]);
+            options.notes = readFileSync(notesFilePath, "utf8").trim();
         } else if (arg === "--output" && i + 1 < args.length) {
             options.output = args[++i];
         }
