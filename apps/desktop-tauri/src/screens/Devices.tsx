@@ -29,6 +29,7 @@ import {
     RefreshCw,
     ChevronDown,
     ArrowLeft,
+    FileText,
 } from "lucide-react";
 import {
     Table,
@@ -43,6 +44,8 @@ import { exportDevices, listDevices, type Device } from "@/lib/tauri";
 import { deviceKey, useScan } from "@/App";
 import { MaskedValue } from "@/components/masked-value";
 import { useCensorship } from "@/components/censorship-provider";
+import { useWorkspace } from "@/components/workspace-provider";
+import { ExportReportModal } from "@/components/export-report-modal";
 import { maskValue } from "@/lib/censor";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { OnlineBadge } from "@/components/online-badge";
@@ -131,15 +134,17 @@ export function Devices({
         "all" | "trusted" | "untrusted"
     >("trust", "all");
     const [, setSearchParams] = useSearchParams();
+    const { activeWorkspace } = useWorkspace();
+    const [exportPdfOpen, setExportPdfOpen] = useState(false);
 
     const clearAllFilters = useCallback(() => {
         setSearchParams({}, { replace: true });
     }, [setSearchParams]);
 
-    async function refresh() {
+    const refresh = useCallback(async () => {
         setLoading(true);
         try {
-            const rows = await listDevices();
+            const rows = await listDevices(activeWorkspace.id);
             setDevices(rows);
             setError(null);
         } catch (e) {
@@ -148,18 +153,18 @@ export function Devices({
         } finally {
             setLoading(false);
         }
-    }
+    }, [activeWorkspace.id]);
 
     useEffect(() => {
         refresh();
-    }, []);
+    }, [refresh]);
 
     // Al terminar el scan refresca con la verdad canónica de la BD (AC-10).
     const prevScanning = useRef(scanning);
     useEffect(() => {
         if (prevScanning.current && !scanning) refresh();
         prevScanning.current = scanning;
-    }, [scanning]);
+    }, [scanning, refresh]);
 
     // Merge en sitio de los hosts hallados en vivo sobre el listado base, por
     // identidad primary_ip → primary_mac, sin duplicados (AC-5/AC-6).
@@ -373,6 +378,11 @@ export function Devices({
                                         onSelect={() => handleExport("json")}
                                     >
                                         JSON
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onSelect={() => setExportPdfOpen(true)}
+                                    >
+                                        Informe Ejecutivo (PDF)
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -991,6 +1001,12 @@ export function Devices({
                         )}
                 </CardContent>
             </Card>
+            {exportPdfOpen && (
+                <ExportReportModal
+                    open={exportPdfOpen}
+                    onOpenChange={setExportPdfOpen}
+                />
+            )}
         </section>
     );
 }

@@ -355,6 +355,23 @@ pub fn list_devices(conn: &Connection, network_id: &str) -> DbResult<Vec<Device>
     Ok(out)
 }
 
+/// Lista todos los dispositivos que pertenecen a un workspace dado.
+pub fn list_devices_by_workspace(conn: &Connection, workspace_id: &str) -> DbResult<Vec<Device>> {
+    let sql = "SELECT id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, \
+               manufacturer, model, device_type, os_family, confidence, first_seen_at, \
+               last_seen_at, is_trusted, is_hidden, notes, is_online \
+               FROM devices WHERE workspace_id = ?1 ORDER BY last_seen_at DESC";
+    let mut stmt = conn.prepare(sql).map_err(map_sqlite)?;
+    let rows = stmt
+        .query_map([workspace_id], DeviceRow::from_row)
+        .map_err(map_sqlite)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(map_sqlite)?.decode()?);
+    }
+    Ok(out)
+}
+
 pub fn get_device_by_ip(
     conn: &Connection,
     network_id: &str,
@@ -894,5 +911,26 @@ mod tests {
         // Confirm table is still intact and original device is present
         let existing = get_device(&conn, "dev-1").unwrap();
         assert!(existing.is_some(), "table and data remained intact");
+    }
+
+    #[test]
+    fn test_list_devices_by_workspace() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = fixture_conn(dir.path(), "by_ws");
+        let d1 = device(
+            "dev-1",
+            Some(mac("aa:bb:cc:dd:ee:41")),
+            Some(ip("192.168.1.10")),
+            "t0",
+        );
+        upsert_device(&conn, &d1).unwrap();
+
+        // Por defecto d1 está en workspace 'default'
+        let devs = list_devices_by_workspace(&conn, "default").unwrap();
+        assert_eq!(devs.len(), 1);
+        assert_eq!(devs[0].id, "dev-1");
+
+        let empty = list_devices_by_workspace(&conn, "non-existent").unwrap();
+        assert!(empty.is_empty());
     }
 }

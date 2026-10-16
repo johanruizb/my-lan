@@ -90,9 +90,12 @@ export function NetworkNameProvider({ children }: { children: ReactNode }) {
 export function useNetworkName(): NetworkNameContextValue {
     const ctx = useContext(NetworkNameContext);
     if (!ctx) {
-        throw new Error(
-            "useNetworkName debe usarse dentro de NetworkNameProvider",
-        );
+        return {
+            name: "",
+            source: "auto",
+            cidr: "",
+            editName: async () => {},
+        };
     }
     return ctx;
 }

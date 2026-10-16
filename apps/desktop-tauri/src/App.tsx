@@ -27,6 +27,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProviderApp } from "@/components/ui/toast";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { CensorshipProvider } from "@/components/censorship-provider";
+import { WorkspaceProvider } from "@/components/workspace-provider";
+import { WorkspaceSelector } from "@/components/workspace-selector";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { UpdaterProvider, useUpdater } from "@/components/updater-provider";
@@ -406,7 +408,7 @@ function AppShell() {
     return (
         <div className="flex h-screen overflow-hidden bg-background text-foreground">
             {/* Sidebar fija en desktop; en móvil se colapsa arriba (AC-1). */}
-            <aside className="hidden h-full w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 md:flex">
+            <aside className="hidden h-full w-60 shrink-0 flex-col gap-4 border-r border-border bg-card p-4 md:flex">
                 <div className="flex items-center gap-2.5 px-1 pt-1">
                     <AppMark className="h-8 w-8 shrink-0" />
                     <span
@@ -416,6 +418,7 @@ function AppShell() {
                         MyLAN
                     </span>
                 </div>
+                <WorkspaceSelector />
                 <Sidebar />
                 <SidebarFooter onOpenAbout={openAbout} />
             </aside>
@@ -428,16 +431,19 @@ function AppShell() {
                 {/* #37: barra superior solo en móvil (desktop tiene el brand en
                     la sidebar). El resumen del último descubrimiento vive en la
                     cabecera de la vista Red (ADR-0007). */}
-                <header className="z-30 flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur md:hidden">
+                <header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 py-2.5 backdrop-blur md:hidden">
                     <div className="flex items-center gap-2">
-                        <AppMark className="h-7 w-7 shrink-0" />
+                        <AppMark className="h-6 w-6 shrink-0" />
                         <span
-                            className="text-lg font-semibold tracking-tight"
+                            className="text-base font-semibold tracking-tight"
                             translate="no"
                             aria-hidden
                         >
                             MyLAN
                         </span>
+                    </div>
+                    <div className="w-44">
+                        <WorkspaceSelector />
                     </div>
                 </header>
                 {/* Navegación móvil (sidebar arriba en pantallas pequeñas, AC-1). */}
@@ -652,13 +658,15 @@ function App() {
     return (
         <ThemeProvider>
             <CensorshipProvider>
-                <TooltipProvider delayDuration={200}>
-                    <ToastProviderApp>
-                        <UpdaterProvider>
-                            <AppInner />
-                        </UpdaterProvider>
-                    </ToastProviderApp>
-                </TooltipProvider>
+                <WorkspaceProvider>
+                    <TooltipProvider delayDuration={200}>
+                        <ToastProviderApp>
+                            <UpdaterProvider>
+                                <AppInner />
+                            </UpdaterProvider>
+                        </ToastProviderApp>
+                    </TooltipProvider>
+                </WorkspaceProvider>
             </CensorshipProvider>
         </ThemeProvider>
     );

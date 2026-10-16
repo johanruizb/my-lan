@@ -32,6 +32,6 @@ pub use mac::MacAddr;
 pub use models::{
     Device, DeviceAddress, DnsRecord, Event, EventType, Network, NetworkHealthSample, PingMethod,
     PingResult, Scan, ScanSummary, SecurityFinding, Service, Severity, SpeedTestProgress,
-    SpeedTestResult, TraceHop,
+    SpeedTestResult, TraceHop, Workspace,
 };
 pub use observation::{aggregate, Observation, Source};

@@ -191,6 +191,8 @@ export interface Settings {
     notify_gateway_down?: boolean;
     /** Notificar puertos críticos abiertos recién detectados. */
     notify_critical_ports?: boolean;
+    /** ID del workspace activo (Pilar 6 / Fase 10). */
+    active_workspace_id?: string;
 }
 
 /** Estado en vivo del monitoreo continuo en segundo plano. */
@@ -211,7 +213,11 @@ export const detectInterface = (interfaceOverride?: string) =>
         interface: interfaceOverride ?? null,
     });
 
-export const listDevices = () => invoke<Device[]>("list_devices_cmd");
+export const listDevices = (workspaceId?: string) =>
+    invoke<Device[]>(
+        "list_devices_cmd",
+        workspaceId !== undefined ? { workspaceId } : {},
+    );
 
 export const getDevice = (ip: string) =>
     invoke<DeviceDetailDto>("get_device_cmd", { ip });
@@ -666,3 +672,61 @@ export const onSpeedTestProgress = (
 export const onSpeedTestDone = (
     cb: (event: SpeedTestDoneEvent) => void,
 ) => listen<SpeedTestDoneEvent>("tool:speedtest_done", (e) => cb(e.payload));
+
+// --- Tipos e IPC de Workspaces (Pilar 6 / Fase 10) ---------------------------
+
+export interface Workspace {
+    id: string;
+    name: string;
+    description: string | null;
+    icon: string;
+    color: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface WorkspaceStats {
+    device_count: number;
+    network_count: number;
+    online_device_count: number;
+    open_findings_count: number;
+}
+
+export interface CreateWorkspacePayload {
+    id?: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+}
+
+export interface UpdateWorkspacePayload {
+    id: string;
+    name: string;
+    description?: string;
+    icon: string;
+    color: string;
+}
+
+export const listWorkspaces = () => invoke<Workspace[]>("list_workspaces_cmd");
+
+export const getWorkspace = (id: string) =>
+    invoke<Workspace | null>("get_workspace_cmd", { id });
+
+export const createWorkspace = (payload: CreateWorkspacePayload) =>
+    invoke<Workspace>("create_workspace_cmd", { payload });
+
+export const updateWorkspace = (payload: UpdateWorkspacePayload) =>
+    invoke<Workspace>("update_workspace_cmd", { payload });
+
+export const deleteWorkspace = (id: string) =>
+    invoke<void>("delete_workspace_cmd", { id });
+
+export const getWorkspaceStats = (id: string) =>
+    invoke<WorkspaceStats>("get_workspace_stats_cmd", { id });
+
+export const assignNetworkWorkspace = (networkId: string, workspaceId: string) =>
+    invoke<void>("assign_network_workspace_cmd", { networkId, workspaceId });
+
+export const detectWorkspaceForNetwork = (networkId: string) =>
+    invoke<string>("detect_workspace_for_network_cmd", { networkId });

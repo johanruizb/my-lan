@@ -23,9 +23,9 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_notification::NotificationExt;
 
 use crate::dto::{
-    parse_ip, parse_profile, DeviceDetailDto, DiscoveryProgress, LanInterfaceDto, NetworkNameDto,
-    ScanCancelled, ScanDevice, ScanFinished, ScanHeartbeat, ScanOutcomeDto, ScanStarted,
-    ScanSummaryDto, ServiceFiltersDto, Settings,
+    parse_ip, parse_profile, CreateWorkspaceDto, DeviceDetailDto, DiscoveryProgress,
+    LanInterfaceDto, NetworkNameDto, ScanCancelled, ScanDevice, ScanFinished, ScanHeartbeat,
+    ScanOutcomeDto, ScanStarted, ScanSummaryDto, ServiceFiltersDto, Settings, UpdateWorkspaceDto,
 };
 use crate::state::DesktopState;
 
@@ -164,8 +164,15 @@ pub fn update_device_cmd(
 }
 
 #[tauri::command]
-pub fn list_devices_cmd(state: State<'_, DesktopState>) -> Result<Vec<mylan_core::Device>, String> {
+pub fn list_devices_cmd(
+    workspace_id: Option<String>,
+    state: State<'_, DesktopState>,
+) -> Result<Vec<mylan_core::Device>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
+    if let Some(ws) = workspace_id {
+        return mylan_db::device_repo::list_devices_by_workspace(&conn, &ws)
+            .map_err(|e| e.to_string());
+    }
     let net_id = latest_network_id(&conn)?
         .ok_or_else(|| "No hay inventario; ejecuta un escaneo primero.".to_string())?;
     mylan_db::device_repo::list_devices(&conn, &net_id).map_err(|e| e.to_string())
@@ -1122,4 +1129,101 @@ pub fn run_security_audit_cmd(
             .ok_or_else(|| "No hay inventario; ejecuta un escaneo primero.".to_string())?,
     };
     mylan_db::security::run_full_security_audit(&conn, &net_id).map_err(|e| e.to_string())
+}
+
+// --- Comandos de Workspaces (Pilar 6 / Fase 10) -----------------------------
+
+#[tauri::command]
+pub fn list_workspaces_cmd(
+    state: State<'_, DesktopState>,
+) -> Result<Vec<mylan_core::Workspace>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::workspace_repo::list_workspaces(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_workspace_cmd(
+    id: String,
+    state: State<'_, DesktopState>,
+) -> Result<Option<mylan_core::Workspace>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::workspace_repo::get_workspace(&conn, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn create_workspace_cmd(
+    payload: CreateWorkspaceDto,
+    state: State<'_, DesktopState>,
+) -> Result<mylan_core::Workspace, String> {
+    let now = mylan_db::util::now_rfc3339().map_err(|e| e.to_string())?;
+    let id = payload.id.unwrap_or_else(mylan_db::util::new_id);
+    let ws = mylan_core::Workspace {
+        id,
+        name: payload.name,
+        description: payload.description,
+        icon: payload.icon.unwrap_or_else(|| "network".to_string()),
+        color: payload.color.unwrap_or_else(|| "#06b6d4".to_string()),
+        created_at: now.clone(),
+        updated_at: now,
+    };
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::workspace_repo::create_workspace(&conn, &ws).map_err(|e| e.to_string())?;
+    Ok(ws)
+}
+
+#[tauri::command]
+pub fn update_workspace_cmd(
+    payload: UpdateWorkspaceDto,
+    state: State<'_, DesktopState>,
+) -> Result<mylan_core::Workspace, String> {
+    let now = mylan_db::util::now_rfc3339().map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut ws = mylan_db::workspace_repo::get_workspace(&conn, &payload.id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Workspace {} no encontrado", payload.id))?;
+    ws.name = payload.name;
+    ws.description = payload.description;
+    ws.icon = payload.icon;
+    ws.color = payload.color;
+    ws.updated_at = now;
+    mylan_db::workspace_repo::update_workspace(&conn, &ws).map_err(|e| e.to_string())?;
+    Ok(ws)
+}
+
+#[tauri::command]
+pub fn delete_workspace_cmd(id: String, state: State<'_, DesktopState>) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::workspace_repo::delete_workspace(&conn, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_workspace_stats_cmd(
+    id: String,
+    state: State<'_, DesktopState>,
+) -> Result<mylan_db::workspace_repo::WorkspaceStats, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::workspace_repo::get_workspace_stats(&conn, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn assign_network_workspace_cmd(
+    network_id: String,
+    workspace_id: String,
+    state: State<'_, DesktopState>,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    mylan_db::workspace_repo::assign_network_to_workspace(&conn, &network_id, &workspace_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn detect_workspace_for_network_cmd(
+    network_id: String,
+    state: State<'_, DesktopState>,
+) -> Result<String, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let ws_id = mylan_db::workspace_repo::get_network_workspace(&conn, &network_id)
+        .map_err(|e| e.to_string())?
+        .unwrap_or_else(|| "default".to_string());
+    Ok(ws_id)
 }

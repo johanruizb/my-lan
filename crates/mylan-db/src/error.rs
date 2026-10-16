@@ -20,6 +20,9 @@ pub enum DbError {
     /// La base de datos está bloqueada por otro escritor (concurrencia).
     #[error("database is locked or busy")]
     Locked,
+    /// Error de validación o restricción de dominio a nivel de base de datos.
+    #[error("domain error: {0}")]
+    Domain(String),
 }
 
 /// Resultado abreviado para las operaciones del crate.

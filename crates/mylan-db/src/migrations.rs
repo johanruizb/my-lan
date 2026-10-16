@@ -18,6 +18,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (5, MIGRATION_V5),
     (6, MIGRATION_V6),
     (7, MIGRATION_V7),
+    (8, MIGRATION_V8),
 ];
 
 /// Esquema inicial completo del plan §8.
@@ -262,6 +263,38 @@ CREATE INDEX IF NOT EXISTS idx_speed_network_created
   ON speed_tests(network_id, created_at DESC);
 ";
 
+/// v8 — Tabla de workspaces (multi-sitio) y partición lógica de inventario (Pilar 6 / Fase 10).
+const MIGRATION_V8: &str = "\
+CREATE TABLE IF NOT EXISTS workspaces (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT NOT NULL DEFAULT 'network',
+  color TEXT NOT NULL DEFAULT '#06b6d4',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO workspaces (id, name, description, icon, color, created_at, updated_at)
+VALUES ('default', 'Mi Red Local', 'Workspace principal por defecto', 'home', '#06b6d4', datetime('now'), datetime('now'));
+
+ALTER TABLE networks ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+ALTER TABLE scans ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+ALTER TABLE devices ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+ALTER TABLE events ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+ALTER TABLE security_findings ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+ALTER TABLE network_health_samples ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+ALTER TABLE speed_tests ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default' REFERENCES workspaces(id);
+
+CREATE INDEX IF NOT EXISTS idx_networks_workspace ON networks(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_devices_workspace ON devices(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_scans_workspace ON scans(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_events_workspace ON events(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_findings_workspace ON security_findings(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_health_workspace ON network_health_samples(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_speed_workspace ON speed_tests(workspace_id);
+";
+
 fn current_version(conn: &Connection) -> DbResult<u32> {
     let v: i64 = conn
         .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -343,12 +376,46 @@ mod tests {
             "security_findings",
             "services",
             "speed_tests",
+            "workspaces",
         ] {
             assert!(
                 tables.iter().any(|t| t == expected),
                 "missing table {expected}"
             );
         }
+    }
+
+    #[test]
+    fn test_migration_v8_workspace_defaults() {
+        let conn = connect_in_memory();
+        run_migrations(&conn).expect("migrate");
+
+        // Workspace por defecto 'default' debe existir
+        let ws_name: String = conn
+            .query_row(
+                "SELECT name FROM workspaces WHERE id = 'default'",
+                [],
+                |r| r.get(0),
+            )
+            .expect("default workspace exists");
+        assert_eq!(ws_name, "Mi Red Local");
+
+        // Insertar una red sin especificar workspace_id: debe tomar 'default'
+        conn.execute(
+            "INSERT INTO networks (id, name, cidr, created_at, updated_at)
+             VALUES ('net-test', 'Test', '10.0.0.0/24', 't0', 't0')",
+            [],
+        )
+        .expect("insert network");
+
+        let ws_id: String = conn
+            .query_row(
+                "SELECT workspace_id FROM networks WHERE id = 'net-test'",
+                [],
+                |r| r.get(0),
+            )
+            .expect("workspace_id read");
+        assert_eq!(ws_id, "default");
     }
 
     #[test]

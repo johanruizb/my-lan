@@ -404,6 +404,52 @@ pub struct SpeedTestProgress {
     pub error_message: Option<String>,
 }
 
+fn default_workspace_icon() -> String {
+    "network".to_string()
+}
+
+fn default_workspace_color() -> String {
+    "#06b6d4".to_string()
+}
+
+/// Espacio de trabajo (partición lógica multi-sitio/multi-red, Pilar 6 / Fase 10).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Workspace {
+    /// Identificador único del workspace (UUID v4 o 'default').
+    pub id: String,
+    /// Nombre visible del espacio (ej. "Mi Red Local", "Oficina Central", "Laboratorio").
+    pub name: String,
+    /// Descripción o notas del espacio de trabajo.
+    pub description: Option<String>,
+    /// Identificador de icono de Lucide (ej. "home", "building", "briefcase", "network").
+    #[serde(default = "default_workspace_icon")]
+    pub icon: String,
+    /// Color hexadecimal distintivo en formato `#RRGGBB`.
+    #[serde(default = "default_workspace_color")]
+    pub color: String,
+    /// Fecha de creación en formato RFC3339.
+    pub created_at: String,
+    /// Fecha de última actualización en formato RFC3339.
+    pub updated_at: String,
+}
+
+impl Workspace {
+    /// Crea un workspace nuevo con valores por defecto.
+    #[must_use]
+    pub fn new(id: impl Into<String>, name: impl Into<String>, now: impl Into<String>) -> Self {
+        let now = now.into();
+        Self {
+            id: id.into(),
+            name: name.into(),
+            description: None,
+            icon: default_workspace_icon(),
+            color: default_workspace_color(),
+            created_at: now.clone(),
+            updated_at: now,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -670,5 +716,22 @@ mod tests {
         let speed_json = serde_json::to_string(&speed).expect("ser");
         let speed_back: SpeedTestResult = serde_json::from_str(&speed_json).expect("de");
         assert_eq!(speed, speed_back);
+    }
+
+    #[test]
+    fn workspace_serde_round_trip() {
+        let ws = Workspace::new("ws-1", "Oficina Central", "2026-10-16T10:00:00Z");
+        let json = serde_json::to_string(&ws).expect("ser");
+        let back: Workspace = serde_json::from_str(&json).expect("de");
+        assert_eq!(ws, back);
+        assert_eq!(back.icon, "network");
+        assert_eq!(back.color, "#06b6d4");
+
+        // Deserialización con defaults si icon/color faltan
+        let json_minimal = r#"{"id":"ws-2","name":"Casa","created_at":"2026-10-16T10:00:00Z","updated_at":"2026-10-16T10:00:00Z"}"#;
+        let ws2: Workspace = serde_json::from_str(json_minimal).expect("de minimal");
+        assert_eq!(ws2.icon, "network");
+        assert_eq!(ws2.color, "#06b6d4");
+        assert_eq!(ws2.description, None);
     }
 }

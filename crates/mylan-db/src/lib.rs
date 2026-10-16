@@ -29,6 +29,7 @@ pub mod scan_repo;
 pub mod security;
 pub mod service_repo;
 pub mod util;
+pub mod workspace_repo;
 
 // Re-exports ergonómicos de la API pública.
 pub use diff::{run_diff, snapshot_devices_before, snapshot_services_before};
@@ -49,6 +50,10 @@ pub use pipeline::{
 pub use security::{
     evaluate_and_persist_device, evaluate_device_rules, evaluate_network_rules,
     run_full_security_audit, SecurityAuditReport,
+};
+pub use workspace_repo::{
+    assign_network_to_workspace, create_workspace, delete_workspace, get_network_workspace,
+    get_workspace, get_workspace_stats, list_workspaces, update_workspace, WorkspaceStats,
 };
 
 #[cfg(test)]

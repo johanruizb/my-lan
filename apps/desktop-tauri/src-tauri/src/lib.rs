@@ -189,6 +189,14 @@ pub fn run() {
             tools::get_recent_speed_tests_cmd,
             tools::get_network_health_samples_cmd,
             tools::run_health_probe_cmd,
+            commands::list_workspaces_cmd,
+            commands::get_workspace_cmd,
+            commands::create_workspace_cmd,
+            commands::update_workspace_cmd,
+            commands::delete_workspace_cmd,
+            commands::get_workspace_stats_cmd,
+            commands::assign_network_workspace_cmd,
+            commands::detect_workspace_for_network_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -243,6 +243,13 @@ pub struct Settings {
     /// Notificar puertos críticos abiertos recién detectados.
     #[serde(default = "default_true")]
     pub notify_critical_ports: bool,
+    /// ID del workspace activo en la UI (Pilar 6 / Fase 10).
+    #[serde(default = "default_active_workspace")]
+    pub active_workspace_id: String,
+}
+
+fn default_active_workspace() -> String {
+    "default".to_string()
 }
 
 impl Default for Settings {
@@ -262,8 +269,29 @@ impl Default for Settings {
             notify_trusted_device_tampered: true,
             notify_gateway_down: true,
             notify_critical_ports: true,
+            active_workspace_id: default_active_workspace(),
         }
     }
+}
+
+/// DTO para crear un workspace desde la interfaz.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateWorkspaceDto {
+    pub id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub icon: Option<String>,
+    pub color: Option<String>,
+}
+
+/// DTO para actualizar un workspace desde la interfaz.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UpdateWorkspaceDto {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub icon: String,
+    pub color: String,
 }
 
 /// Parsea el nombre de perfil serializado (snake_case) a `ScanProfile`.
@@ -335,12 +363,14 @@ mod tests {
             notify_trusted_device_tampered: true,
             notify_gateway_down: false,
             notify_critical_ports: true,
+            active_workspace_id: "custom-ws".to_string(),
         };
 
         let json = serde_json::to_string(&original).expect("serialize");
         let restored: Settings = serde_json::from_str(&json).expect("deserialize");
 
         assert_eq!(restored.db_path, original.db_path);
+        assert_eq!(restored.active_workspace_id, "custom-ws");
         assert!(!restored.background_monitoring_enabled);
         assert_eq!(restored.monitoring_interval_secs, 600);
         assert!(!restored.minimize_to_tray);
