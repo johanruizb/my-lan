@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useBlocker, useBeforeUnload } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,11 @@ import {
 import { CopyButton } from "@/components/copy-button";
 import { ProfileSelect, newScanId } from "@/components/profile-select";
 import { useToast } from "@/components/ui/toast";
-import { deviceIcon } from "@/components/device-icons";
+import {
+    deviceIcon,
+    deviceLabel,
+    isKnownDeviceType,
+} from "@/components/device-icons";
 import { OnlineBadge } from "@/components/online-badge";
 import { TrustBadge } from "@/components/trust-badge";
 import { Switch } from "@/components/ui/switch";
@@ -48,6 +52,7 @@ import {
     Settings,
     ChevronDown,
     Pencil,
+    Clock,
 } from "lucide-react";
 import {
     Table,
@@ -188,19 +193,6 @@ export function DeviceDetail() {
         [isTrusted],
     );
 
-    const scanRef = useRef<HTMLDivElement>(null);
-
-    function scanPortsCta() {
-        scanRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-        });
-        setTimeout(
-            () => document.getElementById("detail-profile")?.focus(),
-            100,
-        );
-    }
-
     useEffect(() => {
         let alive = true;
         getDevice(decodeURIComponent(ip))
@@ -268,7 +260,7 @@ export function DeviceDetail() {
         return () => {
             unlisteners.forEach((u) => u());
         };
-    }, [scanning, scanId, ip]);
+    }, [scanning, scanId, ip, detail, toast]);
 
     useEffect(() => {
         if (!detail) return;
@@ -413,6 +405,7 @@ export function DeviceDetail() {
 
     const d = detail.device;
     const Icon = deviceIcon(d.device_type);
+    const knownType = isKnownDeviceType(d.device_type);
     const openServices = detail.services.filter(
         (s) => s.state.toLowerCase() === "open",
     );
@@ -422,57 +415,70 @@ export function DeviceDetail() {
 
     return (
         <div
-            className={cn("flex flex-col gap-6", SECTION_GAP)}
+            className={cn("flex flex-col", SECTION_GAP)}
             aria-busy={scanning}
         >
-            <div>
-                <Link
-                    to="/devices"
-                    className="inline-flex w-fit items-center gap-1.5 pl-0 mb-4 text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
-                >
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                    Volver a dispositivos
-                </Link>
+            <Link
+                to="/devices"
+                className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Volver a dispositivos
+            </Link>
 
-                {/* #18: header sin glass-panel, bg-card sólido. */}
-                <div className="bg-card p-6 rounded-xl border border-border flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4 min-w-0">
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                            <Icon className="h-8 w-8" aria-hidden />
+            {/* #18: Dossier de identidad sin duplicar MAC/Vendor (que viven en la matriz técnica inferior). */}
+            <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-start sm:items-center gap-4 min-w-0">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                            <Icon className="h-6 w-6" aria-hidden />
                         </div>
                         <div className="flex flex-col min-w-0 gap-1">
-                            <h1 className="text-xl font-bold text-foreground truncate flex items-center gap-2">
-                                <MaskedValue
-                                    field={
-                                        d.display_name
-                                            ? "display_name"
-                                            : d.hostname
-                                              ? "hostname"
-                                              : d.primary_ip
-                                                ? "primary_ip"
-                                                : "id"
-                                    }
-                                    value={
-                                        d.display_name ??
-                                        d.hostname ??
-                                        d.primary_ip ??
-                                        d.id
-                                    }
-                                />
-                                {!d.display_name &&
-                                    !d.hostname &&
-                                    d.primary_ip && (
-                                        <CopyButton
-                                            value={d.primary_ip}
-                                            label="IP"
-                                            className="h-5 w-5"
-                                        />
-                                    )}
-                            </h1>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h1 className="text-xl font-bold tracking-tight text-foreground truncate flex items-center gap-1.5 font-mono tabular-nums">
+                                    <MaskedValue
+                                        field={
+                                            d.display_name
+                                                ? "display_name"
+                                                : d.hostname
+                                                  ? "hostname"
+                                                  : d.primary_ip
+                                                    ? "primary_ip"
+                                                    : "id"
+                                        }
+                                        value={
+                                            d.display_name ??
+                                            d.hostname ??
+                                            d.primary_ip ??
+                                            d.id
+                                        }
+                                    />
+                                    {!d.display_name &&
+                                        !d.hostname &&
+                                        d.primary_ip && (
+                                            <CopyButton
+                                                value={d.primary_ip}
+                                                label="IP"
+                                                className="h-5 w-5"
+                                            />
+                                        )}
+                                </h1>
+                                <OnlineBadge isOnline={d.is_online} />
+                                <TrustBadge device={trustBadgeDevice} />
+                                {knownType && (
+                                    <Badge
+                                        variant="secondary"
+                                        className="h-5 px-2 text-[11px] font-medium"
+                                    >
+                                        {deviceLabel(d.device_type)}
+                                    </Badge>
+                                )}
+                            </div>
+
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                 {(d.display_name || d.hostname) &&
                                     d.primary_ip && (
-                                        <div className="flex items-center gap-1 font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] font-semibold">
+                                        <div className="flex items-center gap-1 font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] font-semibold text-foreground/90 tabular-nums">
                                             <MaskedValue
                                                 field="primary_ip"
                                                 value={d.primary_ip}
@@ -484,144 +490,158 @@ export function DeviceDetail() {
                                             />
                                         </div>
                                     )}
-                                {d.primary_mac && (
-                                    <div className="flex items-center gap-1 font-mono uppercase text-[11px]">
-                                        <MaskedValue
-                                            field="primary_mac"
-                                            value={d.primary_mac}
-                                            mono
-                                        />
-                                        <CopyButton
-                                            value={d.primary_mac}
-                                            label="MAC"
-                                            className="h-5 w-5"
-                                        />
-                                    </div>
-                                )}
-                                {d.vendor && (
-                                    <div className="flex items-center gap-1">
-                                        <span
-                                            className="truncate max-w-[260px] md:max-w-xs"
-                                            title={d.vendor}
-                                        >
-                                            {d.vendor}
-                                        </span>
-                                        <CopyButton
-                                            value={d.vendor}
-                                            label="Vendor"
-                                            className="h-5 w-5"
-                                        />
-                                    </div>
-                                )}
+                                <span className="inline-flex items-center gap-1">
+                                    <Clock
+                                        className="h-3 w-3 text-muted-foreground/70"
+                                        aria-hidden
+                                    />
+                                    Última actividad:{" "}
+                                    <strong className="font-medium text-foreground/85">
+                                        {formatRelative(d.last_seen_at)}
+                                    </strong>
+                                </span>
+                                <span
+                                    className="text-border select-none"
+                                    aria-hidden
+                                >
+                                    ·
+                                </span>
+                                <span className="tabular-nums">
+                                    <strong className="font-mono font-semibold text-foreground/85">
+                                        {openServices.length}
+                                    </strong>{" "}
+                                    {openServices.length === 1
+                                        ? "servicio abierto"
+                                        : "servicios abiertos"}
+                                </span>
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <OnlineBadge isOnline={d.is_online} />
-                        <TrustBadge device={trustBadgeDevice} />
+
+                    {/* Control rápido de confianza integrado en la cabecera del host */}
+                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 border-t border-border/60 pt-3 lg:border-t-0 lg:pt-0 shrink-0">
+                        <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 px-3.5 py-2">
+                            <div className="flex flex-col">
+                                <label
+                                    htmlFor="detail-is-trusted"
+                                    className="text-xs font-semibold text-foreground cursor-pointer leading-tight"
+                                >
+                                    Dispositivo confiable
+                                </label>
+                                <span className="text-[11px] text-muted-foreground leading-tight">
+                                    {isTrusted
+                                        ? "Marcado como seguro en tu red"
+                                        : "Sin verificar manualmente"}
+                                </span>
+                            </div>
+                            <Switch
+                                id="detail-is-trusted"
+                                checked={isTrusted}
+                                onCheckedChange={handleTrustToggle}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                <div className="flex flex-col gap-6 lg:col-span-1">
+            {/* Banco de trabajo principal: 5 columnas Ficha Técnica y Gestión | 7 columnas Auditoría de Puertos y Servicios */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Columna izquierda: Ficha Técnica en cuadrícula 2x3 + Gestión y etiquetas */}
+                <div className="flex flex-col gap-6 lg:col-span-5">
                     <Card>
-                        <CardHeader className="p-3 border-b border-border/10">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                        <CardHeader className="px-5 py-3.5 border-b border-border/60">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Info
-                                    className="h-4 w-4 text-primary"
+                                    className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
                                 />
                                 Información técnica
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 flex flex-col gap-4">
-                            <Field
-                                label="Nombre de red (hostname)"
-                                value={d.hostname ?? "—"}
-                                field="hostname"
-                                glossaryKey="hostname"
-                            />
-                            <Field
-                                label="Dirección MAC"
-                                value={d.primary_mac ?? "—"}
-                                mono
-                                field="primary_mac"
-                                glossaryKey="mac"
-                                copyable
-                            />
-                            <Field
-                                label="Vendor"
-                                value={d.vendor ?? "—"}
-                                glossaryKey="vendor"
-                                title={d.vendor ?? undefined}
-                                copyable
-                            />
-                            <Field
-                                label="Familia S.O."
-                                value={d.os_family ?? "—"}
-                            />
-                            <Field
-                                label="Primera detección"
-                                value={formatTimestamp(d.first_seen_at)}
-                            />
-                            <Field
-                                label="Última detección"
-                                value={formatTimestamp(d.last_seen_at)}
-                                title={formatRelative(d.last_seen_at)}
-                            />
+                        <CardContent className="p-5 flex flex-col gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Field
+                                    label="Dirección MAC"
+                                    value={d.primary_mac ?? "—"}
+                                    mono
+                                    field="primary_mac"
+                                    glossaryKey="mac"
+                                    copyable
+                                />
+                                <Field
+                                    label="Vendor"
+                                    value={d.vendor ?? "—"}
+                                    glossaryKey="vendor"
+                                    title={d.vendor ?? undefined}
+                                    copyable
+                                />
+                                <Field
+                                    label="Nombre de red (hostname)"
+                                    value={d.hostname ?? "—"}
+                                    field="hostname"
+                                    glossaryKey="hostname"
+                                />
+                                <Field
+                                    label="Familia S.O."
+                                    value={d.os_family ?? "—"}
+                                />
+                                <Field
+                                    label="Primera detección"
+                                    value={formatTimestamp(d.first_seen_at)}
+                                    mono
+                                />
+                                <Field
+                                    label="Última detección"
+                                    value={formatTimestamp(d.last_seen_at)}
+                                    title={formatRelative(d.last_seen_at)}
+                                    mono
+                                />
+                            </div>
 
-                            {/* #31: Certeza — ConfidenceBadge barra+número integrado
-                                (T7), reemplaza Badge+Progress separados. #25 rename
-                                Confianza→Certeza + glossaryKey certeza (T11). */}
-                            <div className="flex flex-col gap-1.5 border-t border-border/10 pt-4">
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            {/* #31: Certeza — barra + porcentaje compactos en fila horizontal */}
+                            <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/15 px-3.5 py-2.5">
+                                <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground shrink-0">
                                     Certeza
                                     <InfoTooltip
                                         term="Certeza"
                                         glossaryKey="certeza"
                                     />
                                 </span>
-                                <ConfidenceBadge
-                                    value={d.confidence}
-                                    showLabel={false}
-                                />
+                                <div className="flex-1 max-w-[220px]">
+                                    <ConfidenceBadge
+                                        value={d.confidence}
+                                        showLabel={false}
+                                    />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader className="p-3 border-b border-border/10">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                        <CardHeader className="px-5 py-3.5 border-b border-border/60 flex flex-row items-center justify-between gap-2">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Settings
-                                    className="h-4 w-4 text-primary"
+                                    className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
                                 />
                                 Gestión y etiquetas
                             </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 flex flex-col gap-4">
-                            {/* #19: is_trusted — switch siempre visible, cambio inmediato
-                                (persiste al toggle, sin Guardar). */}
-                            <FormField
-                                label="Confiable"
-                                htmlFor="detail-is-trusted"
-                                helper="Etiqueta manual: marca el dispositivo como seguro"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        id="detail-is-trusted"
-                                        checked={isTrusted}
-                                        onCheckedChange={handleTrustToggle}
+                            {!editing && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditing(true)}
+                                    className="h-7 px-2.5 text-xs gap-1.5"
+                                >
+                                    <Pencil
+                                        className="h-3 w-3"
+                                        aria-hidden
                                     />
-                                    <span className="text-xs text-muted-foreground">
-                                        {isTrusted
-                                            ? "Confiable"
-                                            : "No confiable"}
-                                    </span>
-                                </div>
-                            </FormField>
-
+                                    Editar
+                                </Button>
+                            )}
+                        </CardHeader>
+                        <CardContent className="p-5 flex flex-col gap-4">
                             {/* #19: display_name + notes — modo edición (lectura por
                                 defecto, botón "Editar" revela inputs + Guardar/Cancelar). */}
                             {editing ? (
@@ -662,8 +682,9 @@ export function DeviceDetail() {
                                         />
                                     </FormField>
 
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 pt-1">
                                         <Button
+                                            size="sm"
                                             onClick={handleSaveEdit}
                                             disabled={saving}
                                             className="gap-1.5"
@@ -671,7 +692,7 @@ export function DeviceDetail() {
                                             {saving ? (
                                                 <>
                                                     <Loader2
-                                                        className="h-4 w-4 animate-spin"
+                                                        className="h-3.5 w-3.5 animate-spin"
                                                         aria-hidden
                                                     />
                                                     Guardando…
@@ -681,6 +702,7 @@ export function DeviceDetail() {
                                             )}
                                         </Button>
                                         <Button
+                                            size="sm"
                                             variant="outline"
                                             onClick={handleCancelEdit}
                                             disabled={saving}
@@ -691,7 +713,7 @@ export function DeviceDetail() {
                                     </div>
                                 </>
                             ) : (
-                                <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <Field
                                         label="Nombre personalizado"
                                         value={d.display_name ?? "—"}
@@ -701,224 +723,182 @@ export function DeviceDetail() {
                                         label="Notas internas"
                                         value={d.notes ?? "—"}
                                     />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setEditing(true)}
-                                        className="gap-1.5 w-fit"
-                                    >
-                                        <Pencil
-                                            className="h-3.5 w-3.5"
-                                            aria-hidden
-                                        />
-                                        Editar
-                                    </Button>
-                                </>
+                                </div>
                             )}
                         </CardContent>
                     </Card>
                 </div>
 
-                <div className="flex flex-col gap-6 lg:col-span-2">
-                    <div ref={scanRef}>
-                        <Card>
-                            <CardHeader className="p-3 border-b border-border/10">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                                    <Radar
-                                        className="h-4 w-4 text-primary"
+                {/* Columna derecha: Consola unificada de Escaneo de Puertos y Servicios */}
+                <div className="flex flex-col gap-4 lg:col-span-7">
+                    <Card>
+                        <CardHeader className="px-5 py-4 border-b border-border/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-0.5">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                    <Server
+                                        className="h-4 w-4 text-primary shrink-0"
                                         aria-hidden
                                     />
-                                    Escaneo de puertos
+                                    Servicios abiertos ({openServices.length})
                                 </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-4 flex flex-col gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label
-                                        htmlFor="detail-profile"
-                                        className="text-sm font-medium leading-none text-foreground"
-                                    >
-                                        Perfil de escaneo
-                                    </label>
-                                    <div className="flex flex-wrap items-end gap-4">
-                                        <ProfileSelect
-                                            value={profile}
-                                            onChange={setProfile}
-                                            className="flex-1 min-w-[200px] w-full bg-background/50 border-border/30"
-                                            id="detail-profile"
-                                            disabled={scanning}
-                                        />
-                                        <div className="flex gap-2 shrink-0">
-                                            <Button
-                                                onClick={handleScanPorts}
-                                                disabled={scanning}
-                                                className="gap-1.5"
-                                            >
-                                                {scanning ? (
-                                                    <>
-                                                        <Loader2
-                                                            className="h-4 w-4 animate-spin"
-                                                            aria-hidden
-                                                        />
-                                                        Escaneando…
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Play
-                                                            className="h-4 w-4"
-                                                            aria-hidden
-                                                        />
-                                                        Escanear puertos
-                                                    </>
-                                                )}
-                                            </Button>
-                                            {scanning && (
-                                                <Button
-                                                    variant="destructive"
-                                                    onClick={handleCancel}
-                                                    className="gap-1.5"
-                                                >
-                                                    <Square
-                                                        className="h-4 w-4"
-                                                        aria-hidden
-                                                    />
-                                                    Cancelar
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <p
-                                        id="detail-profile-helper"
-                                        className="text-xs text-muted-foreground"
-                                    >
-                                        Intensidad del barrido
-                                    </p>
-                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Sondeo de puertos TCP y detección de
+                                    servicios en este host.
+                                </p>
+                            </div>
 
-                                {scanning && (
-                                    <div
-                                        className="flex flex-col gap-4 border-t border-border/10 pt-4"
-                                        aria-live="polite"
-                                        aria-atomic="true"
-                                    >
-                                        <div className="flex flex-col md:flex-row items-center gap-6 justify-center bg-muted/20 p-4 rounded-lg border border-border/10">
-                                            {/* #22: sin animate-ping/pulse overlays. Radar icon spin
-                                                (3s) + Progress + contador + timer. motion-safe
-                                                respeta prefers-reduced-motion. */}
-                                            <div className="relative flex items-center justify-center h-16 w-16 shrink-0">
-                                                <Radar
-                                                    className="h-6 w-6 text-primary motion-safe:animate-spin"
-                                                    style={{
-                                                        animationDuration: "3s",
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex-1 w-full flex flex-col gap-2">
-                                                <Progress
-                                                    value={pct}
-                                                    indeterminate={pct === 0}
-                                                    className="h-2"
-                                                />
-                                                <div className="flex justify-between text-xs text-muted-foreground font-medium tabular-nums">
-                                                    <span>
-                                                        {progress
-                                                            ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
-                                                            : "Inicializando escaneo…"}
-                                                        {progress?.latest_open_port
-                                                            ? ` · último abierto: ${progress.latest_open_port}`
-                                                            : ""}
-                                                    </span>
-                                                    <span>
-                                                        {Math.round(
-                                                            elapsed / 100,
-                                                        ) / 10}
-                                                        s /{" "}
-                                                        {Math.round(
-                                                            remainMs / 100,
-                                                        ) / 10}
-                                                        s
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <Card>
-                        <CardHeader className="pb-3 border-b border-border/10 flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                                <Server
-                                    className="h-4 w-4 text-primary"
-                                    aria-hidden
+                            {/* Barra de control de escaneo de puertos integrada */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <label
+                                    htmlFor="detail-profile"
+                                    className="sr-only"
+                                >
+                                    Perfil de escaneo
+                                </label>
+                                <ProfileSelect
+                                    value={profile}
+                                    onChange={setProfile}
+                                    className="h-8 w-[150px] bg-background text-xs"
+                                    id="detail-profile"
+                                    disabled={scanning}
                                 />
-                                Servicios abiertos ({openServices.length})
-                            </CardTitle>
-                            {/* #27: 1 botón Exportar + dropdown CSV/JSON (mismo
-                                patrón que Devices). */}
-                            {detail.services.length > 0 && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="gap-1.5"
-                                        >
-                                            <Download
-                                                className="h-3.5 w-3.5"
+                                <Button
+                                    size="sm"
+                                    onClick={handleScanPorts}
+                                    disabled={scanning}
+                                    className="h-8 gap-1.5"
+                                >
+                                    {scanning ? (
+                                        <>
+                                            <Loader2
+                                                className="h-3.5 w-3.5 animate-spin"
                                                 aria-hidden
                                             />
-                                            Exportar
-                                            <ChevronDown
-                                                className="h-3.5 w-3.5"
-                                                aria-hidden
-                                            />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>
-                                            Formato de exportación
-                                        </DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                            onSelect={() => handleExport("csv")}
-                                        >
-                                            CSV
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onSelect={() =>
-                                                handleExport("json")
-                                            }
-                                        >
-                                            JSON
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </CardHeader>
-                        <CardContent className="pt-4">
-                            {detail.services.length === 0 ? (
-                                <EmptyState
-                                    icon={Cpu}
-                                    title="Sin servicios"
-                                    description="Aún no hay servicios detectados. Realiza un escaneo de puertos en este dispositivo para identificar sus servicios."
-                                    action={
-                                        <Button
-                                            size="sm"
-                                            onClick={scanPortsCta}
-                                            className="gap-1.5"
-                                        >
+                                            Escaneando…
+                                        </>
+                                    ) : (
+                                        <>
                                             <Play
                                                 className="h-3.5 w-3.5"
                                                 aria-hidden
                                             />
-                                            Escanear puertos ahora
-                                        </Button>
-                                    }
+                                            Escanear puertos
+                                        </>
+                                    )}
+                                </Button>
+                                {scanning && (
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={handleCancel}
+                                        className="h-8 gap-1.5"
+                                    >
+                                        <Square
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                        Cancelar
+                                    </Button>
+                                )}
+                                {/* #27: 1 botón Exportar + dropdown CSV/JSON */}
+                                {detail.services.length > 0 && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 gap-1.5"
+                                            >
+                                                <Download
+                                                    className="h-3.5 w-3.5"
+                                                    aria-hidden
+                                                />
+                                                Exportar
+                                                <ChevronDown
+                                                    className="h-3.5 w-3.5"
+                                                    aria-hidden
+                                                />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>
+                                                Formato de exportación
+                                            </DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onSelect={() =>
+                                                    handleExport("csv")
+                                                }
+                                            >
+                                                CSV
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onSelect={() =>
+                                                    handleExport("json")
+                                                }
+                                            >
+                                                JSON
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                            </div>
+                        </CardHeader>
+
+                        {/* Telemetría en vivo durante el escaneo de puertos */}
+                        {scanning && (
+                            <div
+                                className="border-b border-border/60 bg-primary/5 px-5 py-3.5"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                <div className="flex items-center gap-3.5">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                                        <Radar
+                                            className="h-4 w-4 text-primary motion-safe:animate-spin"
+                                            style={{
+                                                animationDuration: "3s",
+                                            }}
+                                            aria-hidden
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                                        <Progress
+                                            value={pct}
+                                            indeterminate={pct === 0}
+                                            className="h-1.5"
+                                        />
+                                        <div className="flex justify-between text-xs text-muted-foreground font-medium tabular-nums">
+                                            <span>
+                                                {progress
+                                                    ? `${progress.ports_tested}/${progress.ports_total} puertos · ${pct}%`
+                                                    : "Inicializando escaneo…"}
+                                                {progress?.latest_open_port
+                                                    ? ` · último abierto: ${progress.latest_open_port}`
+                                                    : ""}
+                                            </span>
+                                            <span className="font-mono">
+                                                {Math.round(elapsed / 100) / 10}
+                                                s /{" "}
+                                                {Math.round(remainMs / 100) /
+                                                    10}
+                                                s
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <CardContent className="p-5">
+                            {detail.services.length === 0 ? (
+                                <EmptyState
+                                    icon={Cpu}
+                                    title="Sin servicios"
+                                    description="Aún no hay servicios detectados. Selecciona un perfil y pulsa Escanear puertos en la barra superior para identificar servicios activos en este dispositivo."
                                 />
                             ) : openServices.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                                <div className="flex flex-col items-center justify-center py-8 px-4 text-center text-sm text-muted-foreground">
                                     <ShieldAlert
                                         className="h-8 w-8 text-muted-foreground/60 mb-2"
                                         aria-hidden
@@ -933,7 +913,7 @@ export function DeviceDetail() {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-md border border-border/40">
+                                <div className="overflow-x-auto rounded-lg border border-border/60">
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="hover:bg-transparent">
@@ -984,7 +964,7 @@ export function DeviceDetail() {
                                                         key={s.id}
                                                         className="hover:bg-muted/30"
                                                     >
-                                                        <TableCell className="font-mono text-xs font-semibold">
+                                                        <TableCell className="font-mono text-xs font-semibold tabular-nums">
                                                             {s.port}
                                                         </TableCell>
                                                         <TableCell className="uppercase font-semibold text-xs text-foreground/80">
@@ -1020,8 +1000,8 @@ export function DeviceDetail() {
                     </Card>
 
                     {closedOrFilteredServices.length > 0 && (
-                        <Collapsible className="rounded-xl border border-border/60 bg-card overflow-hidden">
-                            <CollapsibleTrigger className="flex w-full items-center justify-between p-4 text-sm font-medium hover:bg-muted/40 transition-colors [&[data-state=open]>svg]:rotate-180">
+                        <Collapsible className="rounded-xl border border-border bg-card overflow-hidden">
+                            <CollapsibleTrigger className="flex w-full items-center justify-between px-5 py-3.5 text-sm font-medium hover:bg-muted/40 transition-colors [&[data-state=open]>svg]:rotate-180">
                                 <span className="flex items-center gap-2 font-semibold text-muted-foreground">
                                     <ShieldAlert
                                         className="h-4 w-4 text-muted-foreground"
@@ -1035,8 +1015,8 @@ export function DeviceDetail() {
                                     aria-hidden
                                 />
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="p-4 pt-0">
-                                <div className="overflow-x-auto rounded-md border border-border/40 mt-2">
+                            <CollapsibleContent className="px-5 pb-5 pt-0">
+                                <div className="overflow-x-auto rounded-lg border border-border/60 mt-2">
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="hover:bg-transparent">
@@ -1088,7 +1068,7 @@ export function DeviceDetail() {
                                                             key={s.id}
                                                             className="hover:bg-muted/30"
                                                         >
-                                                            <TableCell className="font-mono text-xs font-semibold">
+                                                            <TableCell className="font-mono text-xs font-semibold tabular-nums">
                                                                 {s.port}
                                                             </TableCell>
                                                             <TableCell className="uppercase font-semibold text-xs text-foreground/80">
@@ -1230,32 +1210,34 @@ function Field({
     copyable?: boolean;
 }) {
     return (
-        <div className="flex flex-col gap-1">
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-1 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 min-w-0">
+            <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                 {label}
                 {glossaryKey && (
                     <InfoTooltip term={label} glossaryKey={glossaryKey} />
                 )}
             </span>
-            <div className="flex items-center gap-1.5">
-                {field && isSensitive(field) ? (
-                    <MaskedValue field={field} value={value} mono={mono} />
-                ) : (
-                    <span
-                        className={cn(
-                            "font-medium break-words",
-                            mono && "font-mono text-xs",
-                        )}
-                        title={title}
-                    >
-                        {value}
-                    </span>
-                )}
+            <div className="flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0 truncate text-sm">
+                    {field && isSensitive(field) ? (
+                        <MaskedValue field={field} value={value} mono={mono} />
+                    ) : (
+                        <span
+                            className={cn(
+                                "font-medium text-foreground break-words",
+                                mono && "font-mono text-xs tabular-nums",
+                            )}
+                            title={title ?? (value !== "—" ? value : undefined)}
+                        >
+                            {value}
+                        </span>
+                    )}
+                </div>
                 {copyable && value && value !== "—" && (
                     <CopyButton
                         value={value}
                         label={label}
-                        className="h-5 w-5"
+                        className="h-5 w-5 shrink-0"
                     />
                 )}
             </div>

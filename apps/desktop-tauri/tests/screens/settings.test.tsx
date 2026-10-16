@@ -1,8 +1,9 @@
 // AC-22: Tests de screen `Settings` con MemoryRouter + providers + mock
 // `@/lib/tauri` por función.
 
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppMark } from "@/App";
 import { Settings } from "@/screens/Settings";
 import { renderWithProviders } from "./helpers";
 import { defaultSettings } from "../fixtures";
@@ -10,6 +11,7 @@ import { defaultSettings } from "../fixtures";
 const getSettingsMock = vi.fn();
 const setSettingsMock = vi.fn();
 const dbPathMock = vi.fn();
+let currentMockTheme: "light" | "dark" = "light";
 
 vi.mock("@/lib/tauri", () => ({
     getSettings: () => getSettingsMock(),
@@ -27,7 +29,7 @@ vi.mock("@/components/censorship-provider", () => ({
 
 vi.mock("@/components/theme-provider", () => ({
     useTheme: () => ({
-        theme: "light",
+        theme: currentMockTheme,
         setTheme: vi.fn(),
         toggleTheme: vi.fn(),
     }),
@@ -64,6 +66,7 @@ vi.mock("@/components/updater-provider", () => ({
 
 describe("Settings screen (AC-22)", () => {
     beforeEach(() => {
+        currentMockTheme = "light";
         getSettingsMock.mockReset();
         setSettingsMock.mockReset();
         dbPathMock.mockReset();
@@ -98,11 +101,27 @@ describe("Settings screen (AC-22)", () => {
         ).toBeInTheDocument();
     });
 
-    it("carga el db_path desde el backend al montar", async () => {
+    it("carga el db_path desde el backend al montar y lo muestra en el campo de almacenamiento", async () => {
         renderWithProviders(<Settings />);
         await waitFor(() => {
             expect(getSettingsMock).toHaveBeenCalled();
             expect(dbPathMock).toHaveBeenCalled();
+        });
+        expect(
+            screen.getByLabelText("Ruta de la base de datos"),
+        ).toHaveValue("/tmp/mylan.db");
+    });
+
+    it("persiste inmediatamente el perfil de descubrimiento al seleccionarlo en la cuadrícula", async () => {
+        renderWithProviders(<Settings />);
+        const deepRadio = await screen.findByRole("radio", {
+            name: /Profundo/,
+        });
+        fireEvent.click(deepRadio);
+        await waitFor(() => {
+            expect(setSettingsMock).toHaveBeenCalledWith(
+                expect.objectContaining({ default_profile: "deep" }),
+            );
         });
     });
 
@@ -130,7 +149,23 @@ describe("Settings screen (AC-22)", () => {
 
         const retryButton = screen.getByRole("button", { name: "Reintentar" });
         expect(retryButton).toBeInTheDocument();
-        retryButton.click();
+        fireEvent.click(retryButton);
         expect(checkForUpdatesMock).toHaveBeenCalledWith({ silent: false });
+    });
+
+    it("cambia el logo AppMark entre variante clara (#F1F5F9 + #0891B2) y oscura (#090D16 + #06B6D4) según el tema activo", () => {
+        currentMockTheme = "light";
+        const { container, rerender } = renderWithProviders(<AppMark />);
+        const lightSvg = container.querySelector("svg[data-theme-variant='light']");
+        expect(lightSvg).not.toBeNull();
+        expect(lightSvg?.querySelector("rect")?.getAttribute("fill")).toBe("#F1F5F9");
+        expect(lightSvg?.querySelector("circle")?.getAttribute("fill")).toBe("#0891B2");
+
+        currentMockTheme = "dark";
+        rerender(<AppMark />);
+        const darkSvg = container.querySelector("svg[data-theme-variant='dark']");
+        expect(darkSvg).not.toBeNull();
+        expect(darkSvg?.querySelector("rect")?.getAttribute("fill")).toBe("#090D16");
+        expect(darkSvg?.querySelector("circle")?.getAttribute("fill")).toBe("#06B6D4");
     });
 });

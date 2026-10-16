@@ -12,20 +12,19 @@ import {
     NavLink,
     Outlet,
     RouterProvider,
+    useLocation,
 } from "react-router-dom";
 import {
-    LayoutDashboard,
     Network,
     History,
     Settings as SettingsIcon,
-    Activity,
     Info,
     Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProviderApp } from "@/components/ui/toast";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { CensorshipProvider } from "@/components/censorship-provider";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
@@ -113,83 +112,105 @@ export function mergeDevice(list: Device[], device: Device): Device[] {
     return next;
 }
 
+// ADR-0007: Dashboard y Dispositivos se unen en la vista Red. La página
+// dedicada /devices (y el detalle /devices/:ip) cuelga de Red: se llega desde
+// su enlace "Ver todos" y mantiene Red resaltado en la navegación.
 const navItems = [
-    { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-    { to: "/devices", label: "Dispositivos", icon: Network, end: false },
+    {
+        to: "/",
+        label: "Red",
+        icon: Network,
+        end: true,
+        alsoActive: "/devices",
+    },
     { to: "/scans", label: "Historial", icon: History, end: false },
     { to: "/settings", label: "Ajustes", icon: SettingsIcon, end: false },
 ];
 
-function LastScanBadge() {
-    const { lastScan } = useLastScan();
-    if (!lastScan) return null;
-    return (
-        <div
-            className="flex items-center gap-2 text-xs text-muted-foreground"
-            role="status"
-            aria-live="polite"
-            aria-label={`Último descubrimiento: ${lastScan.hosts_alive} dispositivos activos, ${lastScan.hosts_new} nuevos`}
-        >
-            <Activity className="h-3.5 w-3.5" aria-hidden />
-            <span>
-                Último descubrimiento: {lastScan.hosts_alive} activos,{" "}
-                {lastScan.hosts_new} nuevos
-            </span>
-        </div>
-    );
+/** Activo propio de NavLink o por prefijo `alsoActive` (subpáginas de Red). */
+function useNavActive() {
+    const { pathname } = useLocation();
+    return (n: (typeof navItems)[number], isActive: boolean) =>
+        isActive || (!!n.alsoActive && pathname.startsWith(n.alsoActive));
 }
 
 // Marca de la app: Discovery Scope (Opción C oficial), retícula táctica de escaneo
 // con 4 cuadrantes simétricos, ondas de radar concéntricas en Q1 y blip de host detectado en Q3.
-// Paleta oficial: Deep Void Navy (#090D16) + Electric Cyan (#06B6D4) + Sky Signal (#38BDF8).
-function AppMark({ className }: { className?: string }) {
+// - Modo oscuro (final-symbol-color.svg): Deep Void Navy (#090D16) + Electric Cyan (#06B6D4) + Sky Signal (#38BDF8).
+// - Modo claro (final-symbol-light.svg): Slate Tile (#F1F5F9, borde #E2E8F0) + Deep Cyan (#0891B2) + Blip (#0284C7).
+export function AppMark({ className }: { className?: string }) {
+    const { theme } = useTheme();
+    const isLight = theme === "light";
+    const primaryColor = isLight ? "#0891B2" : "#06B6D4";
+    const blipColor = isLight ? "#0284C7" : "#38BDF8";
+
     return (
-        <svg viewBox="0 0 256 256" className={className} role="img" aria-hidden>
-            <rect width="256" height="256" rx="56" fill="#090D16" />
+        <svg
+            viewBox="0 0 256 256"
+            className={className}
+            role="img"
+            aria-hidden
+            data-theme-variant={isLight ? "light" : "dark"}
+        >
+            {isLight ? (
+                <rect
+                    x="4"
+                    y="4"
+                    width="248"
+                    height="248"
+                    rx="54"
+                    fill="#F1F5F9"
+                    stroke="#E2E8F0"
+                    strokeWidth="8"
+                />
+            ) : (
+                <rect width="256" height="256" rx="56" fill="#090D16" />
+            )}
             {/* Baliza de origen local central */}
-            <circle cx="128" cy="128" r="22" fill="#06B6D4" />
+            <circle cx="128" cy="128" r="22" fill={primaryColor} />
 
             {/* 4 cuadrantes simétricos de retícula (arcos de 72° con aperturas cardinales de 18°) */}
             <path
-                fill="#06B6D4"
-                opacity="0.9"
+                fill={primaryColor}
+                opacity={isLight ? "0.95" : "0.9"}
                 d="M 144.58 23.31 A 106 106 0 0 1 232.69 111.42 L 216.89 113.92 A 90 90 0 0 0 142.08 39.11 Z"
             />
             <path
-                fill="#06B6D4"
-                opacity="0.9"
+                fill={primaryColor}
+                opacity={isLight ? "0.95" : "0.9"}
                 d="M 23.31 111.42 A 106 106 0 0 1 111.42 23.31 L 113.92 39.11 A 90 90 0 0 0 39.11 113.92 Z"
             />
             <path
-                fill="#06B6D4"
-                opacity="0.9"
+                fill={primaryColor}
+                opacity={isLight ? "0.95" : "0.9"}
                 d="M 111.42 232.69 A 106 106 0 0 1 23.31 144.58 L 39.11 142.08 A 90 90 0 0 0 113.92 216.89 Z"
             />
             <path
-                fill="#06B6D4"
-                opacity="0.9"
+                fill={primaryColor}
+                opacity={isLight ? "0.95" : "0.9"}
                 d="M 232.69 144.58 A 106 106 0 0 1 144.58 232.69 L 142.08 216.89 A 90 90 0 0 0 216.89 142.08 Z"
             />
 
             {/* Ondas concéntricas de barrido de radar */}
             <path
-                fill="#06B6D4"
-                opacity="0.75"
+                fill={primaryColor}
+                opacity={isLight ? "0.8" : "0.75"}
                 d="M 137.70 66.76 A 62 62 0 0 1 189.24 118.30 L 173.43 120.80 A 46 46 0 0 0 135.20 82.57 Z"
             />
             <path
-                fill="#06B6D4"
-                opacity="0.5"
+                fill={primaryColor}
+                opacity={isLight ? "0.6" : "0.5"}
                 d="M 141.14 45.03 A 84 84 0 0 1 210.97 114.86 L 195.16 117.36 A 68 68 0 0 0 138.64 60.84 Z"
             />
 
             {/* Host detectado (blip de señal en Q3) */}
-            <circle cx="89.82" cy="166.18" r="10" fill="#38BDF8" />
+            <circle cx="89.82" cy="166.18" r="10" fill={blipColor} />
         </svg>
     );
 }
 
 function Sidebar() {
+    const navActive = useNavActive();
     return (
         <nav aria-label="Navegación principal" className="flex flex-col gap-1">
             {navItems.map((n) => {
@@ -202,7 +223,7 @@ function Sidebar() {
                         className={({ isActive }) =>
                             cn(
                                 "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-[background-color,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]",
-                                isActive
+                                navActive(n, isActive)
                                     ? "bg-primary/10 text-foreground"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )
@@ -210,7 +231,7 @@ function Sidebar() {
                     >
                         {({ isActive }) => (
                             <>
-                                {isActive && (
+                                {navActive(n, isActive) && (
                                     <span
                                         className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary"
                                         aria-hidden
@@ -219,7 +240,8 @@ function Sidebar() {
                                 <Icon
                                     className={cn(
                                         "h-4 w-4 shrink-0",
-                                        isActive && "text-primary",
+                                        navActive(n, isActive) &&
+                                            "text-primary",
                                     )}
                                     aria-hidden
                                 />
@@ -376,6 +398,7 @@ function AppShell() {
     // en desktop y desde el 5º item del top-nav móvil).
     const [aboutOpen, setAboutOpen] = useState(false);
     const openAbout = () => setAboutOpen(true);
+    const navActive = useNavActive();
 
     return (
         <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -395,20 +418,23 @@ function AppShell() {
             </aside>
 
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <header className="z-30 flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
-                    <div className="flex items-center gap-3">
-                        {/* #37: "MyLAN" solo en móvil (desktop tiene el brand en la sidebar). */}
-                        <h1
-                            className="text-lg font-semibold tracking-tight md:hidden"
+                {/* h1 para lectores de pantalla. */}
+                <h1 className="sr-only" translate="no">
+                    MyLAN
+                </h1>
+                {/* #37: barra superior solo en móvil (desktop tiene el brand en
+                    la sidebar). El resumen del último descubrimiento vive en la
+                    cabecera de la vista Red (ADR-0007). */}
+                <header className="z-30 flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 py-3 backdrop-blur md:hidden">
+                    <div className="flex items-center gap-2">
+                        <AppMark className="h-7 w-7 shrink-0" />
+                        <span
+                            className="text-lg font-semibold tracking-tight"
                             translate="no"
+                            aria-hidden
                         >
                             MyLAN
-                        </h1>
-                        {/* h1 para desktop: visualmente oculto, accesible a SR. */}
-                        <h1 className="sr-only" translate="no">
-                            MyLAN
-                        </h1>
-                        <LastScanBadge />
+                        </span>
                     </div>
                 </header>
                 {/* Navegación móvil (sidebar arriba en pantallas pequeñas, AC-1). */}
@@ -426,7 +452,7 @@ function AppShell() {
                                 className={({ isActive }) =>
                                     cn(
                                         "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                        isActive
+                                        navActive(n, isActive)
                                             ? "bg-primary/10 text-foreground"
                                             : "text-muted-foreground hover:bg-muted hover:text-foreground",
                                     )

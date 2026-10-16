@@ -4,8 +4,8 @@
   "version": "0.6.1",
   "type": "module",
   "scripts": {
-    "dev": "npm run --prefix apps/desktop-tauri tauri -- dev",
-    "build": "npm run --prefix apps/desktop-tauri tauri -- build",
+    "dev": "(test -x apps/desktop-tauri/node_modules/.bin/tauri || npm --prefix apps/desktop-tauri install) && npm run --prefix apps/desktop-tauri tauri -- dev",
+    "build": "(test -x apps/desktop-tauri/node_modules/.bin/tauri || npm --prefix apps/desktop-tauri install) && npm run --prefix apps/desktop-tauri tauri -- build",
     "build:cli": "cargo build --release -p mylan-cli",
     "clean": "rm -rf target apps/desktop-tauri/src-tauri/target apps/desktop-tauri/src-tauri/gen apps/desktop-tauri/dist",
     "clean:cache": "rm -rf ~/.npm ~/.cargo/registry ~/.cargo/git",

@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Vista Red unificada y cabecera de telemetría**: consolidación de Dashboard y Dispositivos en una sola vista principal (`Red`) con lecturas técnicas siempre visibles, barra de progreso en vivo y control de lanzamiento de descubrimiento.
+- **Variante clara de marca Discovery Scope**: isotipo `final-symbol-light.svg` integrado en `AppMark` con adaptación dinámica entre temas claro (`#F1F5F9` / `#0891B2`) y oscuro (`#090D16` / `#06B6D4`).
+- **Acciones rápidas en detalle de dispositivo**: alternancia inmediata de confianza en la cabecera e inicio de escaneo de puertos integrado.
+
+### Changed
+- **Ajustes de escaneo y almacenamiento**: selección interactiva con persistencia inmediata del perfil predeterminado y visualización de la ruta de la base de datos SQLite.
+
 ## [0.6.1] - 2026-10-12 (fea6613)
 
 ### Added

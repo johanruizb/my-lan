@@ -1,7 +1,7 @@
-// AC-22: Tests de screen `Dashboard` con MemoryRouter + providers + mock
-// `@/lib/tauri` por función + fixtures Device[].
+// AC-22 / ADR-0007: Tests de la pantalla principal unificada `Dashboard` (Red)
+// con MemoryRouter + providers + mock `@/lib/tauri` por función + fixtures Device[].
 
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/screens/Dashboard";
 import { renderWithProviders } from "./helpers";
@@ -11,11 +11,13 @@ import { deviceFixtures, defaultSettings } from "../fixtures";
 const detectInterfaceMock = vi.fn();
 const listDevicesMock = vi.fn();
 const getSettingsMock = vi.fn();
+const getNetworkNameMock = vi.fn();
 
 vi.mock("@/lib/tauri", () => ({
     detectInterface: () => detectInterfaceMock(),
     listDevices: () => listDevicesMock(),
     getSettings: () => getSettingsMock(),
+    getNetworkName: (cidr: string) => getNetworkNameMock(cidr),
 }));
 
 vi.mock("@/App", () => ({
@@ -28,6 +30,11 @@ vi.mock("@/App", () => ({
         cancel: vi.fn(),
     }),
     useLastScan: () => ({ lastScan: null, setLastScan: vi.fn() }),
+    deviceKey: (d: {
+        primary_ip: string | null;
+        primary_mac: string | null;
+        id: string;
+    }) => d.primary_ip ?? d.primary_mac ?? d.id,
 }));
 
 vi.mock("@/components/censorship-provider", () => ({
@@ -54,17 +61,22 @@ const ifaceFixture = {
     ssid: null,
 };
 
-describe("Dashboard screen (AC-22)", () => {
+describe("Dashboard screen (AC-22 / ADR-0007)", () => {
     beforeEach(() => {
         detectInterfaceMock.mockReset();
         listDevicesMock.mockReset();
         getSettingsMock.mockReset();
+        getNetworkNameMock.mockReset();
         detectInterfaceMock.mockResolvedValue(ifaceFixture);
         listDevicesMock.mockResolvedValue(deviceFixtures);
         getSettingsMock.mockResolvedValue(defaultSettings);
+        getNetworkNameMock.mockResolvedValue({
+            name: "Casa-5G",
+            source: "auto",
+        });
     });
 
-    it("renderiza la sección 'Red activa' y 'Descubrir dispositivos'", async () => {
+    it("renderiza la sección 'Red activa' con datos técnicos visibles y la sección 'Dispositivos'", async () => {
         renderWithProviders(
             <NetworkNameProvider>
                 <Dashboard />
@@ -75,12 +87,19 @@ describe("Dashboard screen (AC-22)", () => {
                 screen.getByRole("region", { name: "Red activa" }),
             ).toBeInTheDocument();
         });
+        const netSection = screen.getByRole("region", { name: "Red activa" });
+        await waitFor(() => {
+            expect(within(netSection).getByText("eth0")).toBeInTheDocument();
+            expect(
+                within(netSection).getByText("192.168.1.10"),
+            ).toBeInTheDocument();
+        });
         expect(
-            screen.getByRole("region", { name: "Descubrir dispositivos" }),
+            screen.getByRole("region", { name: "Dispositivos" }),
         ).toBeInTheDocument();
     });
 
-    it("muestra el botón 'Iniciar descubrimiento' cuando no hay scan en curso", async () => {
+    it("muestra el botón 'Descubrir dispositivos' junto al selector de perfil cuando no hay scan en curso", async () => {
         renderWithProviders(
             <NetworkNameProvider>
                 <Dashboard />
@@ -88,22 +107,24 @@ describe("Dashboard screen (AC-22)", () => {
         );
         await waitFor(() => {
             expect(
-                screen.getByRole("button", { name: /Iniciar descubrimiento/ }),
+                screen.getByRole("button", { name: /Descubrir dispositivos/ }),
             ).toBeInTheDocument();
         });
+        expect(
+            screen.getByRole("combobox", { name: "Perfil de escaneo" }),
+        ).toBeInTheDocument();
     });
 
-    it("expone el conteo de dispositivos en el resumen", async () => {
+    it("integra la vista previa de dispositivos con conteo y enlace 'Ver todos' hacia /devices", async () => {
         renderWithProviders(
             <NetworkNameProvider>
                 <Dashboard />
             </NetworkNameProvider>,
         );
-        // El resumen lista el número de dispositivos de los fixtures.
         await waitFor(() => {
-            expect(
-                screen.getByRole("region", { name: "Resumen" }),
-            ).toBeInTheDocument();
+            expect(screen.getByText(/Dispositivos \(3\)/)).toBeInTheDocument();
         });
+        const viewAllLink = screen.getByRole("link", { name: /Ver todos/ });
+        expect(viewAllLink).toHaveAttribute("href", "/devices");
     });
 });

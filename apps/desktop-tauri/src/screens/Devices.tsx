@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+    Link,
+    useLocation,
+    useNavigate,
+    useSearchParams,
+} from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -21,6 +26,7 @@ import {
     ChevronRight,
     RefreshCw,
     ChevronDown,
+    ArrowLeft,
 } from "lucide-react";
 import {
     Table,
@@ -60,6 +66,10 @@ import { SECTION_GAP } from "@/lib/design-tokens";
 
 type View = "cards" | "table";
 
+// Tarjetas que muestra la vista Red antes de enlazar a la página completa
+// (3 filas en la rejilla de 3 columnas).
+const PREVIEW_LIMIT = 9;
+
 // Hook que sincroniza un valor string con un query param de la URL.
 // Usa replace: true para no llenar el historial en cada cambio.
 function useUrlState<T extends string>(
@@ -85,8 +95,20 @@ function useUrlState<T extends string>(
     return [value, setValue];
 }
 
-export function Devices() {
+export function Devices({
+    variant = "full",
+}: {
+    /**
+     * `full`: página dedicada /devices (vistas, todos los filtros, export).
+     * `preview`: incrustada en la vista Red bajo la cabecera de red; muestra
+     * los primeros dispositivos con búsqueda + estado y enlaza a la página
+     * completa conservando los filtros (ADR-0007).
+     */
+    variant?: "full" | "preview";
+} = {}) {
+    const preview = variant === "preview";
     const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
     const { scanning, progress, devicesFound, startScan } = useScan();
     const { censorshipEnabled } = useCensorship();
@@ -94,7 +116,8 @@ export function Devices() {
     const [query, setQuery] = useUrlState<string>("q", "");
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useUrlState<View>("view", "cards");
+    const [urlView, setView] = useUrlState<View>("view", "cards");
+    const view: View = preview ? "cards" : urlView;
     // Filtros de la lista (AC-14): tipo, estado online y confiable (manual
     // binario via is_trusted, ADR-0006). Por defecto "all" → se ven todos
     // (offline incluidos, AC-15). Sincronizados a URL para deep-linking.
@@ -147,7 +170,10 @@ export function Devices() {
     }, [devices, devicesFound]);
 
     // Filtros componen AND con la búsqueda texto (AC-14). Single predicate
-    // para una sola pasada sobre `merged` (fix review #4).
+    // para una sola pasada sobre `merged` (fix review #4). En `preview` solo
+    // se exponen búsqueda + estado: los filtros ocultos no deben aplicar.
+    const typeFilter = preview ? "all" : filterType;
+    const trustFilter = preview ? "all" : filterTrust;
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         return merged.filter((d) => {
@@ -163,17 +189,51 @@ export function Devices() {
                     .some((v) => (v as string).toLowerCase().includes(q));
                 if (!matches) return false;
             }
-            if (filterType !== "all" && d.device_type !== filterType)
+            if (typeFilter !== "all" && d.device_type !== typeFilter)
                 return false;
             // AC-15: "En línea" es opt-in; sin filtro activo se ven todos.
             if (filterOnline === "online" && !d.is_online) return false;
             if (filterOnline === "offline" && d.is_online) return false;
             // Confiable: etiqueta manual binaria (is_trusted, ADR-0006).
-            if (filterTrust === "trusted" && !d.is_trusted) return false;
-            if (filterTrust === "untrusted" && d.is_trusted) return false;
+            if (trustFilter === "trusted" && !d.is_trusted) return false;
+            if (trustFilter === "untrusted" && d.is_trusted) return false;
             return true;
         });
-    }, [merged, query, filterType, filterOnline, filterTrust]);
+    }, [merged, query, typeFilter, filterOnline, trustFilter]);
+
+    // Conteos sobre el inventario completo: el resumen que antes vivía en
+    // tarjetas sueltas del Dashboard ahora acompaña a cada filtro.
+    const counts = useMemo(() => {
+        let online = 0;
+        let trusted = 0;
+        for (const d of merged) {
+            if (d.is_online) online++;
+            if (d.is_trusted) trusted++;
+        }
+        return {
+            all: merged.length,
+            online,
+            offline: merged.length - online,
+            trusted,
+            untrusted: merged.length - trusted,
+        };
+    }, [merged]);
+
+    // En `preview`: online primero y luego lo visto más reciente (los hallazgos
+    // en vivo del descubrimiento suben arriba), recortado a PREVIEW_LIMIT.
+    const visible = useMemo(() => {
+        if (!preview) return filtered;
+        return [...filtered]
+            .sort(
+                (a, b) =>
+                    Number(b.is_online) - Number(a.is_online) ||
+                    b.last_seen_at.localeCompare(a.last_seen_at),
+            )
+            .slice(0, PREVIEW_LIMIT);
+    }, [preview, filtered]);
+
+    // Enlace a la página dedicada conservando búsqueda y estado.
+    const fullListPath = `/devices${location.search}`;
 
     async function handleExport(format: string) {
         try {
@@ -185,7 +245,20 @@ export function Devices() {
     }
 
     return (
-        <div className={cn("flex flex-col", SECTION_GAP)} aria-busy={loading}>
+        <section
+            aria-label="Dispositivos"
+            className={cn("flex flex-col", SECTION_GAP)}
+            aria-busy={loading}
+        >
+            {!preview && (
+                <Link
+                    to="/"
+                    className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Volver a la red
+                </Link>
+            )}
             <Card className="border border-border/40 shadow-sm overflow-hidden">
                 <CardHeader variant="toolbar">
                     <CardTitle className="flex items-center gap-2">
@@ -195,98 +268,119 @@ export function Devices() {
                         />
                         Dispositivos ({filtered.length})
                     </CardTitle>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {/* Toggle de vista tarjetas/tabla (AC-9). */}
-                        <div
-                            className="flex rounded-md border border-border p-0.5"
-                            role="group"
-                            aria-label="Modo de vista"
-                        >
-                            <Button
-                                variant={
-                                    view === "cards" ? "secondary" : "ghost"
-                                }
-                                size="sm"
-                                onClick={() => setView("cards")}
-                                aria-pressed={view === "cards"}
-                                aria-label="Vista de tarjetas"
-                                className="gap-1.5"
-                            >
-                                <LayoutGrid
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden
-                                />
-                                Tarjetas
-                            </Button>
-                            <Button
-                                variant={
-                                    view === "table" ? "secondary" : "ghost"
-                                }
-                                size="sm"
-                                onClick={() => setView("table")}
-                                aria-pressed={view === "table"}
-                                aria-label="Vista de tabla"
-                                className="gap-1.5"
-                            >
-                                <TableIcon
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden
-                                />
-                                Tabla
-                            </Button>
-                        </div>
-                        {/* #15: El descubrimiento se lanza desde el Dashboard; aquí
-                            solo Refrescar la lista. Export agrupado en un dropdown
-                            (#27) con formato CSV/JSON. */}
+                    {preview ? (
                         <Button
+                            asChild
                             variant="outline"
                             size="sm"
-                            onClick={refresh}
                             className="gap-1.5"
                         >
-                            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                            Refrescar
+                            <Link to={fullListPath}>
+                                Ver todos
+                                <ChevronRight
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden
+                                />
+                            </Link>
                         </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                    ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Toggle de vista tarjetas/tabla (AC-9). */}
+                            <div
+                                className="flex rounded-md border border-border p-0.5"
+                                role="group"
+                                aria-label="Modo de vista"
+                            >
                                 <Button
-                                    variant="outline"
+                                    variant={
+                                        view === "cards" ? "secondary" : "ghost"
+                                    }
                                     size="sm"
+                                    onClick={() => setView("cards")}
+                                    aria-pressed={view === "cards"}
+                                    aria-label="Vista de tarjetas"
                                     className="gap-1.5"
                                 >
-                                    <Download
+                                    <LayoutGrid
                                         className="h-3.5 w-3.5"
                                         aria-hidden
                                     />
-                                    Exportar
-                                    <ChevronDown
-                                        className="h-3.5 w-3.5"
-                                        aria-hidden
-                                    />
+                                    Tarjetas
                                 </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>
-                                    Formato de exportación
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onSelect={() => handleExport("csv")}
+                                <Button
+                                    variant={
+                                        view === "table" ? "secondary" : "ghost"
+                                    }
+                                    size="sm"
+                                    onClick={() => setView("table")}
+                                    aria-pressed={view === "table"}
+                                    aria-label="Vista de tabla"
+                                    className="gap-1.5"
                                 >
-                                    CSV
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onSelect={() => handleExport("json")}
-                                >
-                                    JSON
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+                                    <TableIcon
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                    Tabla
+                                </Button>
+                            </div>
+                            {/* ADR-0007: el descubrimiento se lanza desde la cabecera
+                            de la vista Red; aquí solo Refrescar la lista. Export
+                            agrupado en un dropdown (#27) con formato CSV/JSON. */}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={refresh}
+                                className="gap-1.5"
+                            >
+                                <RefreshCw
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden
+                                />
+                                Refrescar
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5"
+                                    >
+                                        <Download
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                        Exportar
+                                        <ChevronDown
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                        Formato de exportación
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        onSelect={() => handleExport("csv")}
+                                    >
+                                        CSV
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onSelect={() => handleExport("json")}
+                                    >
+                                        JSON
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {/* #26: Filtros siempre visibles (sin Collapsible). Búsqueda
-                        por texto + filtros por tipo, estado y confiable. */}
+                        por texto + filtros por tipo, estado y confiable. En
+                        `preview` solo búsqueda + estado. */}
                     <div className="mb-4">
                         <div className="relative max-w-md">
                             <Search
@@ -305,64 +399,87 @@ export function Devices() {
                         </div>
                         {/* Filtros por tipo, estado y confiable (AC-14). */}
                         <div className="mt-3 flex flex-wrap items-end gap-3">
-                            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                Tipo
-                                <Select
-                                    value={filterType}
-                                    onValueChange={setFilterType}
-                                >
-                                    <SelectTrigger
-                                        className="w-40 mt-1"
-                                        aria-label="Filtrar por tipo"
+                            {!preview && (
+                                <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                    Tipo
+                                    <Select
+                                        value={filterType}
+                                        onValueChange={setFilterType}
                                     >
-                                        <SelectValue placeholder="Todos" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            Todos
-                                        </SelectItem>
-                                        {DEVICE_TYPE_OPTIONS.map((t) => (
-                                            <SelectItem key={t} value={t}>
-                                                {deviceLabel(t)}
+                                        <SelectTrigger
+                                            className="w-40 mt-1"
+                                            aria-label="Filtrar por tipo"
+                                        >
+                                            <SelectValue placeholder="Todos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Todos
                                             </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </label>
+                                            {DEVICE_TYPE_OPTIONS.map((t) => (
+                                                <SelectItem key={t} value={t}>
+                                                    {deviceLabel(t)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </label>
+                            )}
                             <FilterToggle
                                 label="Estado"
                                 ariaLabel="Filtrar por estado"
                                 options={[
-                                    { value: "all", label: "Todos" },
-                                    { value: "online", label: "Online" },
-                                    { value: "offline", label: "Offline" },
+                                    {
+                                        value: "all",
+                                        label: "Todos",
+                                        count: counts.all,
+                                    },
+                                    {
+                                        value: "online",
+                                        label: "Online",
+                                        count: counts.online,
+                                    },
+                                    {
+                                        value: "offline",
+                                        label: "Offline",
+                                        count: counts.offline,
+                                    },
                                 ]}
                                 value={filterOnline}
                                 onChange={setFilterOnline}
                             />
-                            <FilterToggle
-                                label="Confiable"
-                                ariaLabel="Filtrar por confiable"
-                                options={[
-                                    { value: "all", label: "Todos" },
-                                    {
-                                        value: "trusted",
-                                        label: "Confiables",
-                                    },
-                                    {
-                                        value: "untrusted",
-                                        label: "No confiables",
-                                    },
-                                ]}
-                                value={filterTrust}
-                                onChange={setFilterTrust}
-                            />
+                            {!preview && (
+                                <FilterToggle
+                                    label="Confiable"
+                                    ariaLabel="Filtrar por confiable"
+                                    options={[
+                                        {
+                                            value: "all",
+                                            label: "Todos",
+                                            count: counts.all,
+                                        },
+                                        {
+                                            value: "trusted",
+                                            label: "Confiables",
+                                            count: counts.trusted,
+                                        },
+                                        {
+                                            value: "untrusted",
+                                            label: "No confiables",
+                                            count: counts.untrusted,
+                                        },
+                                    ]}
+                                    value={filterTrust}
+                                    onChange={setFilterTrust}
+                                />
+                            )}
                         </div>
                     </div>
 
                     {/* Barra de progreso del barrido (AC-3/AC-4): % cuando se
-                        conoce el total, indeterminada si no. */}
-                    {scanning && (
+                        conoce el total, indeterminada si no. En `preview` la
+                        muestra la cabecera de red. */}
+                    {!preview && scanning && (
                         <div
                             className="mb-4 flex flex-col gap-1.5"
                             aria-live="polite"
@@ -418,20 +535,39 @@ export function Devices() {
                         </div>
                     )}
 
-                    {!error && !loading && merged.length === 0 && (
+                    {!error && !loading && merged.length === 0 && scanning && (
+                        <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                            <Loader2
+                                className="h-4 w-4 animate-spin"
+                                aria-hidden
+                            />
+                            Buscando dispositivos en tu red…
+                        </div>
+                    )}
+
+                    {!error && !loading && merged.length === 0 && !scanning && (
                         <EmptyState
                             icon={NetworkIcon}
                             title="Sin dispositivos"
-                            description="Aún no hay dispositivos en tu red. Inicia un descubrimiento para encontrarlos."
+                            description={
+                                preview
+                                    ? "Aún no hay dispositivos en tu red. Pulsa Descubrir dispositivos para encontrarlos."
+                                    : "Aún no hay dispositivos en tu red. Inicia un descubrimiento para encontrarlos."
+                            }
                             action={
-                                <Button
-                                    size="sm"
-                                    onClick={() => startScan()}
-                                    className="gap-1.5"
-                                >
-                                    <Play className="h-3.5 w-3.5" aria-hidden />
-                                    Descubrir dispositivos
-                                </Button>
+                                preview ? undefined : (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => startScan()}
+                                        className="gap-1.5"
+                                    >
+                                        <Play
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                        Descubrir dispositivos
+                                    </Button>
+                                )
                             }
                         />
                     )}
@@ -471,7 +607,7 @@ export function Devices() {
                                 role="list"
                                 aria-label="Lista de dispositivos"
                             >
-                                {filtered.map((d) => {
+                                {visible.map((d) => {
                                     const Icon = deviceIcon(d.device_type);
                                     const devicePath = `/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`;
                                     return (
@@ -598,6 +734,30 @@ export function Devices() {
                                         </li>
                                     );
                                 })}
+                            </div>
+                        )}
+
+                    {/* Pie del preview: enlace a la página dedicada cuando la
+                        lista está recortada. */}
+                    {preview &&
+                        !error &&
+                        !loading &&
+                        filtered.length > visible.length && (
+                            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+                                <span className="tabular-nums">
+                                    Mostrando {visible.length} de{" "}
+                                    {filtered.length}
+                                </span>
+                                <Link
+                                    to={fullListPath}
+                                    className="inline-flex items-center gap-1 rounded-sm font-medium text-primary hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    Ver los {filtered.length} dispositivos
+                                    <ChevronRight
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden
+                                    />
+                                </Link>
                             </div>
                         )}
 
@@ -822,7 +982,7 @@ export function Devices() {
                         )}
                 </CardContent>
             </Card>
-        </div>
+        </section>
     );
 }
 
@@ -854,7 +1014,7 @@ function FilterToggle<T extends string>({
 }: {
     label: string;
     ariaLabel: string;
-    options: { value: T; label: string; ariaLabel?: string }[];
+    options: { value: T; label: string; ariaLabel?: string; count?: number }[];
     value: T;
     onChange: (v: T) => void;
 }) {
@@ -877,6 +1037,19 @@ function FilterToggle<T extends string>({
                         className="gap-1.5"
                     >
                         {o.label}
+                        {o.count !== undefined && (
+                            <span
+                                aria-hidden
+                                className={cn(
+                                    "tabular-nums",
+                                    value === o.value
+                                        ? "text-foreground/70"
+                                        : "text-muted-foreground",
+                                )}
+                            >
+                                {o.count}
+                            </span>
+                        )}
                     </Button>
                 ))}
             </div>

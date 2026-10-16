@@ -79,9 +79,10 @@ Mantener siempre una zona de respeto libre de texto y otros elementos gráficos 
 - **Directorio de Maestros:** `design/branding/kit/`
   - `final-symbol.svg` (Símbolo estándar)
   - `final-symbol-small.svg` (Corte óptico 16/32 px)
-  - `final-symbol-color.svg` (Símbolo con color en tile oscuro)
+  - `final-symbol-color.svg` (Símbolo con color en tile oscuro `#090D16`)
+  - `final-symbol-light.svg` (Símbolo con color en tile claro `#F1F5F9` con borde `#E2E8F0`)
   - `final-symbol-dark.svg` (Símbolo transparente para UI oscura)
-  - `final-horizontal.svg` / `final-horizontal-color.svg` (Lockup horizontal)
+  - `final-horizontal.svg` / `final-horizontal-color.svg` / `final-horizontal-light.svg` (Lockup horizontal)
   - `final-stacked.svg` (Lockup apilado)
   - `final-wordmark.svg` (Marca denominativa)
 - **Directorio de Exportaciones:** `design/branding/kit/exports/`

@@ -96,7 +96,7 @@ export function OnboardingDialog() {
                         </div>
                         <div className="flex flex-col gap-0.5">
                             <p className="text-sm font-medium">
-                                Descubrimiento (Dashboard)
+                                Descubrimiento (Red)
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 Recorre toda tu red y lista los dispositivos

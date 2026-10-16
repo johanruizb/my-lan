@@ -227,4 +227,39 @@ describe("DeviceDetail screen (AC-18)", () => {
             screen.getByRole("button", { name: "Menos" }),
         ).toBeInTheDocument();
     });
+
+    it("permite alternar confianza desde la cabecera y lanzar escaneo de puertos desde la barra integrada", async () => {
+        scanPortsMock.mockResolvedValue({});
+
+        renderWithProviders(
+            <Routes>
+                <Route path="/devices/:ip" element={<DeviceDetail />} />
+            </Routes>,
+            ["/devices/192.168.1.1"],
+        );
+
+        const trustSwitch = await screen.findByRole("switch", {
+            name: /Dispositivo confiable/i,
+        });
+        fireEvent.click(trustSwitch);
+
+        await waitFor(() => {
+            expect(updateDeviceMock).toHaveBeenCalledWith("dev-edit-1", {
+                isTrusted: true,
+            });
+        });
+
+        const scanButton = screen.getByRole("button", {
+            name: /Escanear puertos/i,
+        });
+        fireEvent.click(scanButton);
+
+        await waitFor(() => {
+            expect(scanPortsMock).toHaveBeenCalledWith(
+                "192.168.1.1",
+                "normal",
+                expect.any(String),
+            );
+        });
+    });
 });
