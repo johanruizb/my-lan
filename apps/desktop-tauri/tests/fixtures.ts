@@ -76,4 +76,9 @@ export const defaultSettings: Settings = {
     monitoring_interval_secs: 300,
     minimize_to_tray: true,
     autostart_enabled: false,
+    notifications_enabled: true,
+    notify_untrusted_devices: true,
+    notify_trusted_device_tampered: true,
+    notify_gateway_down: true,
+    notify_critical_ports: true,
 };

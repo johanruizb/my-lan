@@ -181,6 +181,16 @@ export interface Settings {
     minimize_to_tray?: boolean;
     /** Autoarranque con el sistema operativo al iniciar sesión. */
     autostart_enabled?: boolean;
+    /** Notificaciones nativas de escritorio activas. */
+    notifications_enabled?: boolean;
+    /** Notificar cuando se detecten dispositivos no confiables. */
+    notify_untrusted_devices?: boolean;
+    /** Notificar cambios de IP o MAC en dispositivos confiables. */
+    notify_trusted_device_tampered?: boolean;
+    /** Notificar caída o recuperación de Internet y Gateway. */
+    notify_gateway_down?: boolean;
+    /** Notificar puertos críticos abiertos recién detectados. */
+    notify_critical_ports?: boolean;
 }
 
 /** Estado en vivo del monitoreo continuo en segundo plano. */
@@ -352,4 +362,35 @@ export function onMonitoringStatus(
     cb: (status: MonitoringStatusDto) => void,
 ): Promise<UnlistenFn> {
     return listen<MonitoringStatusDto>("monitoring:status", (e) => cb(e.payload));
+}
+
+// --- Alertas y notificaciones nativas de escritorio (Fase 6: Desktop Alerts) -
+
+export type AlertCategory =
+    | "device_new_untrusted"
+    | "device_identity_tampered"
+    | "gateway_down"
+    | "gateway_recovered"
+    | "port_critical_opened";
+
+export interface AlertItem {
+    category: AlertCategory;
+    title: string;
+    body: string;
+    device_id: string | null;
+}
+
+export interface AlertSummary {
+    total: number;
+    title: string;
+    body: string;
+    alerts: AlertItem[];
+}
+
+export function onAlertSingle(cb: (alert: AlertItem) => void): Promise<UnlistenFn> {
+    return listen<AlertItem>("alert:single", (e) => cb(e.payload));
+}
+
+export function onAlertSummary(cb: (summary: AlertSummary) => void): Promise<UnlistenFn> {
+    return listen<AlertSummary>("alert:summary", (e) => cb(e.payload));
 }

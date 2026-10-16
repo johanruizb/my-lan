@@ -42,6 +42,7 @@ import {
     Power,
     Play,
     Pause,
+    Bell,
 } from "lucide-react";
 import { useUpdater } from "@/components/updater-provider";
 import { PROFILES } from "@/lib/profiles";
@@ -152,6 +153,16 @@ export function Settings() {
                 settings.minimize_to_tray ?? true,
             autostart_enabled:
                 settings.autostart_enabled ?? false,
+            notifications_enabled:
+                settings.notifications_enabled ?? true,
+            notify_untrusted_devices:
+                settings.notify_untrusted_devices ?? true,
+            notify_trusted_device_tampered:
+                settings.notify_trusted_device_tampered ?? true,
+            notify_gateway_down:
+                settings.notify_gateway_down ?? true,
+            notify_critical_ports:
+                settings.notify_critical_ports ?? true,
             ...patch,
         };
         setSettingsState(next);
@@ -181,6 +192,16 @@ export function Settings() {
                     settings.minimize_to_tray ?? true,
                 autostart_enabled:
                     settings.autostart_enabled ?? false,
+                notifications_enabled:
+                    settings.notifications_enabled ?? true,
+                notify_untrusted_devices:
+                    settings.notify_untrusted_devices ?? true,
+                notify_trusted_device_tampered:
+                    settings.notify_trusted_device_tampered ?? true,
+                notify_gateway_down:
+                    settings.notify_gateway_down ?? true,
+                notify_critical_ports:
+                    settings.notify_critical_ports ?? true,
             };
             await setSettings(next);
             setSettingsState(next);
@@ -538,6 +559,121 @@ export function Settings() {
                                             )}
                                             Escanear ahora
                                         </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="p-5 pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Bell
+                                    className="h-4 w-4 text-primary"
+                                    aria-hidden
+                                />
+                                Notificaciones de escritorio
+                            </CardTitle>
+                            <CardDescription>
+                                Alertas nativas del sistema operativo ante eventos críticos o dispositivos inesperados en la red.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4 p-5 pt-2">
+                            {/* Toggle Maestro */}
+                            <div className="flex items-start justify-between gap-4 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span id="notifications-master-label" className="text-sm font-medium">
+                                        Habilitar notificaciones del SO
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Envía avisos al centro de notificaciones nativo del sistema.
+                                    </span>
+                                </div>
+                                <Switch
+                                    id="notifications-master-switch"
+                                    checked={settings.notifications_enabled ?? true}
+                                    onCheckedChange={(checked) => persistPatch({ notifications_enabled: checked })}
+                                    aria-labelledby="notifications-master-label"
+                                />
+                            </div>
+
+                            {/* Sub-toggles (activos solo si notifications_enabled es true) */}
+                            {(settings.notifications_enabled ?? true) && (
+                                <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3.5">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Disparadores de alerta
+                                    </span>
+
+                                    {/* Dispositivos no confiables */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span id="notify-untrusted-label" className="text-xs font-medium">
+                                                Dispositivos no reconocidos
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                Avisa cuando se detecte un host nuevo sin etiqueta de Confiable.
+                                            </span>
+                                        </div>
+                                        <Switch
+                                            id="notify-untrusted-switch"
+                                            checked={settings.notify_untrusted_devices ?? true}
+                                            onCheckedChange={(checked) => persistPatch({ notify_untrusted_devices: checked })}
+                                            aria-labelledby="notify-untrusted-label"
+                                        />
+                                    </div>
+
+                                    {/* Cambio de IP/identidad en confiables */}
+                                    <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span id="notify-tampered-label" className="text-xs font-medium">
+                                                Cambio de IP en equipo confiable
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                Alerta ante posibles suplantaciones ARP o cambios de dirección IP.
+                                            </span>
+                                        </div>
+                                        <Switch
+                                            id="notify-tampered-switch"
+                                            checked={settings.notify_trusted_device_tampered ?? true}
+                                            onCheckedChange={(checked) => persistPatch({ notify_trusted_device_tampered: checked })}
+                                            aria-labelledby="notify-tampered-label"
+                                        />
+                                    </div>
+
+                                    {/* Caída o reconexión de Gateway */}
+                                    <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span id="notify-gateway-label" className="text-xs font-medium">
+                                                Estado del gateway / conexión
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                Avisa si el router o la puerta de enlace dejan de responder.
+                                            </span>
+                                        </div>
+                                        <Switch
+                                            id="notify-gateway-switch"
+                                            checked={settings.notify_gateway_down ?? true}
+                                            onCheckedChange={(checked) => persistPatch({ notify_gateway_down: checked })}
+                                            aria-labelledby="notify-gateway-label"
+                                        />
+                                    </div>
+
+                                    {/* Puertos críticos */}
+                                    <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span id="notify-ports-label" className="text-xs font-medium">
+                                                Puertos críticos recién abiertos
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                Detecta servicios sensibles expuestos (FTP 21, Telnet 23, SMB 445, RDP 3389).
+                                            </span>
+                                        </div>
+                                        <Switch
+                                            id="notify-ports-switch"
+                                            checked={settings.notify_critical_ports ?? true}
+                                            onCheckedChange={(checked) => persistPatch({ notify_critical_ports: checked })}
+                                            aria-labelledby="notify-ports-label"
+                                        />
                                     </div>
                                 </div>
                             )}

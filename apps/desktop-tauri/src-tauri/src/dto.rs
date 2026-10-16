@@ -228,6 +228,21 @@ pub struct Settings {
     /// Autoarranque con el sistema operativo.
     #[serde(default = "default_false")]
     pub autostart_enabled: bool,
+    /// Notificaciones nativas de escritorio activas.
+    #[serde(default = "default_true")]
+    pub notifications_enabled: bool,
+    /// Notificar cuando se detecten dispositivos no confiables.
+    #[serde(default = "default_true")]
+    pub notify_untrusted_devices: bool,
+    /// Notificar cambios de IP o MAC en dispositivos confiables.
+    #[serde(default = "default_true")]
+    pub notify_trusted_device_tampered: bool,
+    /// Notificar caída o recuperación de Internet y Gateway.
+    #[serde(default = "default_true")]
+    pub notify_gateway_down: bool,
+    /// Notificar puertos críticos abiertos recién detectados.
+    #[serde(default = "default_true")]
+    pub notify_critical_ports: bool,
 }
 
 impl Default for Settings {
@@ -242,6 +257,11 @@ impl Default for Settings {
             monitoring_interval_secs: 300,
             minimize_to_tray: true,
             autostart_enabled: false,
+            notifications_enabled: true,
+            notify_untrusted_devices: true,
+            notify_trusted_device_tampered: true,
+            notify_gateway_down: true,
+            notify_critical_ports: true,
         }
     }
 }
@@ -291,6 +311,11 @@ mod tests {
         assert_eq!(parsed.monitoring_interval_secs, 300);
         assert!(parsed.minimize_to_tray);
         assert!(!parsed.autostart_enabled);
+        assert!(parsed.notifications_enabled);
+        assert!(parsed.notify_untrusted_devices);
+        assert!(parsed.notify_trusted_device_tampered);
+        assert!(parsed.notify_gateway_down);
+        assert!(parsed.notify_critical_ports);
     }
 
     #[test]
@@ -305,6 +330,11 @@ mod tests {
             monitoring_interval_secs: 600,
             minimize_to_tray: false,
             autostart_enabled: true,
+            notifications_enabled: false,
+            notify_untrusted_devices: false,
+            notify_trusted_device_tampered: true,
+            notify_gateway_down: false,
+            notify_critical_ports: true,
         };
 
         let json = serde_json::to_string(&original).expect("serialize");
@@ -315,5 +345,10 @@ mod tests {
         assert_eq!(restored.monitoring_interval_secs, 600);
         assert_eq!(restored.minimize_to_tray, false);
         assert_eq!(restored.autostart_enabled, true);
+        assert_eq!(restored.notifications_enabled, false);
+        assert_eq!(restored.notify_untrusted_devices, false);
+        assert_eq!(restored.notify_trusted_device_tampered, true);
+        assert_eq!(restored.notify_gateway_down, false);
+        assert_eq!(restored.notify_critical_ports, true);
     }
 }

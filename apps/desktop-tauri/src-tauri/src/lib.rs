@@ -6,6 +6,7 @@
 //! arranque) e importa opcionalmente la DB del CLI para usuarios brownfield
 //! (AC-11). Sin servidor HTTP (`mylan-api` se difiere a Fase 7).
 
+mod alerts;
 mod censor;
 mod commands;
 mod dto;

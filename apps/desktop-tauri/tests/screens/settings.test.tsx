@@ -235,4 +235,50 @@ describe("Settings screen (AC-22)", () => {
         fireEvent.click(scanNowBtn);
         expect(triggerBackgroundScanMock).toHaveBeenCalled();
     });
+
+    it("renderiza la tarjeta de 'Notificaciones de escritorio' y permite conmutar el switch maestro y disparadores", async () => {
+        renderWithProviders(<Settings />);
+
+        await waitFor(() => {
+            expect(
+                screen.getByText("Notificaciones de escritorio"),
+            ).toBeInTheDocument();
+        });
+
+        // Switch maestro de notificaciones
+        const masterSwitch = screen.getByRole("switch", {
+            name: /Habilitar notificaciones del SO/i,
+        });
+        expect(masterSwitch).toBeInTheDocument();
+        expect(masterSwitch).toBeChecked();
+
+        // Switch de dispositivos no reconocidos (visible mientras master esté activo)
+        const untrustedSwitch = screen.getByRole("switch", {
+            name: /Dispositivos no reconocidos/i,
+        });
+        expect(untrustedSwitch).toBeInTheDocument();
+        expect(untrustedSwitch).toBeChecked();
+
+        fireEvent.click(untrustedSwitch);
+        expect(setSettingsMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                notify_untrusted_devices: false,
+            }),
+        );
+
+        // Conmutar el switch maestro a off
+        fireEvent.click(masterSwitch);
+        expect(setSettingsMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                notifications_enabled: false,
+            }),
+        );
+
+        // Al estar apagado el switch maestro, los disparadores quedan ocultos
+        expect(
+            screen.queryByRole("switch", {
+                name: /Dispositivos no reconocidos/i,
+            }),
+        ).not.toBeInTheDocument();
+    });
 });

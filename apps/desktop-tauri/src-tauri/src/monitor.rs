@@ -34,6 +34,7 @@ pub struct BackgroundMonitor {
     missed_scans: Arc<std::sync::Mutex<HashMap<String, u32>>>,
     cancel_token: CancellationToken,
     tray_handles: Arc<RwLock<Option<TrayHandles>>>,
+    prev_gateway_reachable: Arc<RwLock<Option<bool>>>,
 }
 
 impl Default for BackgroundMonitor {
@@ -53,6 +54,7 @@ impl BackgroundMonitor {
             missed_scans: Arc::new(std::sync::Mutex::new(HashMap::new())),
             cancel_token: CancellationToken::new(),
             tray_handles: Arc::new(RwLock::new(None)),
+            prev_gateway_reachable: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -340,7 +342,7 @@ impl BackgroundMonitor {
             let enricher = build_enricher(&signatures_dir, iface.gateway_ip);
 
             // 6. Ejecutar pipeline con diff y persistencia atómica
-            let (outcome, _events) = mylan_db::pipeline::run_scan_pipeline_with_diff(
+            let (outcome, events) = mylan_db::pipeline::run_scan_pipeline_with_diff(
                 &conn,
                 &network,
                 &final_observations,
@@ -351,7 +353,32 @@ impl BackgroundMonitor {
             )
             .map_err(|e| e.to_string())?;
 
-            // 7. Notificar al frontend que terminó un escaneo de fondo
+            // 7. Evaluar y despachar alertas nativas del SO (Fase 6: Desktop Alerts)
+            let settings = {
+                let state = app_clone.state::<crate::state::DesktopState>();
+                let s = state.settings.blocking_read().clone();
+                s
+            };
+            crate::alerts::dispatch_scan_alerts(&app_clone, &events, &conn, &settings, cold_start);
+
+            // 8. Evaluar conectividad al Gateway local
+            if let Some(gw_ip) = iface.gateway_ip {
+                let is_reachable = observed_ips.contains(&gw_ip);
+                let mut gw_guard = this.prev_gateway_reachable.blocking_write();
+                if let Some(prev) = *gw_guard {
+                    if !cold_start && is_reachable != prev {
+                        crate::alerts::notify_gateway_status(
+                            &app_clone,
+                            &settings,
+                            is_reachable,
+                            prev,
+                        );
+                    }
+                }
+                *gw_guard = Some(is_reachable);
+            }
+
+            // 9. Notificar al frontend que terminó un escaneo de fondo
             let _ = app_clone.emit(
                 "scan:finished",
                 &ScanFinished {
