@@ -165,6 +165,108 @@
     }
 }
 
+/* Dialog and Overlay transitions */
+@keyframes dialog-overlay-show {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes dialog-overlay-hide {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes dialog-content-show {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -48%) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes dialog-content-hide {
+    from {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, -48%) scale(0.97);
+    }
+}
+
+.dialog-overlay[data-state="open"] {
+    animation: dialog-overlay-show 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dialog-overlay[data-state="closed"] {
+    animation: dialog-overlay-hide 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.dialog-content[data-state="open"] {
+    animation: dialog-content-show 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dialog-content[data-state="closed"] {
+    animation: dialog-content-hide 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Toast notifications */
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes toast-slide-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.toast-root[data-state="open"] {
+    animation: toast-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-root[data-state="closed"] {
+    animation: toast-slide-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.toast-root[data-swipe="move"] {
+    transform: translateX(var(--radix-toast-swipe-move-x));
+    transition: none;
+}
+
+.toast-root[data-swipe="cancel"] {
+    transform: translateX(0);
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-root[data-swipe="end"] {
+    animation: toast-slide-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
 /* #6: Respeta prefers-reduced-motion. Desactiva radar, ping, pulse, spin
    e indeterminate. */
 @media (prefers-reduced-motion: reduce) {
@@ -176,6 +278,26 @@
     .animate-spin,
     .progress-indeterminate {
         animation: none;
+    }
+
+    @keyframes dialog-content-show {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes dialog-content-hide {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    @keyframes toast-slide-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes toast-slide-out {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    .toast-root[data-swipe="cancel"] {
+        transition: none;
     }
 }
 
