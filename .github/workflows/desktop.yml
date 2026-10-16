@@ -98,13 +98,13 @@ jobs:
 
       # Lint del frontend (eslint + tsc).
       - name: Frontend lint
-        run: npm run lint
+        run: npx eslint .
         working-directory: apps/desktop-tauri
 
       # Tests del frontend (vitest run, AC-23). Node 20 ya configurado arriba
       # (actions/setup-node@v5) y deps instaladas con `npm ci`.
       - name: Frontend tests
-        run: npm test
+        run: npx vitest run
         working-directory: apps/desktop-tauri
 
       # Construye el bundle. `tauri build` filtra `bundle.targets` por

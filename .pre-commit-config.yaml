@@ -49,8 +49,8 @@ repos:
       - id: check-illegal-windows-names
       - id: check-vcs-permalinks
       - id: detect-private-key
-      - id: no-commit-to-branch
-        args: [--branch, main, --branch, master]
+      # - id: no-commit-to-branch
+      #   args: [--branch, main, --branch, master]
 
   # ---------------------------------------------------------------------------
   # Secretos

@@ -150,7 +150,7 @@ if (checkOnly) {
       `Version mismatch: expected ${version} from Cargo.toml in:\n` +
         stale.map((path) => `- ${path}`).join("\n"),
     );
-    console.error("Run `npm run version:sync` from the repository root.");
+    console.error("Run `node scripts/sync-version.mjs` from the repository root.");
     process.exit(1);
   }
   console.log(`All app versions match ${version}.`);
