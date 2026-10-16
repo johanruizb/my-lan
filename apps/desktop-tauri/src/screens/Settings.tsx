@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/theme-provider";
 import { useCensorship } from "@/components/censorship-provider";
@@ -539,21 +540,20 @@ export function Settings() {
                                         </span>
                                     )}
                                     {status === "error" && (
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
-                                                <AlertCircle
-                                                    className="h-3.5 w-3.5 shrink-0"
-                                                    aria-hidden
-                                                />
-                                                Error al comprobar
-                                                actualizaciones
-                                            </span>
-                                            <span className="text-[11px] text-muted-foreground">
+                                        <Alert
+                                            variant="destructive"
+                                            className="my-1 py-2 px-3"
+                                        >
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle className="text-xs">
+                                                Error al comprobar actualizaciones
+                                            </AlertTitle>
+                                            <AlertDescription className="text-[11px] text-destructive/90">
                                                 {updateError
                                                     ? updateError
                                                     : "Verifica tu conexión a Internet o inténtalo nuevamente."}
-                                            </span>
-                                        </div>
+                                            </AlertDescription>
+                                        </Alert>
                                     )}
                                 </div>
 

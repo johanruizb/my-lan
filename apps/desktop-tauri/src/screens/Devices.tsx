@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { EmptyState } from "@/components/empty-state";
 import { deviceIcon, deviceLabel } from "@/components/device-icons";
 import { useToast } from "@/components/ui/toast";
@@ -22,6 +23,7 @@ import {
     Loader2,
     Network as NetworkIcon,
     ShieldAlert,
+    AlertCircle,
     Play,
     ChevronRight,
     RefreshCw,
@@ -502,27 +504,34 @@ export function Devices({
                     )}
 
                     {error && (
-                        <div role="alert" className="mb-4">
-                            <EmptyState
-                                icon={ShieldAlert}
-                                title="No se pudieron cargar los dispositivos"
-                                description={error}
-                                action={
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={refresh}
-                                        className="gap-1.5"
-                                    >
-                                        <RefreshCw
-                                            className="h-4 w-4"
-                                            aria-hidden
-                                        />
-                                        Reintentar
-                                    </Button>
-                                }
-                            />
-                        </div>
+                        <Alert
+                            variant="destructive"
+                            className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                        >
+                            <div className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                                <div>
+                                    <AlertTitle>
+                                        No se pudieron cargar los dispositivos
+                                    </AlertTitle>
+                                    <AlertDescription className="text-xs">
+                                        {error}
+                                    </AlertDescription>
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={refresh}
+                                className="gap-1.5 shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                                <RefreshCw
+                                    className="h-4 w-4"
+                                    aria-hidden
+                                />
+                                Reintentar
+                            </Button>
+                        </Alert>
                     )}
 
                     {!error && loading && (

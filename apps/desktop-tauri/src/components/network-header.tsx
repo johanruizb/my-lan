@@ -5,7 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { ProfileSelect } from "@/components/profile-select";
 import { MaskedValue } from "@/components/masked-value";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import { Radio, RefreshCw, Square } from "lucide-react";
+import { AlertCircle, Radio, RefreshCw, Square } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { detectInterface, type LanInterfaceDto } from "@/lib/tauri";
 import { useLastScan, useScan } from "@/App";
 import { useNetworkName } from "@/lib/use-network-name";
@@ -75,18 +76,27 @@ export function NetworkHeader({
                         </h2>
 
                         {error ? (
-                            <div
-                                role="alert"
-                                className="flex flex-wrap items-center gap-3 text-sm text-destructive"
+                            <Alert
+                                variant="destructive"
+                                className="flex flex-wrap items-start justify-between gap-3"
                             >
-                                <span>
-                                    No se detectó la interfaz de red: {error}
-                                </span>
+                                <div>
+                                    <AlertCircle
+                                        className="h-4 w-4"
+                                        aria-hidden
+                                    />
+                                    <AlertTitle>
+                                        No se detectó la interfaz de red
+                                    </AlertTitle>
+                                    <AlertDescription className="text-xs">
+                                        {error}
+                                    </AlertDescription>
+                                </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={refresh}
-                                    className="gap-1.5"
+                                    className="gap-1.5 shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                 >
                                     <RefreshCw
                                         className="h-3.5 w-3.5"
@@ -94,7 +104,7 @@ export function NetworkHeader({
                                     />
                                     Reintentar
                                 </Button>
-                            </div>
+                            </Alert>
                         ) : (
                             <dl className="flex flex-wrap gap-x-8 gap-y-3">
                                 <Readout label="Interfaz" value={iface?.name} />

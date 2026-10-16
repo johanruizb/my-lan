@@ -5,6 +5,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { SECTION_GAP } from "@/lib/design-tokens";
 import { RelativeTime } from "@/components/relative-time";
@@ -12,6 +13,7 @@ import {
     History,
     Loader2,
     ShieldAlert,
+    AlertCircle,
     CircleCheck,
     CircleX,
     RefreshCw,
@@ -123,27 +125,34 @@ export function Scans() {
                     </CardHeader>
                     <CardContent>
                         {historyError && (
-                            <div role="alert" className="mb-4">
-                                <EmptyState
-                                    icon={ShieldAlert}
-                                    title="No se pudo cargar el historial"
-                                    description={historyError}
-                                    action={
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={refreshHistory}
-                                            className="gap-1.5"
-                                        >
-                                            <RefreshCw
-                                                className="h-4 w-4"
-                                                aria-hidden
-                                            />
-                                            Reintentar
-                                        </Button>
-                                    }
-                                />
-                            </div>
+                            <Alert
+                                variant="destructive"
+                                className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                            >
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                                    <div>
+                                        <AlertTitle>
+                                            No se pudo cargar el historial
+                                        </AlertTitle>
+                                        <AlertDescription className="text-xs">
+                                            {historyError}
+                                        </AlertDescription>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={refreshHistory}
+                                    className="gap-1.5 shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <RefreshCw
+                                        className="h-4 w-4"
+                                        aria-hidden
+                                    />
+                                    Reintentar
+                                </Button>
+                            </Alert>
                         )}
 
                         {!historyError && historyLoading && (

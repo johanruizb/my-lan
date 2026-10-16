@@ -7,6 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
     Info,
     Tag,
@@ -224,9 +225,18 @@ export function AboutDialog({
                         )}
 
                         {status === "error" && error && (
-                            <p className="break-words text-[11px] leading-tight text-destructive">
-                                {error}
-                            </p>
+                            <Alert
+                                variant="destructive"
+                                className="py-2.5 px-3"
+                            >
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle className="text-xs">
+                                    Error de actualización
+                                </AlertTitle>
+                                <AlertDescription className="break-words text-[11px] leading-tight">
+                                    {error}
+                                </AlertDescription>
+                            </Alert>
                         )}
 
                         {status !== "available" &&
