@@ -38,3 +38,14 @@ if (typeof globalThis.Request !== "undefined") {
         // En entornos sin Request nativo o si falla el patch, mantener OriginalRequest
     }
 }
+
+// Polyfill pointer capture + scrollIntoView para Radix Select en jsdom
+if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = (() => false) as () => boolean;
+}
+if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = (() => {}) as () => void;
+}
+if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = (() => {}) as () => void;
+}

@@ -89,14 +89,14 @@ pub fn setup_tray(app: &AppHandle) -> Result<(TrayIcon, TrayHandles), Box<dyn st
                 }
                 TRAY_ID_SCAN_NOW => {
                     let app_clone = app_handle.clone();
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         let state = app_clone.state::<crate::state::DesktopState>();
                         state.monitor.trigger_scan(app_clone.clone()).await;
                     });
                 }
                 TRAY_ID_TOGGLE_PAUSE => {
                     let app_clone = app_handle.clone();
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         let state = app_clone.state::<crate::state::DesktopState>();
                         let is_paused = state.monitor.toggle_pause();
                         state.monitor.update_tray(&app_clone, is_paused);

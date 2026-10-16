@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Tools } from "@/screens/Tools";
 import { renderWithProviders } from "./helpers";
@@ -10,6 +10,8 @@ const mockCancelTool = vi.fn();
 const mockGetRecentSpeedTests = vi.fn();
 const mockGetNetworkHealthSamples = vi.fn();
 const mockRunHealthProbe = vi.fn();
+const toastMock = vi.fn();
+let speedTestDoneCallbacks: ((payload: any) => void)[] = [];
 
 vi.mock("@/lib/tauri", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/lib/tauri")>();
@@ -24,7 +26,12 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
             mockGetNetworkHealthSamples(networkId, limit),
         runHealthProbe: (networkId?: string) => mockRunHealthProbe(networkId),
         onSpeedTestProgress: vi.fn().mockResolvedValue(() => {}),
-        onSpeedTestDone: vi.fn().mockResolvedValue(() => {}),
+        onSpeedTestDone: (cb: (payload: any) => void) => {
+            speedTestDoneCallbacks.push(cb);
+            return Promise.resolve(() => {
+                speedTestDoneCallbacks = speedTestDoneCallbacks.filter((c) => c !== cb);
+            });
+        },
         onToolPingPacket: vi.fn().mockResolvedValue(() => {}),
         onToolPingSummary: vi.fn().mockResolvedValue(() => {}),
         onToolTraceHop: vi.fn().mockResolvedValue(() => {}),
@@ -33,12 +40,153 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
 });
 
 vi.mock("@/components/ui/toast", () => ({
-    useToast: () => ({ toast: vi.fn() }),
+    useToast: () => ({ toast: toastMock }),
 }));
 
 describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        speedTestDoneCallbacks = [];
+    });
+
+    it("muestra un único toast cuando el evento speedtest_done se dispara dos veces para la misma sesión", async () => {
+        mockGetRecentSpeedTests.mockResolvedValue([]);
+        mockGetNetworkHealthSamples.mockResolvedValue([]);
+        mockStartSpeedTest.mockResolvedValue(undefined);
+
+        renderWithProviders(
+            <CensorshipProvider initialEnabled={false}>
+                <Tools />
+            </CensorshipProvider>,
+            ["/tools?tool=speed"],
+        );
+
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /Iniciar Test/i })).toBeInTheDocument();
+        });
+
+        const startBtn = screen.getByRole("button", { name: /Iniciar Test/i });
+        fireEvent.click(startBtn);
+
+        await waitFor(() => {
+            expect(mockStartSpeedTest).toHaveBeenCalled();
+            expect(speedTestDoneCb).toBeDefined();
+        });
+
+        const sessionId = mockStartSpeedTest.mock.calls[0][0];
+        const result: SpeedTestResult = {
+            id: "st-dup",
+            network_id: "net-1",
+            server_name: "Cloudflare (BOG)",
+            server_host: "speed.cloudflare.com",
+            server_city: "Bogotá",
+            server_country: "CO",
+            download_mbps: 100.0,
+            upload_mbps: 50.0,
+            latency_ms: 10,
+            jitter_ms: 1.0,
+            bufferbloat_ms: null,
+            retransmits: null,
+            protocol: "cloudflare",
+            created_at: "2026-10-16T12:00:00Z",
+        };
+
+        act(() => {
+            speedTestDoneCallbacks.forEach((cb) => cb({ session_id: sessionId, result, error: null }));
+            speedTestDoneCallbacks.forEach((cb) => cb({ session_id: sessionId, result, error: null }));
+        });
+
+        await waitFor(() => {
+            expect(toastMock).toHaveBeenCalledTimes(1);
+            expect(toastMock).toHaveBeenCalledWith(
+                "Test de velocidad completado exitosamente.",
+                "success",
+            );
+        });
+    });
+
+    it("evita toasts duplicados ante doble suscripción por re-montaje del panel", async () => {
+        mockGetRecentSpeedTests.mockResolvedValue([]);
+        mockGetNetworkHealthSamples.mockResolvedValue([]);
+        mockStartSpeedTest.mockResolvedValue(undefined);
+
+        const { unmount } = renderWithProviders(
+            <CensorshipProvider initialEnabled={false}>
+                <Tools />
+            </CensorshipProvider>,
+            ["/tools?tool=speed"],
+        );
+
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /Iniciar Test/i })).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: /Iniciar Test/i }));
+
+        await waitFor(() => {
+            expect(mockStartSpeedTest).toHaveBeenCalled();
+            expect(speedTestDoneCallbacks.length).toBe(1);
+        });
+
+        const firstSessionId = mockStartSpeedTest.mock.calls[0][0];
+
+        // Simular re-montaje (StrictMode / cambio de pestaña): desmontar y volver a montar.
+        unmount();
+
+        renderWithProviders(
+            <CensorshipProvider initialEnabled={false}>
+                <Tools />
+            </CensorshipProvider>,
+            ["/tools?tool=speed"],
+        );
+
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /Iniciar Test/i })).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: /Iniciar Test/i }));
+
+        await waitFor(() => {
+            expect(mockStartSpeedTest).toHaveBeenCalledTimes(2);
+            expect(speedTestDoneCallbacks.length).toBe(2);
+        });
+
+        const secondSessionId = mockStartSpeedTest.mock.calls[1][0];
+        const result: SpeedTestResult = {
+            id: "st-remount",
+            network_id: "net-1",
+            server_name: "Cloudflare (BOG)",
+            server_host: "speed.cloudflare.com",
+            server_city: "Bogotá",
+            server_country: "CO",
+            download_mbps: 200.0,
+            upload_mbps: 100.0,
+            latency_ms: 8,
+            jitter_ms: 0.5,
+            bufferbloat_ms: null,
+            retransmits: null,
+            protocol: "cloudflare",
+            created_at: "2026-10-16T12:00:00Z",
+        };
+
+        act(() => {
+            // Ambos listeners colgados reciben el evento de la sesión activa.
+            speedTestDoneCallbacks.forEach((cb) => cb({ session_id: secondSessionId, result, error: null }));
+        });
+
+        await waitFor(() => {
+            expect(toastMock).toHaveBeenCalledTimes(1);
+            expect(toastMock).toHaveBeenCalledWith(
+                "Test de velocidad completado exitosamente.",
+                "success",
+            );
+        });
+
+        // El listener del primer montaje debe haber quedado inactivo: eventos de su sesión no generan toast.
+        expect(toastMock).not.toHaveBeenCalledWith(
+            expect.stringContaining(firstSessionId),
+            expect.anything(),
+        );
     });
 
     it("renderiza la pestaña 'Velocidad y Salud' y muestra métricas históricas", async () => {

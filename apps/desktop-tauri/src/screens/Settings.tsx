@@ -288,9 +288,10 @@ export function Settings() {
                                     const active =
                                         settings.default_profile === p.value;
                                     return (
-                                        <button
+                                        <Button
                                             key={p.value}
                                             type="button"
+                                            variant="ghost"
                                             role="radio"
                                             aria-checked={active}
                                             onClick={() =>
@@ -299,9 +300,9 @@ export function Settings() {
                                                 })
                                             }
                                             className={cn(
-                                                "group flex flex-col justify-between gap-2 rounded-lg border p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                "group h-auto flex flex-col justify-between gap-2 rounded-lg border p-3.5 text-left transition-colors whitespace-normal font-normal",
                                                 active
-                                                    ? "border-primary/60 bg-primary/10"
+                                                    ? "border-primary/60 bg-primary/10 hover:bg-primary/15"
                                                     : "border-border bg-background/40 hover:border-border/80 hover:bg-muted/40",
                                             )}
                                         >
@@ -331,7 +332,7 @@ export function Settings() {
                                             <span className="border-t border-border/60 pt-2 text-[11px] text-muted-foreground/90">
                                                 {p.tradeoff}
                                             </span>
-                                        </button>
+                                        </Button>
                                     );
                                 })}
                             </div>
@@ -398,9 +399,10 @@ export function Settings() {
                                             const active =
                                                 (settings.monitoring_interval_secs ?? 300) === item.value;
                                             return (
-                                                <button
+                                                <Button
                                                     key={item.value}
                                                     type="button"
+                                                    variant="ghost"
                                                     role="radio"
                                                     aria-checked={active}
                                                     onClick={() =>
@@ -409,9 +411,9 @@ export function Settings() {
                                                         })
                                                     }
                                                     className={cn(
-                                                        "flex flex-col items-center justify-center rounded-md border py-2 px-1 text-center text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                        "h-auto flex flex-col items-center justify-center rounded-md border py-2 px-1 text-center text-xs transition-colors whitespace-normal font-normal",
                                                         active
-                                                            ? "border-primary bg-primary/15 font-semibold text-primary"
+                                                            ? "border-primary bg-primary/15 font-semibold text-primary hover:bg-primary/20 hover:text-primary"
                                                             : "border-border bg-background/60 hover:border-border/80 hover:bg-muted/40 text-muted-foreground",
                                                     )}
                                                 >
@@ -419,7 +421,7 @@ export function Settings() {
                                                     {"recommended" in item && (
                                                         <span className="text-[9px] text-primary/80">Rec.</span>
                                                     )}
-                                                </button>
+                                                </Button>
                                             );
                                         })}
                                     </div>

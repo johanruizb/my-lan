@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -69,13 +70,15 @@ export function CopyButton({
     };
 
     return (
-        <button
+        <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={handleCopy}
             title={`Copiar ${label}`}
             aria-label={`Copiar ${label}`}
             className={cn(
-                "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                "h-6 w-6 shrink-0 text-muted-foreground",
                 className,
             )}
         >
@@ -87,6 +90,6 @@ export function CopyButton({
             ) : (
                 <Copy className={cn("h-3 w-3", iconClassName)} aria-hidden />
             )}
-        </button>
+        </Button>
     );
 }

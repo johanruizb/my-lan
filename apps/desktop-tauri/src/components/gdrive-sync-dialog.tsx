@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/components/workspace-provider";
 import {
     startGdriveAuth,
@@ -405,28 +406,34 @@ export function GdriveSyncDialog({
                         ) : (
                             <div className="space-y-3 pt-1">
                                 <div className="flex gap-2 border-b border-border/60 pb-2">
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => setActiveTab("new_key")}
-                                        className={`text-xs pb-1 font-medium border-b-2 transition-colors ${
+                                        className={cn(
+                                            "h-7 rounded-none border-b-2 px-2 pb-1 text-xs font-medium transition-colors shadow-none",
                                             activeTab === "new_key"
-                                                ? "border-cyan-500 text-cyan-500"
-                                                : "border-transparent text-muted-foreground hover:text-foreground"
-                                        }`}
+                                                ? "border-primary text-primary"
+                                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-transparent"
+                                        )}
                                     >
                                         Crear Contraseña Maestra
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         type="button"
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => setActiveTab("restore_key")}
-                                        className={`text-xs pb-1 font-medium border-b-2 transition-colors ${
+                                        className={cn(
+                                            "h-7 rounded-none border-b-2 px-2 pb-1 text-xs font-medium transition-colors shadow-none",
                                             activeTab === "restore_key"
-                                                ? "border-cyan-500 text-cyan-500"
-                                                : "border-transparent text-muted-foreground hover:text-foreground"
-                                        }`}
+                                                ? "border-primary text-primary"
+                                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-transparent"
+                                        )}
                                     >
                                         Restaurar (12 palabras)
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 {activeTab === "new_key" ? (

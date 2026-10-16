@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Componente Alert de shadcn/ui**: integración oficial del componente `Alert` (`Alert`, `AlertTitle`, `AlertDescription`) en la interfaz de escritorio y porteo de avisos de error y advertencia en vistas de red, escaneos, ajustes y acerca de junto con iconos de Lucide.
 
 ### Changed
+- **Rediseño y layout workbench de Herramientas de red**: interfaz en dos columnas para diagnóstico de red con osciloscopio SVG de latencia RTT en tiempo real, atajos de destino predefinidos, HUD interactivo en espera y cadena visual de saltos en Traceroute.
+- **Robustez en migraciones y accesibilidad de componentes**: ejecución segura de migración v8 desactivando temporalmente foreign keys durante la migración y estandarización accesible de botones en diálogos y paneles.
 - **Notificaciones Toast al estándar shadcn/ui**: reescritura del componente `Toast` conforme a la especificación oficial de shadcn/ui y sustitución del fondo sólido plano por superficies translúcidas con iconos contextuales de Lucide (`CheckCircle2`, `AlertCircle`, `AlertTriangle`, `Info`).
 
 ## [0.6.2] - 2026-10-16 (441fd22)

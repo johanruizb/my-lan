@@ -1,4 +1,5 @@
 import { HelpCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
     Tooltip,
     TooltipTrigger,
@@ -31,17 +32,19 @@ export function InfoTooltip({
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <button
+                <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     className={cn(
-                        "inline-flex items-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
+                        "h-auto w-auto p-0 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
                         className,
                     )}
                     aria-describedby={tipId}
                     aria-label={`Más información: ${term}`}
                 >
                     <HelpCircle className="h-3.5 w-3.5" aria-hidden />
-                </button>
+                </Button>
             </TooltipTrigger>
             <TooltipContent id={tipId} side={side}>
                 <span className="block max-w-xs text-left">{text}</span>

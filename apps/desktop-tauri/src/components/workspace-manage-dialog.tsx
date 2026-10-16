@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "./workspace-provider";
 import { useToast } from "@/components/ui/toast";
 import type { Workspace } from "@/lib/tauri";
@@ -294,15 +295,18 @@ export function WorkspaceManageDialog({
                             </label>
                             <div className="flex items-center gap-2">
                                 {PRESET_COLORS.map((c) => (
-                                    <button
+                                    <Button
                                         key={c}
                                         type="button"
+                                        variant="ghost"
+                                        size="icon"
                                         onClick={() => setColor(c)}
-                                        className={`h-7 w-7 rounded-full transition-transform ${
+                                        className={cn(
+                                            "h-7 w-7 rounded-full p-0 transition-transform",
                                             color === c
                                                 ? "scale-110 ring-2 ring-primary ring-offset-2"
                                                 : "hover:scale-105"
-                                        }`}
+                                        )}
                                         style={{ backgroundColor: c }}
                                         title={c}
                                     />
@@ -319,21 +323,23 @@ export function WorkspaceManageDialog({
                                     const IconComp = WORKSPACE_ICONS[iconKey];
                                     const isSelected = icon === iconKey;
                                     return (
-                                        <button
+                                        <Button
                                             key={iconKey}
                                             type="button"
+                                            variant="ghost"
                                             onClick={() => setIcon(iconKey)}
-                                            className={`flex flex-col items-center justify-center gap-1 rounded-md border p-2 text-xs transition-colors ${
+                                            className={cn(
+                                                "h-auto flex flex-col items-center justify-center gap-1 rounded-md border p-2 text-xs transition-colors",
                                                 isSelected
-                                                    ? "border-primary bg-primary/10 text-primary font-medium"
+                                                    ? "border-primary bg-primary/10 text-primary font-medium hover:bg-primary/15 hover:text-primary"
                                                     : "border-border text-muted-foreground hover:bg-muted"
-                                            }`}
+                                            )}
                                         >
                                             <IconComp className="h-5 w-5" />
                                             <span className="capitalize text-[10px]">
                                                 {iconKey}
                                             </span>
-                                        </button>
+                                        </Button>
                                     );
                                 })}
                             </div>

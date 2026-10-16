@@ -24,6 +24,14 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
 import { useCensorship } from "@/components/censorship-provider";
@@ -52,6 +60,7 @@ export function SpeedTestPanel() {
     const [healthSamples, setHealthSamples] = useState<NetworkHealthSample[]>([]);
     const [healthProbing, setHealthProbing] = useState(false);
     const speedSessionRef = useRef<string | null>(null);
+    const toastedSessionsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         loadData();
@@ -76,36 +85,50 @@ export function SpeedTestPanel() {
     }
 
     useEffect(() => {
-        let unlistens: (() => void)[] = [];
+        let active = true;
+        const unlistens: (() => void)[] = [];
 
-        if (typeof onSpeedTestProgress === "function") {
-            onSpeedTestProgress((payload) => {
-                if (payload.session_id === speedSessionRef.current) {
-                    setSpeedProgress(payload.progress);
-                }
-            }).then((u) => {
-                if (typeof u === "function") unlistens.push(u);
-            });
-        }
-
-        if (typeof onSpeedTestDone === "function") {
-            onSpeedTestDone((payload) => {
-                if (payload.session_id === speedSessionRef.current) {
-                    setSpeedTesting(false);
-                    if (payload.result) {
-                        setSpeedResult(payload.result);
-                        setSpeedHistory((prev) => [payload.result!, ...prev]);
-                        toast("Test de velocidad completado exitosamente.", "success");
-                    } else if (payload.error) {
-                        toast(`Test de velocidad finalizado o cancelado: ${payload.error}`, "info");
+        const setupListeners = async () => {
+            if (typeof onSpeedTestProgress === "function") {
+                const unlisten = await onSpeedTestProgress((payload) => {
+                    if (!active) return;
+                    if (payload.session_id === speedSessionRef.current) {
+                        setSpeedProgress(payload.progress);
                     }
+                });
+                if (typeof unlisten === "function") {
+                    if (active) unlistens.push(unlisten);
+                    else unlisten();
                 }
-            }).then((u) => {
-                if (typeof u === "function") unlistens.push(u);
-            });
-        }
+            }
+
+            if (typeof onSpeedTestDone === "function") {
+                const unlisten = await onSpeedTestDone((payload) => {
+                    if (!active) return;
+                    if (payload.session_id === speedSessionRef.current) {
+                        if (toastedSessionsRef.current.has(payload.session_id)) return;
+                        toastedSessionsRef.current.add(payload.session_id);
+                        setSpeedTesting(false);
+                        if (payload.result) {
+                            setSpeedResult(payload.result);
+                            setSpeedHistory((prev) => [payload.result!, ...prev]);
+                            toast("Test de velocidad completado exitosamente.", "success");
+                        } else if (payload.error) {
+                            toast(`Test de velocidad finalizado o cancelado: ${payload.error}`, "info");
+                        }
+                    }
+                });
+                if (typeof unlisten === "function") {
+                    if (active) unlistens.push(unlisten);
+                    else unlisten();
+                }
+            }
+        };
+
+        setupListeners();
 
         return () => {
+            active = false;
             unlistens.forEach((u) => u());
             if (speedSessionRef.current) {
                 try {
@@ -120,6 +143,7 @@ export function SpeedTestPanel() {
     async function handleStartSpeedTest() {
         const sessionId = `speed-${Date.now()}`;
         speedSessionRef.current = sessionId;
+        toastedSessionsRef.current.clear();
         setSpeedTesting(true);
         setSpeedProgress(null);
 
@@ -220,7 +244,7 @@ export function SpeedTestPanel() {
                                     variant="default"
                                     size="sm"
                                     onClick={handleStartSpeedTest}
-                                    className="gap-1.5 h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-500 dark:hover:bg-amber-600"
+                                    className="gap-1.5 h-8 text-xs"
                                 >
                                     <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
                                     Iniciar Test
@@ -359,45 +383,45 @@ export function SpeedTestPanel() {
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Historial de mediciones recientes
                             </span>
-                            <div className="overflow-x-auto rounded-md border border-border/70">
-                                <table className="w-full text-xs text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border/60">
-                                        <tr>
-                                            <th className="py-2 px-3">Fecha y Hora</th>
-                                            <th className="py-2 px-3">Servidor</th>
-                                            <th className="py-2 px-3 text-right">Bajada</th>
-                                            <th className="py-2 px-3 text-right">Subida</th>
-                                            <th className="py-2 px-3 text-right">Latencia</th>
-                                            <th className="py-2 px-3 text-right">Jitter</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/40 font-mono">
+                            <div className="rounded-md border border-border/70 overflow-hidden">
+                                <Table className="text-xs text-left">
+                                    <TableHeader className="bg-muted/50 text-muted-foreground font-medium border-b border-border/60">
+                                        <TableRow>
+                                            <TableHead className="py-2 px-3">Fecha y Hora</TableHead>
+                                            <TableHead className="py-2 px-3">Servidor</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Bajada</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Subida</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Latencia</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Jitter</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody className="divide-y divide-border/40 font-mono">
                                         {speedHistory.map((item) => (
-                                            <tr key={item.id} className="hover:bg-muted/20">
-                                                <td className="py-2 px-3 text-muted-foreground font-sans">
+                                            <TableRow key={item.id} className="hover:bg-muted/20">
+                                                <TableCell className="py-2 px-3 text-muted-foreground font-sans">
                                                     {new Date(item.created_at).toLocaleString()}
-                                                </td>
-                                                <td className="py-2 px-3 text-foreground font-sans">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-foreground font-sans">
                                                     {item.server_city
                                                         ? `${item.server_name} (${item.server_city})`
                                                         : item.server_name}
-                                                </td>
-                                                <td className="py-2 px-3 text-right text-emerald-600 dark:text-emerald-400 font-semibold">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right text-emerald-600 dark:text-emerald-400 font-semibold">
                                                     {item.download_mbps.toFixed(1)} Mbps
-                                                </td>
-                                                <td className="py-2 px-3 text-right text-cyan-600 dark:text-cyan-400 font-semibold">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right text-cyan-600 dark:text-cyan-400 font-semibold">
                                                     {item.upload_mbps.toFixed(1)} Mbps
-                                                </td>
-                                                <td className="py-2 px-3 text-right text-muted-foreground">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right text-muted-foreground">
                                                     {item.latency_ms} ms
-                                                </td>
-                                                <td className="py-2 px-3 text-right text-muted-foreground">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right text-muted-foreground">
                                                     {item.jitter_ms.toFixed(1)} ms
-                                                </td>
-                                            </tr>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </TableBody>
+                                </Table>
                             </div>
                         </div>
                     )}
@@ -558,38 +582,38 @@ export function SpeedTestPanel() {
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Registros recientes de salud de enlace
                             </span>
-                            <div className="overflow-x-auto rounded-md border border-border/70">
-                                <table className="w-full text-xs text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border/60">
-                                        <tr>
-                                            <th className="py-2 px-3">Fecha y Hora</th>
-                                            <th className="py-2 px-3">Objetivo</th>
-                                            <th className="py-2 px-3">IP</th>
-                                            <th className="py-2 px-3 text-right">Latencia RTT</th>
-                                            <th className="py-2 px-3 text-right">Jitter</th>
-                                            <th className="py-2 px-3 text-right">Pérdida</th>
-                                            <th className="py-2 px-3 text-right">Método</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/40 font-mono">
+                            <div className="rounded-md border border-border/70 overflow-hidden">
+                                <Table className="text-xs text-left">
+                                    <TableHeader className="bg-muted/50 text-muted-foreground font-medium border-b border-border/60">
+                                        <TableRow>
+                                            <TableHead className="py-2 px-3">Fecha y Hora</TableHead>
+                                            <TableHead className="py-2 px-3">Objetivo</TableHead>
+                                            <TableHead className="py-2 px-3">IP</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Latencia RTT</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Jitter</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Pérdida</TableHead>
+                                            <TableHead className="py-2 px-3 text-right">Método</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody className="divide-y divide-border/40 font-mono">
                                         {healthSamples.slice(0, 8).map((sample) => (
-                                            <tr key={sample.id} className="hover:bg-muted/20">
-                                                <td className="py-2 px-3 text-muted-foreground font-sans">
+                                            <TableRow key={sample.id} className="hover:bg-muted/20">
+                                                <TableCell className="py-2 px-3 text-muted-foreground font-sans">
                                                     {new Date(sample.created_at).toLocaleString()}
-                                                </td>
-                                                <td className="py-2 px-3 text-foreground font-sans capitalize">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-foreground font-sans capitalize">
                                                     {sample.target_type}
-                                                </td>
-                                                <td className="py-2 px-3 text-foreground">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-foreground">
                                                     {displayIp(sample.target_ip)}
-                                                </td>
-                                                <td className="py-2 px-3 text-right font-medium">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right font-medium">
                                                     {sample.rtt_ms != null ? `${sample.rtt_ms} ms` : "-"}
-                                                </td>
-                                                <td className="py-2 px-3 text-right text-muted-foreground">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right text-muted-foreground">
                                                     {sample.jitter_ms.toFixed(1)} ms
-                                                </td>
-                                                <td
+                                                </TableCell>
+                                                <TableCell
                                                     className={`py-2 px-3 text-right font-medium ${
                                                         sample.loss_pct > 0
                                                             ? "text-red-500"
@@ -597,14 +621,14 @@ export function SpeedTestPanel() {
                                                     }`}
                                                 >
                                                     {sample.loss_pct.toFixed(0)}%
-                                                </td>
-                                                <td className="py-2 px-3 text-right text-muted-foreground uppercase text-[10px]">
+                                                </TableCell>
+                                                <TableCell className="py-2 px-3 text-right text-muted-foreground uppercase text-[10px]">
                                                     {sample.method}
-                                                </td>
-                                            </tr>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </TableBody>
+                                </Table>
                             </div>
                         </div>
                     )}

@@ -308,17 +308,35 @@ fn current_version(conn: &Connection) -> DbResult<u32> {
 /// la última. Cada migración se ejecuta con `execute_batch` y actualiza
 /// `user_version` atómicamente.
 pub fn run_migrations(conn: &Connection) -> DbResult<()> {
-    let mut version = current_version(conn)?;
-    for &(target, sql) in MIGRATIONS {
-        if version >= target {
-            continue;
-        }
-        conn.execute_batch(sql).map_err(map_sqlite)?;
-        conn.execute_batch(&format!("PRAGMA user_version = {target};"))
+    let fk_was_on: i64 = conn
+        .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
+        .map_err(map_sqlite)?;
+    if fk_was_on != 0 {
+        conn.execute_batch("PRAGMA foreign_keys = OFF;")
             .map_err(map_sqlite)?;
-        version = target;
     }
-    Ok(())
+
+    let run = || -> DbResult<()> {
+        let mut version = current_version(conn)?;
+        for &(target, sql) in MIGRATIONS {
+            if version >= target {
+                continue;
+            }
+            conn.execute_batch(sql).map_err(map_sqlite)?;
+            conn.execute_batch(&format!("PRAGMA user_version = {target};"))
+                .map_err(map_sqlite)?;
+            version = target;
+        }
+        Ok(())
+    };
+
+    let result = run();
+
+    if fk_was_on != 0 {
+        let _ = conn.execute_batch("PRAGMA foreign_keys = ON;");
+    }
+
+    result
 }
 
 #[must_use]
@@ -416,6 +434,33 @@ mod tests {
             )
             .expect("workspace_id read");
         assert_eq!(ws_id, "default");
+    }
+
+    #[test]
+    fn test_migration_v8_with_existing_rows() {
+        let conn = connect_in_memory();
+        for &(target, sql) in MIGRATIONS {
+            if target > 7 {
+                break;
+            }
+            conn.execute_batch(sql).unwrap();
+            conn.execute_batch(&format!("PRAGMA user_version = {target};"))
+                .unwrap();
+        }
+        conn.execute(
+            "INSERT INTO networks (id, name, cidr, created_at, updated_at)
+             VALUES ('net-1', 'Home', '192.168.1.0/24', 't0', 't0')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO devices (id, network_id, primary_mac, first_seen_at, last_seen_at)
+             VALUES ('dev-1', 'net-1', 'aa:bb:cc:dd:ee:ff', 't0', 't0')",
+            [],
+        )
+        .unwrap();
+
+        run_migrations(&conn).expect("migration v8 must succeed with existing rows");
     }
 
     #[test]

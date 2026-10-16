@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Badge } from "@/components/ui/badge";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { EmptyState } from "@/components/empty-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -190,53 +198,35 @@ export function Scans() {
                         {!historyError &&
                             !historyLoading &&
                             history.length > 0 && (
-                                <div className="overflow-x-auto rounded-md border border-border">
-                                    <table className="w-full caption-bottom text-sm">
+                                <div className="rounded-md border border-border overflow-hidden">
+                                    <Table>
                                         <caption className="sr-only">
                                             Historial cronológico de
                                             descubrimientos
                                         </caption>
-                                        <thead className="[&_tr]:border-b">
-                                            <tr className="border-b">
-                                                <th
-                                                    scope="col"
-                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                >
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead scope="col">
                                                     Tipo
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                >
+                                                </TableHead>
+                                                <TableHead scope="col">
                                                     Destino
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                >
+                                                </TableHead>
+                                                <TableHead scope="col">
                                                     Fecha
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                >
+                                                </TableHead>
+                                                <TableHead scope="col">
                                                     Perfil
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                >
+                                                </TableHead>
+                                                <TableHead scope="col">
                                                     Puertos abiertos
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                >
+                                                </TableHead>
+                                                <TableHead scope="col">
                                                     Estado
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="[&_tr:last-child]:border-0">
+                                                </TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
                                             {history.map((s) => {
                                                 const isPorts =
                                                     s.scan_type.toLowerCase() ===
@@ -250,7 +240,7 @@ export function Scans() {
                                                         ? s.target_ip
                                                         : "Red local";
                                                 return (
-                                                    <tr
+                                                    <TableRow
                                                         key={s.id}
                                                         onClick={(e) => {
                                                             // Fila completa navega (como antes con el
@@ -270,14 +260,14 @@ export function Scans() {
                                                                 ),
                                                             );
                                                         }}
-                                                        className="cursor-pointer border-b transition-colors hover:bg-muted/50 cv-auto-row"
+                                                        className="cursor-pointer cv-auto-row"
                                                     >
-                                                        <td className="p-3 align-middle text-xs font-medium text-foreground/80">
+                                                        <TableCell className="text-xs font-medium text-foreground/80">
                                                             {scanTypeLabel(
                                                                 s.scan_type,
                                                             )}
-                                                        </td>
-                                                        <td className="p-3 align-middle">
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <div className="flex flex-col gap-0.5">
                                                                 <Link
                                                                     to={scanTargetPath(
@@ -303,35 +293,35 @@ export function Scans() {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                        </td>
-                                                        <td className="p-3 align-middle text-xs text-muted-foreground">
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground">
                                                             <RelativeTime
                                                                 value={
                                                                     s.started_at
                                                                 }
                                                             />
-                                                        </td>
-                                                        <td className="p-3 align-middle text-xs text-muted-foreground">
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground">
                                                             {getProfile(
                                                                 s.profile,
                                                             )?.label ??
                                                                 s.profile}
-                                                        </td>
-                                                        <td className="p-3 align-middle text-muted-foreground tabular-nums">
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground tabular-nums">
                                                             {isPorts
                                                                 ? s.open_ports
                                                                 : "—"}
-                                                        </td>
-                                                        <td className="p-3 align-middle">
+                                                        </TableCell>
+                                                        <TableCell>
                                                             {statusBadge(
                                                                 s.status,
                                                             )}
-                                                        </td>
-                                                    </tr>
+                                                        </TableCell>
+                                                    </TableRow>
                                                 );
                                             })}
-                                        </tbody>
-                                    </table>
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             )}
                     </CardContent>

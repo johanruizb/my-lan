@@ -341,8 +341,10 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                                 {displayName}
                             </span>
                         </div>
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                                 setDraft(name);
                                 setEditing(true);
@@ -350,10 +352,10 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                             disabled={!cidr}
                             aria-label="Editar nombre de la red"
                             title="Editar nombre de la red"
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            className="h-6 w-6 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                         >
                             <Pencil className="h-3.5 w-3.5" aria-hidden />
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>
@@ -366,34 +368,40 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                         MyLAN v{version || "…"}
                     </p>
                     {status === "available" && (
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={onOpenAbout}
-                            className="inline-flex items-center rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary transition-colors hover:bg-primary/30"
+                            className="h-auto rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary hover:bg-primary/30"
                             title={`Nueva versión v${updateInfo?.version} disponible`}
                         >
                             Update
-                        </button>
+                        </Button>
                     )}
                     {status === "ready" && (
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={onOpenAbout}
-                            className="inline-flex items-center rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 transition-colors hover:bg-emerald-500/30"
+                            className="h-auto rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30"
                             title="Actualización lista para reiniciar"
                         >
                             Reiniciar
-                        </button>
+                        </Button>
                     )}
                 </div>
-                <button
+                <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={onOpenAbout}
-                    className="inline-flex items-center gap-1 rounded text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-auto p-1 gap-1 text-[11px] text-muted-foreground hover:text-foreground"
                 >
                     <Info className="h-3 w-3" aria-hidden />
                     Acerca de
-                </button>
+                </Button>
             </div>
         </div>
     );
@@ -480,14 +488,16 @@ function AppShell() {
                         );
                     })}
                     {/* #21: 5º item "Acerca de" abre dialog (no es ruta). */}
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={openAbout}
-                        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-auto gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                         <Info className="h-3.5 w-3.5" aria-hidden />
                         <span>Acerca de</span>
-                    </button>
+                    </Button>
                 </nav>
                 <a
                     href="#main-content"

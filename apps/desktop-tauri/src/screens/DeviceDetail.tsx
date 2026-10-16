@@ -1575,17 +1575,19 @@ function BannerCell({ banner }: { banner: string | null }) {
             </span>
             <div className="flex items-center shrink-0 gap-0.5 mt-0.5">
                 {isLong && (
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => {
                             e.stopPropagation();
                             setExpanded(!expanded);
                         }}
-                        className="text-[10px] px-1 py-0.5 rounded text-primary hover:bg-muted font-sans font-medium"
+                        className="h-auto px-1 py-0.5 text-[10px] text-primary hover:bg-muted font-sans font-medium"
                         title={expanded ? "Contraer banner" : "Expandir banner"}
                     >
                         {expanded ? "Menos" : "Más"}
-                    </button>
+                    </Button>
                 )}
                 <CopyButton value={banner} label="Banner" className="h-5 w-5" />
             </div>

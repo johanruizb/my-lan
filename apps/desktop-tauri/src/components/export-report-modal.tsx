@@ -8,6 +8,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useCensorship } from "./censorship-provider";
 import { useWorkspace } from "./workspace-provider";
 import { useToast } from "@/components/ui/toast";
@@ -142,11 +143,9 @@ export function ExportReportModal({ open, onOpenChange }: ExportReportModalProps
                                 externas seguras.
                             </span>
                         </div>
-                        <input
-                            type="checkbox"
+                        <Switch
                             checked={censorExport}
-                            onChange={(e) => setCensorExport(e.target.checked)}
-                            className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                            onCheckedChange={setCensorExport}
                             aria-label="Exportar con Modo Censura"
                         />
                     </div>

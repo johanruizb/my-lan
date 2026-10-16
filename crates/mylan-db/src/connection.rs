@@ -66,10 +66,10 @@ pub fn setup(conn: &Connection) -> DbResult<()> {
     // WAL + busy_timeout antes de las FKs: concurrencia read+write sin SQLITE_BUSY.
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;")
         .map_err(map_sqlite)?;
+    run_migrations(conn)?;
     // Fuerza la integridad referencial (FKs del esquema §8).
     conn.execute_batch("PRAGMA foreign_keys = ON;")
         .map_err(map_sqlite)?;
-    run_migrations(conn)?;
     Ok(())
 }
 

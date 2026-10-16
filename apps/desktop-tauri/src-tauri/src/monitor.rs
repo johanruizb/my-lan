@@ -131,7 +131,7 @@ impl BackgroundMonitor {
         let net_name_clone = self.current_network.clone();
         let scanning = self.is_scanning.load(Ordering::SeqCst);
 
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let handles = tray_handles_clone.read().await;
             if let Some(h) = &*handles {
                 let net_name = net_name_clone.read().await.clone();
@@ -167,14 +167,14 @@ impl BackgroundMonitor {
             return;
         }
         let this = self.clone();
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             this.run_cycle(&app, false).await;
         });
     }
 
     /// Bucle principal de monitoreo continuo.
     pub fn start_loop(self: Arc<Self>, app: AppHandle) {
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             // Breve retraso al arranque para dejar que la interfaz de red y la ventana inicialicen
             tokio::time::sleep(Duration::from_secs(3)).await;
 

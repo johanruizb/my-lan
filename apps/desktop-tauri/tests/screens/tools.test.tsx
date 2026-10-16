@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Tools } from "@/screens/Tools";
 import { renderWithProviders } from "./helpers";
@@ -182,6 +183,38 @@ describe("Tools Screen", () => {
         await waitFor(() => {
             expect(dnsLookupMock).toHaveBeenCalledWith("example.com", "A", undefined);
             expect(screen.getByText("93.184.216.34")).toBeInTheDocument();
+        });
+    });
+
+    it("allows selecting DNS record type and provider via shadcn select", async () => {
+        const user = userEvent.setup();
+        dnsLookupMock.mockResolvedValueOnce([
+            {
+                name: "example.com",
+                record_type: "AAAA",
+                value: "2606:2800:220:1:248:1893:25c8:1946",
+                ttl: 300,
+            },
+        ]);
+
+        renderWithProviders(<Tools />, ["/tools?tool=dns&ip=example.com"]);
+
+        const typeTrigger = screen.getByRole("combobox", { name: "Tipo de registro" });
+        await user.click(typeTrigger);
+        const aaaaOption = await screen.findByRole("option", { name: "AAAA" });
+        await user.click(aaaaOption);
+
+        const providerTrigger = screen.getByRole("combobox", { name: "Servidor DNS" });
+        await user.click(providerTrigger);
+        const cloudflareOption = await screen.findByRole("option", { name: /Cloudflare/i });
+        await user.click(cloudflareOption);
+
+        const queryButton = screen.getByRole("button", { name: /Consultar DNS/i });
+        await user.click(queryButton);
+
+        await waitFor(() => {
+            expect(dnsLookupMock).toHaveBeenCalledWith("example.com", "AAAA", "cloudflare");
+            expect(screen.getByText("2606:2800:220:1:248:1893:25c8:1946")).toBeInTheDocument();
         });
     });
 
