@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-16 (441fd22)
+
 ### Added
 - **Vista Red unificada y cabecera de telemetría**: consolidación de Dashboard y Dispositivos en una sola vista principal (`Red`) con lecturas técnicas siempre visibles, barra de progreso en vivo y control de lanzamiento de descubrimiento.
 - **Variante clara de marca Discovery Scope**: isotipo `final-symbol-light.svg` integrado en `AppMark` con adaptación dinámica entre temas claro (`#F1F5F9` / `#0891B2`) y oscuro (`#090D16` / `#06B6D4`).
@@ -13,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Ajustes de escaneo y almacenamiento**: selección interactiva con persistencia inmediata del perfil predeterminado y visualización de la ruta de la base de datos SQLite.
+
+**Full changelog:** https://github.com/johanruizb/my-lan/compare/v0.6.1...v0.6.2
 
 ## [0.6.1] - 2026-10-12 (fea6613)
 

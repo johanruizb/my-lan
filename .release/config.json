@@ -9,9 +9,9 @@
     "githubReleases": true
   },
   "lastRelease": {
-    "version": "0.6.1",
-    "tag": "v0.6.1",
-    "branch": "release/v0.6.1",
-    "date": "2026-10-12"
+    "version": "0.6.2",
+    "tag": "v0.6.2",
+    "branch": "release/v0.6.2",
+    "date": "2026-10-16"
   }
 }
