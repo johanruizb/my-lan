@@ -35,9 +35,6 @@ use mylan_core::TraceHop;
 use crate::dns::{reverse_lookup, system_resolver};
 use crate::error::DiscoveryError;
 
-/// Salto crudo antes de resolver hostname: (hop_number, ip, latency_ms, state).
-type RawHop = (u8, Option<IpAddr>, Option<u64>, String);
-
 /// Puerto base para las sondas UDP (convención de traceroute).
 const TRACE_PORT_BASE: u16 = 33434;
 /// ICMP Type 11 = Time Exceeded (router intermedio).
@@ -46,6 +43,71 @@ const ICMP_TIME_EXCEEDED: u8 = 11;
 const ICMP_DEST_UNREACH: u8 = 3;
 /// ICMP Code 3 = Port Unreachable (el destino alcanzó un puerto cerrado).
 const ICMP_PORT_UNREACH: u8 = 3;
+
+/// `traceroute` en streaming a `target` emitiendo cada salto tan pronto como se descubre.
+pub async fn traceroute_stream<F>(
+    target: IpAddr,
+    max_hops: u8,
+    timeout: Duration,
+    cancel_token: tokio_util::sync::CancellationToken,
+    mut on_hop: F,
+) -> Result<Vec<TraceHop>, DiscoveryError>
+where
+    F: FnMut(TraceHop) + Send + 'static,
+{
+    let target_v4 = match target {
+        IpAddr::V4(v4) => v4,
+        IpAddr::V6(_) => {
+            return Err(DiscoveryError::Dns(
+                "IPv6 traceroute aún no soportado en este push (usar IPv4)".to_string(),
+            ));
+        }
+    };
+    let max_hops = max_hops.max(1);
+    let resolver = system_resolver()?;
+    let mut hops = Vec::with_capacity(max_hops as usize);
+
+    for ttl in 1..=max_hops {
+        if cancel_token.is_cancelled() {
+            break;
+        }
+
+        let raw = tokio::task::spawn_blocking(move || probe_hop(target_v4, ttl, timeout))
+            .await
+            .map_err(|e| {
+                DiscoveryError::Io(io::Error::other(format!("traceroute hop join: {e}")))
+            })??;
+
+        let (ip, latency_ms, state, reached) = raw;
+        let hostname = match ip {
+            Some(ip_addr) => tokio::time::timeout(
+                Duration::from_millis(500),
+                reverse_lookup(&resolver, ip_addr),
+            )
+            .await
+            .ok()
+            .flatten(),
+            None => None,
+        };
+
+        let hop = TraceHop {
+            hop_number: ttl,
+            ip,
+            hostname,
+            latency_ms,
+            state,
+        };
+
+        on_hop(hop.clone());
+        hops.push(hop);
+
+        if reached {
+            break;
+        }
+    }
+
+    Ok(hops)
+}
 
 /// `traceroute` a `target` (AC-7).
 ///
@@ -57,64 +119,14 @@ pub async fn traceroute_host(
     max_hops: u8,
     timeout: Duration,
 ) -> Result<Vec<TraceHop>, DiscoveryError> {
-    let target_v4 = match target {
-        IpAddr::V4(v4) => v4,
-        IpAddr::V6(_) => {
-            return Err(DiscoveryError::Dns(
-                "IPv6 traceroute aún no soportado en este push (usar IPv4)".to_string(),
-            ));
-        }
-    };
-    let max_hops = max_hops.max(1);
-
-    // Núcleo síncrono (socket2 + nix + libc::poll es bloqueante por salto): se
-    // ejecuta en `spawn_blocking` para no congelar el runtime tokio.
-    let hops_raw =
-        tokio::task::spawn_blocking(move || traceroute_sync(target_v4, max_hops, timeout))
-            .await
-            .map_err(|e| {
-                DiscoveryError::Io(io::Error::other(format!("traceroute task join: {e}")))
-            })??;
-
-    // Reverse DNS por salto (best-effort, acotado a 500 ms por hop).
-    let resolver = system_resolver()?;
-    let mut hops = Vec::with_capacity(hops_raw.len());
-    for (hop_number, ip, latency_ms, state) in hops_raw {
-        let hostname = match ip {
-            Some(ip) => {
-                tokio::time::timeout(Duration::from_millis(500), reverse_lookup(&resolver, ip))
-                    .await
-                    .ok()
-                    .flatten()
-            }
-            None => None,
-        };
-        hops.push(TraceHop {
-            hop_number,
-            ip,
-            hostname,
-            latency_ms,
-            state,
-        });
-    }
-    Ok(hops)
-}
-
-/// Núcleo síncrono: itera TTL 1..=max_hops sondando un socket UDP por salto.
-fn traceroute_sync(
-    target: Ipv4Addr,
-    max_hops: u8,
-    timeout: Duration,
-) -> Result<Vec<RawHop>, DiscoveryError> {
-    let mut hops = Vec::new();
-    for ttl in 1..=max_hops {
-        let (ip, latency, state, reached) = probe_hop(target, ttl, timeout)?;
-        hops.push((ttl, ip, latency, state));
-        if reached {
-            break;
-        }
-    }
-    Ok(hops)
+    traceroute_stream(
+        target,
+        max_hops,
+        timeout,
+        tokio_util::sync::CancellationToken::new(),
+        |_| {},
+    )
+    .await
 }
 
 /// Sonda un salto: socket UDP fresco, `IP_RECVERR` + `TTL=ttl`, connect+send,

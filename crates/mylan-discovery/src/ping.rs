@@ -67,6 +67,116 @@ pub async fn ping_host(
     }
 }
 
+/// Paquete individual de ping emitido en un stream interactivo.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PingPacket {
+    pub seq: u32,
+    pub target: IpAddr,
+    pub reachable: bool,
+    pub latency_ms: Option<u64>,
+    pub jitter_ms: f64,
+    pub method: PingMethod,
+}
+
+/// Resumen agregado al finalizar o detener un ping en streaming.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PingStreamSummary {
+    pub target: IpAddr,
+    pub transmitted: u32,
+    pub received: u32,
+    pub packet_loss_percent: f32,
+    pub min_rtt_ms: Option<u64>,
+    pub avg_rtt_ms: Option<u64>,
+    pub max_rtt_ms: Option<u64>,
+    pub jitter_ms: f64,
+}
+
+/// Ejecuta un ping continuo emitiendo cada paquete a `on_packet` hasta que `cancel_token` se active.
+pub async fn ping_stream<F>(
+    target: IpAddr,
+    interval: Duration,
+    timeout: Duration,
+    cancel_token: tokio_util::sync::CancellationToken,
+    mut on_packet: F,
+) -> Result<PingStreamSummary, DiscoveryError>
+where
+    F: FnMut(PingPacket) + Send + 'static,
+{
+    let mut seq = 0u32;
+    let mut transmitted = 0u32;
+    let mut received = 0u32;
+    let mut min_rtt: Option<u64> = None;
+    let mut max_rtt: Option<u64> = None;
+    let mut sum_rtt = 0u64;
+    let mut jitter = 0.0f64;
+    let mut prev_rtt: Option<f64> = None;
+
+    loop {
+        if cancel_token.is_cancelled() {
+            break;
+        }
+
+        seq += 1;
+        transmitted += 1;
+
+        let res = ping_host(target, 1, timeout).await?;
+        if res.reachable {
+            received += 1;
+            if let Some(rtt) = res.latency_ms {
+                min_rtt = Some(min_rtt.map_or(rtt, |m| m.min(rtt)));
+                max_rtt = Some(max_rtt.map_or(rtt, |m| m.max(rtt)));
+                sum_rtt += rtt;
+
+                let rtt_f = rtt as f64;
+                if let Some(prev) = prev_rtt {
+                    let d = (rtt_f - prev).abs();
+                    jitter += (d - jitter) / 16.0;
+                }
+                prev_rtt = Some(rtt_f);
+            }
+        }
+
+        let packet = PingPacket {
+            seq,
+            target,
+            reachable: res.reachable,
+            latency_ms: res.latency_ms,
+            jitter_ms: jitter,
+            method: res.method,
+        };
+
+        on_packet(packet);
+
+        tokio::select! {
+            _ = cancel_token.cancelled() => break,
+            _ = tokio::time::sleep(interval) => {}
+        }
+    }
+
+    let packet_loss_percent = if transmitted > 0 {
+        ((transmitted - received) as f32 / transmitted as f32) * 100.0
+    } else {
+        0.0
+    };
+
+    let avg_rtt_ms = if received > 0 {
+        Some(sum_rtt / (received as u64))
+    } else {
+        None
+    };
+
+    Ok(PingStreamSummary {
+        target,
+        transmitted,
+        received,
+        packet_loss_percent,
+        min_rtt_ms: min_rtt,
+        avg_rtt_ms,
+        max_rtt_ms: max_rtt,
+        jitter_ms: jitter,
+    })
+}
+
 /// Tipo ICMP "Echo Request" / "Echo Reply" (RFC 792).
 const ECHO_REQUEST_V4: u8 = 8;
 const ECHO_REPLY_V4: u8 = 0;

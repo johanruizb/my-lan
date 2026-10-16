@@ -37,30 +37,45 @@ pub(crate) mod tcp_ping;
 // Linux-only. En otras plataformas se expone el stub `traceroute_host` de abajo.
 #[cfg(target_os = "linux")]
 pub mod traceroute;
+pub mod wol;
 
 pub use arp::{arp_entries_to_observations, read_arp_cache};
-pub use dns::{dns_lookup_host, resolve_host};
+pub use dns::{
+    dns_lookup_host, dns_lookup_with_provider, dns_lookup_with_resolver, resolve_host,
+    resolver_for_provider,
+};
 pub use error::DiscoveryError;
 pub use iface::{detect_interface, gateway_observations, LanInterface};
 pub use netutil::enumerate_hosts;
-pub use ping::ping_host;
+pub use ping::{ping_host, ping_stream, PingPacket, PingStreamSummary};
 pub use ssid::detect_ssid;
 #[cfg(target_os = "linux")]
-pub use traceroute::traceroute_host;
+pub use traceroute::{traceroute_host, traceroute_stream};
+pub use wol::{build_magic_packet, send_wol_packet};
 
 use std::time::Duration;
 
-/// Stub de `traceroute_host` para plataformas no-Linux.
-///
-/// El traceroute real depende de la cola de errores ICMP (`IP_RECVERR` + `nix`),
-/// exclusiva de Linux. Fuera de Linux devuelve [`DiscoveryError::UnsupportedPlatform`]
-/// en lugar de no compilar (degradación documentada, Paso 0).
+/// Stub de `traceroute_host` y `traceroute_stream` para plataformas no-Linux.
 #[cfg(not(target_os = "linux"))]
 pub async fn traceroute_host(
     _target: std::net::IpAddr,
     _max_hops: u8,
     _timeout: Duration,
 ) -> Result<Vec<mylan_core::TraceHop>, DiscoveryError> {
+    Err(DiscoveryError::UnsupportedPlatform)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub async fn traceroute_stream<F>(
+    _target: std::net::IpAddr,
+    _max_hops: u8,
+    _timeout: Duration,
+    _cancel_token: tokio_util::sync::CancellationToken,
+    _on_hop: F,
+) -> Result<Vec<mylan_core::TraceHop>, DiscoveryError>
+where
+    F: FnMut(mylan_core::TraceHop) + Send + 'static,
+{
     Err(DiscoveryError::UnsupportedPlatform)
 }
 

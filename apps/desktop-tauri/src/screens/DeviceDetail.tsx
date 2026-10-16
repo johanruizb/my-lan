@@ -53,6 +53,11 @@ import {
     ChevronDown,
     Pencil,
     Clock,
+    Wrench,
+    Activity,
+    Route,
+    CheckCircle2,
+    Zap,
 } from "lucide-react";
 import {
     Table,
@@ -725,6 +730,71 @@ export function DeviceDetail() {
                                     />
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="px-5 py-3.5 border-b border-border/60">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                <Wrench
+                                    className="h-4 w-4 text-primary shrink-0"
+                                    aria-hidden
+                                />
+                                Diagnóstico y herramientas
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-5 flex flex-col gap-3">
+                            <p className="text-xs text-muted-foreground">
+                                Lanza pruebas de red interactivas dirigidas a este host.
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    className="justify-start gap-2 h-8 text-xs font-medium"
+                                >
+                                    <Link to={`/tools?tool=ping&ip=${encodeURIComponent(d.primary_ip ?? "")}`}>
+                                        <Activity className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
+                                        Ping ICMP
+                                    </Link>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    className="justify-start gap-2 h-8 text-xs font-medium"
+                                >
+                                    <Link to={`/tools?tool=traceroute&ip=${encodeURIComponent(d.primary_ip ?? "")}`}>
+                                        <Route className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
+                                        Traceroute
+                                    </Link>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    className="justify-start gap-2 h-8 text-xs font-medium"
+                                >
+                                    <Link to={`/tools?tool=port&ip=${encodeURIComponent(d.primary_ip ?? "")}`}>
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
+                                        Probar puerto
+                                    </Link>
+                                </Button>
+                                {d.primary_mac && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                        className="justify-start gap-2 h-8 text-xs font-medium"
+                                    >
+                                        <Link to={`/tools?tool=wol&mac=${encodeURIComponent(d.primary_mac)}`}>
+                                            <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" aria-hidden />
+                                            Wake-on-LAN
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

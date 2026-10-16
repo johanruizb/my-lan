@@ -12,6 +12,7 @@ mod commands;
 mod dto;
 mod monitor;
 mod state;
+mod tools;
 mod tray;
 
 use std::path::Path;
@@ -174,6 +175,12 @@ pub fn run() {
             commands::get_monitoring_status_cmd,
             commands::toggle_monitoring_pause_cmd,
             commands::trigger_background_scan_cmd,
+            tools::start_tool_ping_cmd,
+            tools::start_tool_traceroute_cmd,
+            tools::cancel_tool_cmd,
+            tools::dns_lookup_cmd,
+            tools::send_wol_cmd,
+            tools::check_port_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

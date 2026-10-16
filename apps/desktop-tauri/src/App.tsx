@@ -20,6 +20,7 @@ import {
     Settings as SettingsIcon,
     Info,
     Pencil,
+    Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,6 +51,7 @@ import { Dashboard } from "@/screens/Dashboard";
 import { Devices } from "@/screens/Devices";
 import { DeviceDetail } from "@/screens/DeviceDetail";
 import { Scans } from "@/screens/Scans";
+import { Tools } from "@/screens/Tools";
 import { Settings } from "@/screens/Settings";
 import { NotFound } from "@/screens/NotFound";
 import { AboutDialog } from "@/screens/About";
@@ -123,6 +125,7 @@ const navItems = [
         end: true,
         alsoActive: "/devices",
     },
+    { to: "/tools", label: "Herramientas", icon: Wrench, end: false },
     { to: "/scans", label: "Historial", icon: History, end: false },
     { to: "/settings", label: "Ajustes", icon: SettingsIcon, end: false },
 ];
@@ -503,6 +506,7 @@ const router = createHashRouter([
             { path: "/", element: <Dashboard /> },
             { path: "/devices", element: <Devices /> },
             { path: "/devices/:ip", element: <DeviceDetail /> },
+            { path: "/tools", element: <Tools /> },
             { path: "/scans", element: <Scans /> },
             { path: "/settings", element: <Settings /> },
             { path: "*", element: <NotFound /> },

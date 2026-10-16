@@ -394,3 +394,135 @@ export function onAlertSingle(cb: (alert: AlertItem) => void): Promise<UnlistenF
 export function onAlertSummary(cb: (summary: AlertSummary) => void): Promise<UnlistenFn> {
     return listen<AlertSummary>("alert:summary", (e) => cb(e.payload));
 }
+
+// --- Suite de Herramientas de Red (Fase 7: Network Tools) --------------------
+
+export interface PingPacket {
+    seq: number;
+    target: string;
+    reachable: boolean;
+    latency_ms: number | null;
+    jitter_ms: number;
+    method: "icmp" | "tcp_connect";
+}
+
+export interface PingStreamSummary {
+    target: string;
+    transmitted: number;
+    received: number;
+    packet_loss_percent: number;
+    min_rtt_ms: number | null;
+    avg_rtt_ms: number | null;
+    max_rtt_ms: number | null;
+    jitter_ms: number;
+}
+
+export interface TraceHop {
+    hop_number: number;
+    ip: string | null;
+    hostname: string | null;
+    latency_ms: number | null;
+    state: string;
+}
+
+export interface TraceHopEvent {
+    session_id: string;
+    hop: TraceHop;
+}
+
+export interface TraceDoneEvent {
+    session_id: string;
+    hops: TraceHop[];
+}
+
+export interface DnsRecord {
+    name: string;
+    record_type: string;
+    value: string;
+    ttl: number;
+}
+
+export interface PortCheckResult {
+    target: string;
+    port: number;
+    state: string; // "open" | "closed" | "filtered"
+    latency_ms: number | null;
+    banner: string | null;
+}
+
+export const startToolPing = (params: {
+    target: string;
+    sessionId: string;
+    intervalMs?: number;
+    timeoutMs?: number;
+}) =>
+    invoke<void>("start_tool_ping_cmd", {
+        target: params.target,
+        sessionId: params.sessionId,
+        intervalMs: params.intervalMs ?? null,
+        timeoutMs: params.timeoutMs ?? null,
+    });
+
+export const startToolTraceroute = (params: {
+    target: string;
+    sessionId: string;
+    maxHops?: number;
+    timeoutMs?: number;
+}) =>
+    invoke<void>("start_tool_traceroute_cmd", {
+        target: params.target,
+        sessionId: params.sessionId,
+        maxHops: params.maxHops ?? null,
+        timeoutMs: params.timeoutMs ?? null,
+    });
+
+export const cancelTool = (sessionId: string) =>
+    invoke<boolean>("cancel_tool_cmd", { sessionId });
+
+export const dnsLookup = (name: string, recordType: string, provider?: string) =>
+    invoke<DnsRecord[]>("dns_lookup_cmd", {
+        name,
+        recordType,
+        provider: provider ?? null,
+    });
+
+export const sendWol = (mac: string, broadcastIp?: string) =>
+    invoke<void>("send_wol_cmd", {
+        mac,
+        broadcastIp: broadcastIp ?? null,
+    });
+
+export const checkPort = (target: string, port: number, timeoutMs?: number) =>
+    invoke<PortCheckResult>("check_port_cmd", {
+        target,
+        port,
+        timeoutMs: timeoutMs ?? null,
+    });
+
+export function onToolPingPacket(
+    cb: (payload: { session_id: string; packet: PingPacket }) => void,
+): Promise<UnlistenFn> {
+    return listen<{ session_id: string; packet: PingPacket }>("tool:ping_packet", (e) =>
+        cb(e.payload),
+    );
+}
+
+export function onToolPingSummary(
+    cb: (payload: { session_id: string; summary: PingStreamSummary }) => void,
+): Promise<UnlistenFn> {
+    return listen<{ session_id: string; summary: PingStreamSummary }>("tool:ping_summary", (e) =>
+        cb(e.payload),
+    );
+}
+
+export function onToolTraceHop(
+    cb: (payload: TraceHopEvent) => void,
+): Promise<UnlistenFn> {
+    return listen<TraceHopEvent>("tool:trace_hop", (e) => cb(e.payload));
+}
+
+export function onToolTraceDone(
+    cb: (payload: TraceDoneEvent) => void,
+): Promise<UnlistenFn> {
+    return listen<TraceDoneEvent>("tool:trace_done", (e) => cb(e.payload));
+}

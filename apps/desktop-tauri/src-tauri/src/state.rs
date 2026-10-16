@@ -26,6 +26,8 @@ pub struct DesktopState {
     /// Tokens de cancelación de scans de puertos en curso, indexados por
     /// `scan_id`. Permite a `cancel_scan_cmd` cancelar un scan por id.
     pub scan_tokens: Mutex<HashMap<String, CancellationToken>>,
+    /// Tokens de cancelación de herramientas interactivas (Ping, Traceroute, etc.).
+    pub tool_tokens: Mutex<HashMap<String, CancellationToken>>,
     /// Settings persistidas (AC-9).
     pub settings: RwLock<Settings>,
     /// Gestor del monitor continuo en segundo plano.
@@ -43,6 +45,7 @@ impl DesktopState {
             db: Mutex::new(db),
             db_path,
             scan_tokens: Mutex::new(HashMap::new()),
+            tool_tokens: Mutex::new(HashMap::new()),
             settings: RwLock::new(settings),
             monitor,
         }

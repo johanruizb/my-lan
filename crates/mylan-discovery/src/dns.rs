@@ -74,17 +74,40 @@ pub async fn resolve_host(
     Ok(ips)
 }
 
-/// Resuelve registros DNS para un nombre (AC-8).
-///
-/// `record_type` (case-insensitive) acepta: `A`, `AAAA`, `A+AAAA`/vacío
-/// (default dual-stack), `PTR`, `MX`, `TXT`. Para `PTR` con un nombre que es
-/// una IP se usa `reverse_lookup` (API idiomática); si es un hostname, se hace
-/// una consulta PTR directa (raro pero válido).
-pub async fn dns_lookup_host(
+/// Construye un [`TokioResolver`] según el proveedor indicado (`cloudflare`, `google`, `quad9` o sistema).
+pub fn resolver_for_provider(provider: Option<&str>) -> Result<TokioResolver, DiscoveryError> {
+    let server_ip = match provider.map(|p| p.trim().to_ascii_lowercase()).as_deref() {
+        Some("cloudflare") => Some("1.1.1.1".parse::<IpAddr>().unwrap()),
+        Some("google") => Some("8.8.8.8".parse::<IpAddr>().unwrap()),
+        Some("quad9") => Some("9.9.9.9".parse::<IpAddr>().unwrap()),
+        Some(custom) => custom.parse::<IpAddr>().ok(),
+        None => None,
+    };
+
+    match server_ip {
+        Some(ip) => {
+            let config = hickory_resolver::config::ResolverConfig::from_parts(
+                None,
+                Vec::new(),
+                vec![hickory_resolver::config::NameServerConfig::udp_and_tcp(ip)],
+            );
+            hickory_resolver::Resolver::builder_with_config(
+                config,
+                hickory_resolver::net::runtime::TokioRuntimeProvider::default(),
+            )
+            .build()
+            .map_err(|e| DiscoveryError::Dns(format!("construcción del resolver {ip}: {e}")))
+        }
+        None => system_resolver(),
+    }
+}
+
+/// Resuelve registros DNS para un nombre usando un [`TokioResolver`] específico.
+pub async fn dns_lookup_with_resolver(
+    resolver: &TokioResolver,
     name: &str,
     record_type: String,
 ) -> Result<Vec<DnsRecord>, DiscoveryError> {
-    let resolver = system_resolver()?;
     let rt = record_type.trim().to_ascii_uppercase();
     match rt.as_str() {
         "" | "A+AAAA" | "ANY" => {
@@ -97,15 +120,37 @@ pub async fn dns_lookup_host(
             }
             Ok(out)
         }
-        "A" => lookup_one(&resolver, name, "A", RecordType::A).await,
-        "AAAA" => lookup_one(&resolver, name, "AAAA", RecordType::AAAA).await,
-        "MX" => lookup_one(&resolver, name, "MX", RecordType::MX).await,
-        "TXT" => lookup_one(&resolver, name, "TXT", RecordType::TXT).await,
-        "PTR" => ptr_lookup(&resolver, name).await,
+        "A" => lookup_one(resolver, name, "A", RecordType::A).await,
+        "AAAA" => lookup_one(resolver, name, "AAAA", RecordType::AAAA).await,
+        "MX" => lookup_one(resolver, name, "MX", RecordType::MX).await,
+        "TXT" => lookup_one(resolver, name, "TXT", RecordType::TXT).await,
+        "CNAME" => lookup_one(resolver, name, "CNAME", RecordType::CNAME).await,
+        "NS" => lookup_one(resolver, name, "NS", RecordType::NS).await,
+        "SOA" => lookup_one(resolver, name, "SOA", RecordType::SOA).await,
+        "PTR" => ptr_lookup(resolver, name).await,
         other => Err(DiscoveryError::Dns(format!(
-            "tipo de registro no soportado: '{other}' (usar A|AAAA|PTR|MX|TXT)"
+            "tipo de registro no soportado: '{other}' (usar A|AAAA|PTR|MX|TXT|CNAME|NS|SOA)"
         ))),
     }
+}
+
+/// Resuelve registros DNS para un nombre usando el resolver del sistema (AC-8).
+pub async fn dns_lookup_host(
+    name: &str,
+    record_type: String,
+) -> Result<Vec<DnsRecord>, DiscoveryError> {
+    let resolver = system_resolver()?;
+    dns_lookup_with_resolver(&resolver, name, record_type).await
+}
+
+/// Resuelve registros DNS para un nombre usando un proveedor específico o el sistema.
+pub async fn dns_lookup_with_provider(
+    name: &str,
+    record_type: String,
+    provider: Option<&str>,
+) -> Result<Vec<DnsRecord>, DiscoveryError> {
+    let resolver = resolver_for_provider(provider)?;
+    dns_lookup_with_resolver(&resolver, name, record_type).await
 }
 
 /// Consulta un único `RecordType` y mapea las respuestas a `DnsRecord`.
@@ -167,6 +212,12 @@ fn rdata_value(data: &RData) -> Option<String> {
                 .join(" "),
         ),
         RData::PTR(ptr) => Some(ptr.0.to_string().trim_end_matches('.').to_string()),
+        RData::CNAME(cname) => Some(cname.0.to_string().trim_end_matches('.').to_string()),
+        RData::NS(ns) => Some(ns.0.to_string().trim_end_matches('.').to_string()),
+        RData::SOA(soa) => Some(format!(
+            "mname: {} rname: {} serial: {}",
+            soa.mname, soa.rname, soa.serial
+        )),
         _ => None,
     }
 }
