@@ -29,6 +29,7 @@ import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { CensorshipProvider } from "@/components/censorship-provider";
 import { WorkspaceProvider } from "@/components/workspace-provider";
 import { WorkspaceSelector } from "@/components/workspace-selector";
+import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 import { CensuraUpgradeDialog } from "@/components/censura-upgrade-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { UpdaterProvider, useUpdater } from "@/components/updater-provider";
@@ -418,7 +419,10 @@ function AppShell() {
                         MyLAN
                     </span>
                 </div>
-                <WorkspaceSelector />
+                <div className="flex flex-col gap-2">
+                    <WorkspaceSelector />
+                    <SyncStatusIndicator className="w-full justify-start" showLabel />
+                </div>
                 <Sidebar />
                 <SidebarFooter onOpenAbout={openAbout} />
             </aside>
@@ -442,8 +446,11 @@ function AppShell() {
                             MyLAN
                         </span>
                     </div>
-                    <div className="w-44">
-                        <WorkspaceSelector />
+                    <div className="flex items-center gap-2">
+                        <SyncStatusIndicator />
+                        <div className="w-36 sm:w-44">
+                            <WorkspaceSelector />
+                        </div>
                     </div>
                 </header>
                 {/* Navegación móvil (sidebar arriba en pantallas pequeñas, AC-1). */}

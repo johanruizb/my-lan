@@ -246,10 +246,32 @@ pub struct Settings {
     /// ID del workspace activo en la UI (Pilar 6 / Fase 10).
     #[serde(default = "default_active_workspace")]
     pub active_workspace_id: String,
+    /// Sincronización Serverless con Google Drive activa (Pilar 7 / Fase 11).
+    #[serde(default = "default_false")]
+    pub gdrive_sync_enabled: bool,
+    /// Intervalo de sincronización periódica en minutos (por defecto 30m).
+    #[serde(default = "default_sync_interval")]
+    pub gdrive_sync_interval_mins: u32,
+    /// Client ID personalizado de Google OAuth (opcional).
+    #[serde(default)]
+    pub gdrive_client_id: Option<String>,
+    /// Hash de verificación de la clave maestra Zero-Knowledge (para validación).
+    #[serde(default)]
+    pub gdrive_master_key_hash: Option<String>,
+    /// Fecha/hora RFC3339 de la última sincronización exitosa.
+    #[serde(default)]
+    pub last_synced_at: Option<String>,
+    /// Epoch UNIX de la última sincronización exitosa.
+    #[serde(default)]
+    pub last_synced_epoch: Option<i64>,
 }
 
 fn default_active_workspace() -> String {
     "default".to_string()
+}
+
+fn default_sync_interval() -> u32 {
+    30
 }
 
 impl Default for Settings {
@@ -270,8 +292,38 @@ impl Default for Settings {
             notify_gateway_down: true,
             notify_critical_ports: true,
             active_workspace_id: default_active_workspace(),
+            gdrive_sync_enabled: false,
+            gdrive_sync_interval_mins: 30,
+            gdrive_client_id: None,
+            gdrive_master_key_hash: None,
+            last_synced_at: None,
+            last_synced_epoch: None,
         }
     }
+}
+
+/// Estado reportado a la UI para Google Drive Sync.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GdriveSyncStatus {
+    pub is_authenticated: bool,
+    pub email: Option<String>,
+    pub has_master_key: bool,
+    pub last_synced_at: Option<String>,
+    pub sync_enabled: bool,
+}
+
+/// Resultado de iniciar el flujo OAuth 2.0 PKCE.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct StartGdriveAuthResult {
+    pub auth_url: String,
+    pub port: u16,
+}
+
+/// Resultado de configurar la clave maestra.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MasterKeySetupDto {
+    pub verification_hash: String,
+    pub mnemonic_phrase: String,
 }
 
 /// DTO para crear un workspace desde la interfaz.
@@ -364,6 +416,12 @@ mod tests {
             notify_gateway_down: false,
             notify_critical_ports: true,
             active_workspace_id: "custom-ws".to_string(),
+            gdrive_sync_enabled: true,
+            gdrive_sync_interval_mins: 15,
+            gdrive_client_id: Some("custom-id".to_string()),
+            gdrive_master_key_hash: Some("mock-hash".to_string()),
+            last_synced_at: Some("2026-10-16T12:00:00Z".to_string()),
+            last_synced_epoch: Some(12345678),
         };
 
         let json = serde_json::to_string(&original).expect("serialize");
@@ -371,6 +429,9 @@ mod tests {
 
         assert_eq!(restored.db_path, original.db_path);
         assert_eq!(restored.active_workspace_id, "custom-ws");
+        assert!(restored.gdrive_sync_enabled);
+        assert_eq!(restored.gdrive_sync_interval_mins, 15);
+        assert_eq!(restored.gdrive_client_id.as_deref(), Some("custom-id"));
         assert!(!restored.background_monitoring_enabled);
         assert_eq!(restored.monitoring_interval_secs, 600);
         assert!(!restored.minimize_to_tray);

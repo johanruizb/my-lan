@@ -28,6 +28,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+time = { version = "0.3", features = ["formatting", "parsing"] }
 # `backup` feature for the brownfield import (`rusqlite::backup::Backup` gives a
 # WAL-consistent snapshot of the CLI db without sharing the live path). Feature
 # unification with mylan-db's `bundled` rusqlite is benign.
@@ -38,3 +40,4 @@ mylan-db = { path = "../../../crates/mylan-db" }
 mylan-discovery = { path = "../../../crates/mylan-discovery" }
 mylan-fingerprint = { path = "../../../crates/mylan-fingerprint" }
 mylan-scanner = { path = "../../../crates/mylan-scanner" }
+mylan-sync = { path = "../../../crates/mylan-sync" }

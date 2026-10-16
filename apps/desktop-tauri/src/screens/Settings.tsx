@@ -43,9 +43,13 @@ import {
     Play,
     Pause,
     Bell,
+    Cloud,
+    ShieldCheck,
 } from "lucide-react";
 import { useUpdater } from "@/components/updater-provider";
 import { PROFILES } from "@/lib/profiles";
+import { GdriveSyncDialog } from "@/components/gdrive-sync-dialog";
+import { useWorkspace } from "@/components/workspace-provider";
 import {
     dbPath,
     getSettings,
@@ -54,6 +58,9 @@ import {
     toggleMonitoringPause,
     triggerBackgroundScan,
     onMonitoringStatus,
+    getGdriveSyncStatus,
+    syncWorkspace,
+    type GdriveSyncStatus,
     type MonitoringStatusDto,
     type Settings as SettingsDto,
 } from "@/lib/tauri";
@@ -86,6 +93,11 @@ export function Settings() {
     const [saving, setSaving] = useState(false);
     const [monitoringStatus, setMonitoringStatus] = useState<MonitoringStatusDto | null>(null);
 
+    const { activeWorkspace } = useWorkspace();
+    const [gdriveStatus, setGdriveStatus] = useState<GdriveSyncStatus | null>(null);
+    const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+    const [isSyncingNow, setIsSyncingNow] = useState(false);
+
     const {
         status,
         updateInfo,
@@ -113,10 +125,11 @@ export function Settings() {
     );
 
     useEffect(() => {
-        Promise.all([getSettings(), dbPath()])
-            .then(([s, p]) => {
+        Promise.all([getSettings(), dbPath(), getGdriveSyncStatus().catch(() => null)])
+            .then(([s, p, g]) => {
                 setSettingsState(s);
                 setDbPathValue(p || s.db_path);
+                if (g) setGdriveStatus(g);
             })
             .catch((e) => toast(`Error: ${e}`, "error"));
 
@@ -139,30 +152,9 @@ export function Settings() {
     async function persistPatch(patch: Partial<SettingsDto>) {
         if (!settings) return;
         const next: SettingsDto = {
-            db_path: settings.db_path,
-            default_profile: settings.default_profile,
+            ...settings,
             theme,
             censorship_enabled: censorshipEnabled,
-            check_updates_on_startup:
-                settings.check_updates_on_startup ?? true,
-            background_monitoring_enabled:
-                settings.background_monitoring_enabled ?? true,
-            monitoring_interval_secs:
-                settings.monitoring_interval_secs ?? 300,
-            minimize_to_tray:
-                settings.minimize_to_tray ?? true,
-            autostart_enabled:
-                settings.autostart_enabled ?? false,
-            notifications_enabled:
-                settings.notifications_enabled ?? true,
-            notify_untrusted_devices:
-                settings.notify_untrusted_devices ?? true,
-            notify_trusted_device_tampered:
-                settings.notify_trusted_device_tampered ?? true,
-            notify_gateway_down:
-                settings.notify_gateway_down ?? true,
-            notify_critical_ports:
-                settings.notify_critical_ports ?? true,
             ...patch,
         };
         setSettingsState(next);
@@ -178,30 +170,10 @@ export function Settings() {
         setSaving(true);
         try {
             const next: SettingsDto = {
+                ...settings,
                 db_path: dbPathValue,
-                default_profile: settings.default_profile,
                 theme,
                 censorship_enabled: censorshipEnabled,
-                check_updates_on_startup:
-                    settings.check_updates_on_startup ?? true,
-                background_monitoring_enabled:
-                    settings.background_monitoring_enabled ?? true,
-                monitoring_interval_secs:
-                    settings.monitoring_interval_secs ?? 300,
-                minimize_to_tray:
-                    settings.minimize_to_tray ?? true,
-                autostart_enabled:
-                    settings.autostart_enabled ?? false,
-                notifications_enabled:
-                    settings.notifications_enabled ?? true,
-                notify_untrusted_devices:
-                    settings.notify_untrusted_devices ?? true,
-                notify_trusted_device_tampered:
-                    settings.notify_trusted_device_tampered ?? true,
-                notify_gateway_down:
-                    settings.notify_gateway_down ?? true,
-                notify_critical_ports:
-                    settings.notify_critical_ports ?? true,
             };
             await setSettings(next);
             setSettingsState(next);
@@ -210,6 +182,28 @@ export function Settings() {
             toast(`Error guardando: ${e}`, "error");
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleManualSync() {
+        if (!activeWorkspace) return;
+        setIsSyncingNow(true);
+        try {
+            const outcome = await syncWorkspace(activeWorkspace.id);
+            if (outcome.status === "success") {
+                toast(`Sincronización exitosa: ${outcome.action} (${outcome.devices_synced} dispositivos).`, "success");
+                const s = await getGdriveSyncStatus();
+                setGdriveStatus(s);
+            } else if (outcome.status === "conflict") {
+                toast("Conflicto de sincronización detectado. Abre el asistente para resolverlo.", "warning");
+                setSyncDialogOpen(true);
+            } else {
+                toast(outcome.message, "info");
+            }
+        } catch (e) {
+            toast(`Error sincronizando: ${e}`, "error");
+        } finally {
+            setIsSyncingNow(false);
         }
     }
 
@@ -886,6 +880,139 @@ export function Settings() {
                     <Card>
                         <CardHeader className="p-5 pb-3">
                             <CardTitle className="flex items-center gap-2 text-base">
+                                <Cloud className="h-4 w-4 text-primary" aria-hidden />
+                                Sincronización en la Nube (Google Drive)
+                            </CardTitle>
+                            <CardDescription>
+                                Cifrado Zero-Knowledge (Argon2id + XChaCha20-Poly1305). Tus datos nunca son legibles para Google ni terceros.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-3 p-5 pt-2">
+                            {/* Estado de Cuenta */}
+                            <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-medium">
+                                        Cuenta de Google
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {gdriveStatus?.is_authenticated
+                                            ? (gdriveStatus.email || "Conectado")
+                                            : "No conectado"}
+                                    </span>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSyncDialogOpen(true)}
+                                    className="h-7 text-xs gap-1.5"
+                                >
+                                    {gdriveStatus?.is_authenticated ? "Administrar" : "Conectar"}
+                                </Button>
+                            </div>
+
+                            {/* Clave Maestra Zero Knowledge */}
+                            <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-medium flex items-center gap-1.5">
+                                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                                        Clave Maestra Zero-Knowledge
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {gdriveStatus?.has_master_key
+                                            ? "Clave activa protegida en el llavero del sistema"
+                                            : "Pendiente de configuración"}
+                                    </span>
+                                </div>
+                                {!gdriveStatus?.has_master_key && gdriveStatus?.is_authenticated && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => setSyncDialogOpen(true)}
+                                        className="h-7 text-xs gap-1"
+                                    >
+                                        Configurar
+                                    </Button>
+                                )}
+                            </div>
+
+                            {/* Sincronización periódica automática */}
+                            <div className="flex items-center justify-between gap-4 rounded-lg border bg-background/40 p-3.5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-medium">
+                                        Sincronización en segundo plano
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Sincronizar cambios de forma automática periódicamente.
+                                    </span>
+                                </div>
+                                <Switch
+                                    checked={settings.gdrive_sync_enabled ?? false}
+                                    disabled={!gdriveStatus?.is_authenticated || !gdriveStatus?.has_master_key}
+                                    onCheckedChange={(checked) =>
+                                        void persistPatch({ gdrive_sync_enabled: checked })
+                                    }
+                                    aria-label="Activar sincronización periódica en segundo plano"
+                                />
+                            </div>
+
+                            {/* Intervalo de sincronización */}
+                            {settings.gdrive_sync_enabled && (
+                                <div className="flex items-center justify-between gap-4 rounded-lg border bg-background/40 p-3.5">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-sm font-medium">
+                                            Intervalo de sincronización
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            Frecuencia de sincronización de snapshots cifrados.
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {[15, 30, 60].map((mins) => {
+                                            const active = (settings.gdrive_sync_interval_mins ?? 30) === mins;
+                                            return (
+                                                <Button
+                                                    key={mins}
+                                                    variant={active ? "secondary" : "ghost"}
+                                                    size="sm"
+                                                    onClick={() => void persistPatch({ gdrive_sync_interval_mins: mins })}
+                                                    className="h-7 px-2 text-xs"
+                                                >
+                                                    {mins}m
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Última sincronización y botón manual */}
+                            {gdriveStatus?.is_authenticated && gdriveStatus?.has_master_key && (
+                                <div className="flex items-center justify-between gap-3 pt-1">
+                                    <span className="text-[11px] text-muted-foreground truncate">
+                                        Última sync: {gdriveStatus.last_synced_at
+                                            ? new Date(gdriveStatus.last_synced_at).toLocaleString()
+                                            : "Nunca"}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={isSyncingNow}
+                                        onClick={handleManualSync}
+                                        className="h-7 text-xs gap-1.5 shrink-0"
+                                    >
+                                        <RefreshCw
+                                            className={cn("h-3 w-3", isSyncingNow && "animate-spin")}
+                                        />
+                                        Sincronizar ahora
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="p-5 pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base">
                                 <RefreshCw
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -1079,6 +1206,18 @@ export function Settings() {
                     </DialogContent>
                 </Dialog>
             )}
+
+            <GdriveSyncDialog
+                open={syncDialogOpen}
+                onOpenChange={setSyncDialogOpen}
+                status={gdriveStatus}
+                onStatusChange={setGdriveStatus}
+                onSyncStart={() => setIsSyncingNow(true)}
+                onSyncEnd={() => {
+                    setIsSyncingNow(false);
+                    getGdriveSyncStatus().then(setGdriveStatus).catch(() => {});
+                }}
+            />
         </div>
     );
 }

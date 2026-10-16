@@ -32,6 +32,8 @@ pub struct DesktopState {
     pub settings: RwLock<Settings>,
     /// Gestor del monitor continuo en segundo plano.
     pub monitor: std::sync::Arc<crate::monitor::BackgroundMonitor>,
+    /// Motor de sincronización Zero-Knowledge con Google Drive (Pilar 7 / Fase 11).
+    pub sync_engine: std::sync::Arc<mylan_sync::sync_engine::SyncEngine>,
 }
 
 impl DesktopState {
@@ -40,6 +42,7 @@ impl DesktopState {
         db_path: String,
         settings: Settings,
         monitor: std::sync::Arc<crate::monitor::BackgroundMonitor>,
+        sync_engine: std::sync::Arc<mylan_sync::sync_engine::SyncEngine>,
     ) -> Self {
         Self {
             db: Mutex::new(db),
@@ -48,6 +51,7 @@ impl DesktopState {
             tool_tokens: Mutex::new(HashMap::new()),
             settings: RwLock::new(settings),
             monitor,
+            sync_engine,
         }
     }
 }

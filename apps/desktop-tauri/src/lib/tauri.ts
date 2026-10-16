@@ -193,6 +193,18 @@ export interface Settings {
     notify_critical_ports?: boolean;
     /** ID del workspace activo (Pilar 6 / Fase 10). */
     active_workspace_id?: string;
+    /** Sincronización Serverless con Google Drive activa (Pilar 7 / Fase 11). */
+    gdrive_sync_enabled?: boolean;
+    /** Intervalo de sincronización periódica en minutos (por defecto 30m). */
+    gdrive_sync_interval_mins?: number;
+    /** Client ID personalizado de Google OAuth (opcional). */
+    gdrive_client_id?: string | null;
+    /** Hash de verificación de la clave maestra Zero-Knowledge. */
+    gdrive_master_key_hash?: string | null;
+    /** Fecha/hora RFC3339 de la última sincronización exitosa. */
+    last_synced_at?: string | null;
+    /** Epoch UNIX de la última sincronización exitosa. */
+    last_synced_epoch?: number | null;
 }
 
 /** Estado en vivo del monitoreo continuo en segundo plano. */
@@ -730,3 +742,88 @@ export const assignNetworkWorkspace = (networkId: string, workspaceId: string) =
 
 export const detectWorkspaceForNetwork = (networkId: string) =>
     invoke<string>("detect_workspace_for_network_cmd", { networkId });
+
+// --- Sincronización Serverless con Google Drive (Pilar 7 / Fase 11) ---
+
+export interface GdriveSyncStatus {
+    is_authenticated: boolean;
+    email: string | null;
+    has_master_key: boolean;
+    last_synced_at: string | null;
+    sync_enabled: boolean;
+}
+
+export interface StartGdriveAuthResult {
+    auth_url: string;
+    port: number;
+}
+
+export interface MasterKeySetupDto {
+    verification_hash: string;
+    mnemonic_phrase: string;
+}
+
+export type SyncOutcome =
+    | {
+          status: "uploaded";
+          workspace_id: string;
+          etag?: string;
+          timestamp: string;
+      }
+    | {
+          status: "downloaded";
+          workspace_id: string;
+          etag?: string;
+          summary: {
+              devices_imported: number;
+              devices_updated: number;
+              networks_imported: number;
+              findings_imported: number;
+              samples_imported: number;
+              speed_tests_imported: number;
+          };
+          timestamp: string;
+      }
+    | {
+          status: "conflict";
+          workspace_id: string;
+          remote_modified_at?: string;
+          remote_snapshot_epoch?: number;
+          local_snapshot_epoch: number;
+          backup_path?: string;
+      }
+    | {
+          status: "up_to_date";
+          workspace_id: string;
+          timestamp: string;
+      };
+
+export const getGdriveSyncStatus = () =>
+    invoke<GdriveSyncStatus>("get_gdrive_sync_status_cmd");
+
+export const startGdriveAuth = () =>
+    invoke<StartGdriveAuthResult>("start_gdrive_auth_cmd");
+
+export const disconnectGdrive = () =>
+    invoke<void>("disconnect_gdrive_cmd");
+
+export const setupMasterKey = (passphrase: string) =>
+    invoke<MasterKeySetupDto>("setup_master_key_cmd", { passphrase });
+
+export const restoreMasterKey = (phraseOrPassword: string) =>
+    invoke<string>("restore_master_key_cmd", { phraseOrPassword });
+
+export const syncWorkspace = (workspaceId?: string, force?: boolean) =>
+    invoke<SyncOutcome>("sync_workspace_cmd", {
+        workspaceId: workspaceId ?? null,
+        force: force ?? false,
+    });
+
+export const resolveSyncConflict = (
+    workspaceId: string,
+    resolution: "adopt_cloud" | "keep_local_and_overwrite",
+) =>
+    invoke<SyncOutcome>("resolve_sync_conflict_cmd", {
+        workspaceId,
+        resolution,
+    });

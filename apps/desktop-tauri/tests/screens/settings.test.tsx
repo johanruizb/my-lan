@@ -15,6 +15,13 @@ const getMonitoringStatusMock = vi.fn();
 const toggleMonitoringPauseMock = vi.fn();
 const triggerBackgroundScanMock = vi.fn();
 const onMonitoringStatusMock = vi.fn();
+const getGdriveSyncStatusMock = vi.fn();
+const syncWorkspaceMock = vi.fn();
+const startGdriveAuthMock = vi.fn();
+const disconnectGdriveMock = vi.fn();
+const setupMasterKeyMock = vi.fn();
+const restoreMasterKeyMock = vi.fn();
+const resolveSyncConflictMock = vi.fn();
 let currentMockTheme: "light" | "dark" = "light";
 
 vi.mock("@/lib/tauri", () => ({
@@ -25,6 +32,13 @@ vi.mock("@/lib/tauri", () => ({
     toggleMonitoringPause: () => toggleMonitoringPauseMock(),
     triggerBackgroundScan: () => triggerBackgroundScanMock(),
     onMonitoringStatus: (cb: unknown) => onMonitoringStatusMock(cb),
+    getGdriveSyncStatus: () => getGdriveSyncStatusMock(),
+    syncWorkspace: (wsId: string, override?: boolean) => syncWorkspaceMock(wsId, override),
+    startGdriveAuth: () => startGdriveAuthMock(),
+    disconnectGdrive: () => disconnectGdriveMock(),
+    setupMasterKey: (pass: string) => setupMasterKeyMock(pass),
+    restoreMasterKey: (input: string) => restoreMasterKeyMock(input),
+    resolveSyncConflict: (wsId: string, res: string) => resolveSyncConflictMock(wsId, res),
 }));
 
 vi.mock("@/components/censorship-provider", () => ({
@@ -108,6 +122,15 @@ describe("Settings screen (AC-22)", () => {
         toggleMonitoringPauseMock.mockResolvedValue(true);
         triggerBackgroundScanMock.mockResolvedValue(undefined);
         onMonitoringStatusMock.mockResolvedValue(() => {});
+        getGdriveSyncStatusMock.mockReset();
+        getGdriveSyncStatusMock.mockResolvedValue({
+            is_authenticated: false,
+            email: null,
+            has_master_key: false,
+            last_synced_at: null,
+            last_synced_epoch: null,
+        });
+        syncWorkspaceMock.mockReset();
     });
 
     it("renderiza el título 'Ajustes' y los selectores de tema y censura", async () => {
@@ -280,5 +303,29 @@ describe("Settings screen (AC-22)", () => {
                 name: /Dispositivos no reconocidos/i,
             }),
         ).not.toBeInTheDocument();
+    });
+
+    it("renderiza la tarjeta de 'Sincronización en la Nube (Google Drive)'", async () => {
+        getGdriveSyncStatusMock.mockResolvedValue({
+            is_authenticated: true,
+            email: "alice@example.com",
+            has_master_key: true,
+            last_synced_at: "2026-10-16T12:00:00Z",
+            last_synced_epoch: 1792152000,
+        });
+
+        renderWithProviders(<Settings />);
+
+        await waitFor(() => {
+            expect(
+                screen.getByText("Sincronización en la Nube (Google Drive)"),
+            ).toBeInTheDocument();
+        });
+
+        expect(screen.getByText("alice@example.com")).toBeInTheDocument();
+        expect(
+            screen.getByText("Clave activa protegida en el llavero del sistema"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("Sincronizar ahora")).toBeInTheDocument();
     });
 });

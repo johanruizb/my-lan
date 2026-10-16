@@ -9,6 +9,7 @@ members = [
     "crates/mylan-api",
     "crates/mylan-agent",
     "apps/cli",
+    "crates/mylan-sync",
     "tests/integration",
 ]
 
@@ -30,6 +31,7 @@ mylan-fingerprint = { path = "crates/mylan-fingerprint" }
 mylan-scanner = { path = "crates/mylan-scanner" }
 mylan-api = { path = "crates/mylan-api" }
 mylan-agent = { path = "crates/mylan-agent" }
+mylan-sync = { path = "crates/mylan-sync" }
 # Externos (versiones pinneadas; reproducibilidad vía Cargo.lock commiteado).
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }

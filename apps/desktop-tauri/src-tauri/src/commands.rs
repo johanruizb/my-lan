@@ -24,10 +24,16 @@ use tauri_plugin_notification::NotificationExt;
 
 use crate::dto::{
     parse_ip, parse_profile, CreateWorkspaceDto, DeviceDetailDto, DiscoveryProgress,
-    LanInterfaceDto, NetworkNameDto, ScanCancelled, ScanDevice, ScanFinished, ScanHeartbeat,
-    ScanOutcomeDto, ScanStarted, ScanSummaryDto, ServiceFiltersDto, Settings, UpdateWorkspaceDto,
+    GdriveSyncStatus, LanInterfaceDto, MasterKeySetupDto, NetworkNameDto, ScanCancelled,
+    ScanDevice, ScanFinished, ScanHeartbeat, ScanOutcomeDto, ScanStarted, ScanSummaryDto,
+    ServiceFiltersDto, Settings, StartGdriveAuthResult, UpdateWorkspaceDto,
 };
 use crate::state::DesktopState;
+use mylan_sync::conflict::ConflictResolution;
+use mylan_sync::oauth::{
+    build_authorization_url, exchange_code_for_tokens, fetch_user_email, listen_for_oauth_callback,
+    PkceSession,
+};
 
 /// Replica la query `latest_network_id` del CLI (`apps/cli/src/commands/mod.rs`):
 /// el `network_id` del escaneo más reciente. `None` si el inventario está vacío.
@@ -1226,4 +1232,266 @@ pub fn detect_workspace_for_network_cmd(
         .map_err(|e| e.to_string())?
         .unwrap_or_else(|| "default".to_string());
     Ok(ws_id)
+}
+
+// ---------------------------------------------------------------------------
+// Comandos de Sincronización Serverless con Google Drive (Pilar 7 / Fase 11)
+// ---------------------------------------------------------------------------
+
+async fn persist_settings_to_disk(app: &AppHandle, settings: &Settings) -> Result<(), String> {
+    let path = settings_path(app);
+    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
+    tokio::fs::write(&path, json)
+        .await
+        .map_err(|e| format!("no se pudo escribir {:?}: {e}", path))
+}
+
+#[tauri::command]
+pub async fn get_gdrive_sync_status_cmd(
+    state: State<'_, DesktopState>,
+) -> Result<GdriveSyncStatus, String> {
+    let settings = state.settings.read().await;
+    let status = state
+        .sync_engine
+        .get_sync_status(settings.last_synced_at.clone())
+        .map_err(|e| e.to_string())?;
+
+    Ok(GdriveSyncStatus {
+        is_authenticated: status.is_authenticated,
+        email: status.email,
+        has_master_key: status.has_master_key,
+        last_synced_at: status.last_synced_at,
+        sync_enabled: settings.gdrive_sync_enabled,
+    })
+}
+
+#[tauri::command]
+pub async fn start_gdrive_auth_cmd(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<StartGdriveAuthResult, String> {
+    let session = PkceSession::new().map_err(|e| e.to_string())?;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .map_err(|e| format!("no se pudo enlazar puerto loopback: {e}"))?;
+    let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+
+    let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+    let auth_url = build_authorization_url(&state.sync_engine.client_id, &redirect_uri, &session);
+
+    let sync_engine = state.sync_engine.clone();
+    let client_id = state.sync_engine.client_id.clone();
+    let client_secret = state.sync_engine.client_secret.clone();
+    let expected_state = session.state.clone();
+    let code_verifier = session.code_verifier.clone();
+    let app_handle = app.clone();
+
+    // Tarea asíncrona en segundo plano esperando que Google redirija al callback
+    tokio::spawn(async move {
+        match listen_for_oauth_callback(listener, &expected_state, 120).await {
+            Ok(code) => {
+                let http_client = reqwest::Client::new();
+                match exchange_code_for_tokens(
+                    &http_client,
+                    &client_id,
+                    client_secret.as_deref(),
+                    &code,
+                    &code_verifier,
+                    &redirect_uri,
+                )
+                .await
+                {
+                    Ok(tokens) => {
+                        let email = fetch_user_email(&http_client, &tokens.access_token)
+                            .await
+                            .unwrap_or(None);
+
+                        if let Some(ref refresh_token) = tokens.refresh_token {
+                            let _ = sync_engine
+                                .vault
+                                .save_gdrive_auth(refresh_token, email.as_deref());
+                            let _ = app_handle.emit("gdrive:auth_success", &email);
+                        }
+                    }
+                    Err(e) => {
+                        let _ = app_handle.emit("gdrive:auth_error", &e.to_string());
+                    }
+                }
+            }
+            Err(e) => {
+                let _ = app_handle.emit("gdrive:auth_error", &e.to_string());
+            }
+        }
+    });
+
+    Ok(StartGdriveAuthResult { auth_url, port })
+}
+
+#[tauri::command]
+pub async fn disconnect_gdrive_cmd(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<(), String> {
+    state
+        .sync_engine
+        .vault
+        .delete_gdrive_auth()
+        .map_err(|e| e.to_string())?;
+    {
+        let mut settings = state.settings.write().await;
+        settings.gdrive_sync_enabled = false;
+        let _ = persist_settings_to_disk(&app, &settings).await;
+    }
+    let _ = app.emit("gdrive:disconnected", &());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn setup_master_key_cmd(
+    passphrase: String,
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<MasterKeySetupDto, String> {
+    let res = state
+        .sync_engine
+        .setup_master_key_with_passphrase(&passphrase)
+        .map_err(|e| e.to_string())?;
+
+    {
+        let mut settings = state.settings.write().await;
+        settings.gdrive_master_key_hash = Some(res.verification_hash.clone());
+        let _ = persist_settings_to_disk(&app, &settings).await;
+    }
+
+    Ok(MasterKeySetupDto {
+        verification_hash: res.verification_hash,
+        mnemonic_phrase: res.mnemonic_phrase,
+    })
+}
+
+#[tauri::command]
+pub async fn restore_master_key_cmd(
+    phrase_or_password: String,
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<String, String> {
+    let expected = state.settings.read().await.gdrive_master_key_hash.clone();
+    let hash = state
+        .sync_engine
+        .restore_master_key(&phrase_or_password, expected.as_deref())
+        .map_err(|e| e.to_string())?;
+
+    {
+        let mut settings = state.settings.write().await;
+        settings.gdrive_master_key_hash = Some(hash.clone());
+        let _ = persist_settings_to_disk(&app, &settings).await;
+    }
+
+    Ok(hash)
+}
+
+#[tauri::command]
+pub async fn sync_workspace_cmd(
+    workspace_id: Option<String>,
+    force: Option<bool>,
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<serde_json::Value, String> {
+    let ws_id = match workspace_id {
+        Some(w) if !w.trim().is_empty() => w,
+        _ => state.settings.read().await.active_workspace_id.clone(),
+    };
+
+    let backups_dir = std::path::Path::new(&state.db_path)
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("backups");
+
+    let last_synced_epoch = state.settings.read().await.last_synced_epoch;
+    let mut conn = clone_for_blocking(&state)?;
+
+    let outcome = state
+        .sync_engine
+        .sync_workspace(
+            &mut conn,
+            &ws_id,
+            force.unwrap_or(false),
+            last_synced_epoch,
+            &backups_dir,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let now_str = time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_else(|_| "2026-10-16T12:00:00Z".to_string());
+    let now_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    // Actualizar settings si la sincronización fue exitosa
+    match &outcome {
+        mylan_sync::sync_engine::SyncOutcome::Uploaded { .. }
+        | mylan_sync::sync_engine::SyncOutcome::Downloaded { .. }
+        | mylan_sync::sync_engine::SyncOutcome::UpToDate { .. } => {
+            let mut settings = state.settings.write().await;
+            settings.last_synced_at = Some(now_str);
+            settings.last_synced_epoch = Some(now_epoch);
+            let _ = persist_settings_to_disk(&app, &settings).await;
+        }
+        _ => {}
+    }
+
+    serde_json::to_value(&outcome).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn resolve_sync_conflict_cmd(
+    workspace_id: String,
+    resolution: String,
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<serde_json::Value, String> {
+    let res = match resolution.as_str() {
+        "adopt_cloud" => ConflictResolution::AdoptCloud,
+        _ => ConflictResolution::KeepLocalAndOverwrite,
+    };
+
+    let backups_dir = std::path::Path::new(&state.db_path)
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("backups");
+
+    let last_synced_epoch = state.settings.read().await.last_synced_epoch;
+    let mut conn = clone_for_blocking(&state)?;
+
+    let outcome = state
+        .sync_engine
+        .resolve_conflict(
+            &mut conn,
+            &workspace_id,
+            res,
+            last_synced_epoch,
+            &backups_dir,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let now_str = time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_else(|_| "2026-10-16T12:00:00Z".to_string());
+    let now_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    {
+        let mut settings = state.settings.write().await;
+        settings.last_synced_at = Some(now_str);
+        settings.last_synced_epoch = Some(now_epoch);
+        let _ = persist_settings_to_disk(&app, &settings).await;
+    }
+
+    serde_json::to_value(&outcome).map_err(|e| e.to_string())
 }

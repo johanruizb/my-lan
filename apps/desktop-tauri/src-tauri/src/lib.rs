@@ -126,11 +126,27 @@ pub fn run() {
             // Iniciar bucle de fondo de monitoreo continuo
             monitor.clone().start_loop(app.handle().clone());
 
+            // Motor de sincronización Zero-Knowledge con Google Drive
+            let vault_dir = db_path.parent().unwrap_or(std::path::Path::new("."));
+            let vault = mylan_sync::vault::Vault::new(vault_dir);
+            let client_id = settings.gdrive_client_id.clone().unwrap_or_else(|| {
+                "1042738722883-mylan-desktop.apps.googleusercontent.com".to_string()
+            });
+            let origin = std::env::var("HOSTNAME").unwrap_or_else(|_| "mylan-desktop".to_string());
+            let sync_engine = std::sync::Arc::new(mylan_sync::sync_engine::SyncEngine::new(
+                vault,
+                client_id,
+                None,
+                origin,
+                app.package_info().version.to_string(),
+            ));
+
             app.manage(DesktopState::new(
                 conn,
                 db_path.to_string_lossy().to_string(),
                 settings,
                 monitor,
+                sync_engine,
             ));
 
             // Si se arrancó con bandera --minimized (p.ej. desde autoarranque con el sistema),
@@ -197,6 +213,13 @@ pub fn run() {
             commands::get_workspace_stats_cmd,
             commands::assign_network_workspace_cmd,
             commands::detect_workspace_for_network_cmd,
+            commands::get_gdrive_sync_status_cmd,
+            commands::start_gdrive_auth_cmd,
+            commands::disconnect_gdrive_cmd,
+            commands::setup_master_key_cmd,
+            commands::restore_master_key_cmd,
+            commands::sync_workspace_cmd,
+            commands::resolve_sync_conflict_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
