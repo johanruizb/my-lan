@@ -28,8 +28,13 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
         onSpeedTestProgress: vi.fn().mockResolvedValue(() => {}),
         onSpeedTestDone: (cb: (payload: any) => void) => {
             speedTestDoneCallbacks.push(cb);
-            return Promise.resolve(() => {
-                speedTestDoneCallbacks = speedTestDoneCallbacks.filter((c) => c !== cb);
+            // Simula la asincronía real de Tauri: el unlisten llega luego de un microtask.
+            return new Promise<() => void>((resolve) => {
+                setTimeout(() => {
+                    resolve(() => {
+                        speedTestDoneCallbacks = speedTestDoneCallbacks.filter((c) => c !== cb);
+                    });
+                }, 5);
             });
         },
         onToolPingPacket: vi.fn().mockResolvedValue(() => {}),
@@ -70,7 +75,7 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
 
         await waitFor(() => {
             expect(mockStartSpeedTest).toHaveBeenCalled();
-            expect(speedTestDoneCb).toBeDefined();
+            expect(speedTestDoneCallbacks.length).toBeGreaterThan(0);
         });
 
         const sessionId = mockStartSpeedTest.mock.calls[0][0];
@@ -125,13 +130,17 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
 
         await waitFor(() => {
             expect(mockStartSpeedTest).toHaveBeenCalled();
-            expect(speedTestDoneCallbacks.length).toBe(1);
         });
 
         const firstSessionId = mockStartSpeedTest.mock.calls[0][0];
 
-        // Simular re-montaje (StrictMode / cambio de pestaña): desmontar y volver a montar.
+        // Simular re-montaje rápido (StrictMode / cambio de pestaña): desmontar
+        // ANTES de que Tauri resuelva el unlisten, reproduciendo el escenario
+        // que deja listeners colgados en la app real.
         unmount();
+
+        // Esperar a que la promesa del primer listener se resuelva y se limpie.
+        await new Promise((resolve) => setTimeout(resolve, 20));
 
         renderWithProviders(
             <CensorshipProvider initialEnabled={false}>
@@ -148,7 +157,7 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
 
         await waitFor(() => {
             expect(mockStartSpeedTest).toHaveBeenCalledTimes(2);
-            expect(speedTestDoneCallbacks.length).toBe(2);
+            expect(speedTestDoneCallbacks.length).toBe(1);
         });
 
         const secondSessionId = mockStartSpeedTest.mock.calls[1][0];
@@ -170,7 +179,6 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
         };
 
         act(() => {
-            // Ambos listeners colgados reciben el evento de la sesión activa.
             speedTestDoneCallbacks.forEach((cb) => cb({ session_id: secondSessionId, result, error: null }));
         });
 
