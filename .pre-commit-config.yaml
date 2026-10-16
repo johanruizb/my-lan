@@ -62,7 +62,11 @@ repos:
 
   # ---------------------------------------------------------------------------
   # Rust: formato, lint, compilación
-  #   fmt:      formatea con rustfmt (auto-fix)
+  #   fmt:      valida el formato con rustfmt --check (solo lectura, NUNCA
+  #             reescribe): mutar ficheros staged en mitad de un commit
+  #             dispara VCS_STATE_INVALID en Antigravity y congeló dos
+  #             conversaciones del agente (2026-10-16). Para formatear:
+  #             `cargo fmt` antes de `git add`.
   #   clippy:   lint estricto; -D warnings convierte cualquier warning en error
   #   check:    valida que el paquete compila sin generar binarios
   # ---------------------------------------------------------------------------
@@ -70,5 +74,6 @@ repos:
     rev: v1.0
     hooks:
       - id: fmt
+        args: [--, --check]
       - id: clippy
       - id: cargo-check

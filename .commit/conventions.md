@@ -8,6 +8,7 @@
 - The workspace includes both Rust crates and the Tauri desktop frontend (`apps/desktop-tauri`).
 - The project documentation and code comments are largely in Spanish, while commit messages follow standard Conventional Commits.
 - `design/branding/kit/` contains the official brand identity assets and guidelines.
+- In pre-commit, config `args` REPLACE the hook manifest's `args` (no concatenation). The doublify `fmt` hook therefore needs `args: [--, --check]`: the leading `--` passes staged files to rustfmt, and `--check` makes it validate read-only. Never let hooks rewrite staged files mid-commit — that triggered `VCS_STATE_INVALID` in Antigravity IDE and froze agent conversations (2026-10-16). To format: `cargo fmt` before `git add`.
 
 ## Preferences
 - User-facing features (`feat`, `fix`, etc.) extend `CHANGELOG.md` under `## [Unreleased]`.
