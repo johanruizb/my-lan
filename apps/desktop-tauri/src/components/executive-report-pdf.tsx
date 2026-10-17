@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         marginBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: "#e2e8f0",
+        borderBottomColor: "#b5bfce",
     },
     brandTitle: {
         fontSize: 20,
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#f8fafc",
         borderRadius: 4,
         borderWidth: 1,
-        borderColor: "#e2e8f0",
+        borderColor: "#b5bfce",
     },
     kpiValue: {
         fontSize: 14,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     table: {
         width: "100%",
         borderWidth: 1,
-        borderColor: "#e2e8f0",
+        borderColor: "#b5bfce",
         borderRadius: 4,
         overflow: "hidden",
         marginBottom: 12,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         backgroundColor: "#f1f5f9",
         borderBottomWidth: 1,
-        borderBottomColor: "#e2e8f0",
+        borderBottomColor: "#b5bfce",
         paddingVertical: 6,
         paddingHorizontal: 8,
     },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         borderTopWidth: 1,
-        borderTopColor: "#e2e8f0",
+        borderTopColor: "#b5bfce",
         paddingTop: 8,
     },
     footerText: {

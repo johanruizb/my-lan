@@ -91,11 +91,12 @@ pub struct PingStreamSummary {
     pub jitter_ms: f64,
 }
 
-/// Ejecuta un ping continuo emitiendo cada paquete a `on_packet` hasta que `cancel_token` se active.
+/// Ejecuta un ping continuo o limitado emitiendo cada paquete a `on_packet` hasta que `cancel_token` se active o se alcance `count`.
 pub async fn ping_stream<F>(
     target: IpAddr,
     interval: Duration,
     timeout: Duration,
+    count: Option<u32>,
     cancel_token: tokio_util::sync::CancellationToken,
     mut on_packet: F,
 ) -> Result<PingStreamSummary, DiscoveryError>
@@ -146,6 +147,12 @@ where
         };
 
         on_packet(packet);
+
+        if let Some(limit) = count {
+            if limit > 0 && transmitted >= limit {
+                break;
+            }
+        }
 
         tokio::select! {
             _ = cancel_token.cancelled() => break,
@@ -393,6 +400,24 @@ mod tests {
         .await
         .expect("ping ok");
         assert_eq!(r.packets_sent, 2);
+    }
+
+    /// `ping_stream` respeta el límite de `count`.
+    #[tokio::test]
+    async fn ping_stream_respects_count_limit() {
+        let cancel_token = tokio_util::sync::CancellationToken::new();
+        let summary = ping_stream(
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+            Duration::from_millis(10),
+            Duration::from_millis(200),
+            Some(3),
+            cancel_token,
+            |_pkt| {},
+        )
+        .await
+        .expect("ping_stream ok");
+
+        assert_eq!(summary.transmitted, 3);
     }
 
     /// Un host inalcanzable (link-local no routable) no responde → reachable=false.

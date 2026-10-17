@@ -116,7 +116,7 @@ export function SecurityScoreCard({ className, onViewFindings }: SecurityScoreCa
           : "Postura de seguridad sólida";
 
     return (
-        <Card className={cn("overflow-hidden border-border/80 shadow-xs", className)}>
+        <Card className={cn("overflow-hidden shadow-xs", className)}>
             <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4 min-w-0">
@@ -152,7 +152,7 @@ export function SecurityScoreCard({ className, onViewFindings }: SecurityScoreCa
                     </div>
 
                     {/* Desglose de severidades y botón de re-auditar */}
-                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t border-border/60 sm:border-t-0">
+                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t border-border sm:border-t-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                             {criticalCount > 0 && (
                                 <Badge

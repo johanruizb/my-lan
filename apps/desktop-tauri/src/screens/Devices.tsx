@@ -266,7 +266,7 @@ export function Devices({
                     Volver a la red
                 </Link>
             )}
-            <Card className="border border-border/40 shadow-sm overflow-hidden">
+            <Card className="border border-border shadow-sm overflow-hidden">
                 <CardHeader variant="toolbar">
                     <CardTitle className="flex items-center gap-2">
                         <NetworkIcon
@@ -640,7 +640,7 @@ export function Devices({
                                                 aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
                                                 className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             >
-                                                <Card className="group relative flex h-full flex-col border border-border/40 overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-md">
+                                                <Card className="group relative flex h-full flex-col border border-border overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/50 hover:shadow-md">
                                                     <CardContent className="flex flex-1 flex-col justify-between gap-3 p-4">
                                                         <div className="flex flex-col gap-2.5">
                                                             <div className="flex items-center justify-between gap-3">
@@ -681,7 +681,7 @@ export function Devices({
                                                                         </span>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-background/50 text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/50 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
                                                                     <ChevronRight
                                                                         className="h-4 w-4"
                                                                         aria-hidden
@@ -730,7 +730,7 @@ export function Devices({
                                                         </div>
 
                                                         {/* Estado, confianza y última vez visto unificados con continuidad visual */}
-                                                        <div className="mt-auto pt-3 border-t border-border/30 flex flex-wrap items-center justify-between gap-y-1.5 gap-x-2 text-xs">
+                                                        <div className="mt-auto pt-3 border-t border-border flex flex-wrap items-center justify-between gap-y-1.5 gap-x-2 text-xs">
                                                             <div className="flex items-center gap-x-3">
                                                                 <OnlineBadge
                                                                     isOnline={

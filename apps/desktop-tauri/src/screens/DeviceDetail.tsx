@@ -676,8 +676,8 @@ export function DeviceDetail() {
                     </div>
 
                     {/* Control rápido de confianza integrado en la cabecera del host */}
-                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 border-t border-border/60 pt-3 lg:border-t-0 lg:pt-0 shrink-0">
-                        <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 px-3.5 py-2">
+                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 border-t border-border pt-3 lg:border-t-0 lg:pt-0 shrink-0">
+                        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3.5 py-2">
                             <div className="flex flex-col">
                                 <label
                                     htmlFor="detail-is-trusted"
@@ -706,7 +706,7 @@ export function DeviceDetail() {
                 {/* Columna izquierda: Ficha Técnica en cuadrícula 2x3 + Gestión y etiquetas */}
                 <div className="flex flex-col gap-6 lg:col-span-5">
                     <Card>
-                        <CardHeader className="px-5 py-3.5 border-b border-border/60">
+                        <CardHeader className="px-5 py-3.5 border-b border-border">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Info
                                     className="h-4 w-4 text-primary shrink-0"
@@ -756,7 +756,7 @@ export function DeviceDetail() {
                             </div>
 
                             {/* #31: Certeza — barra + porcentaje compactos en fila horizontal */}
-                            <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/15 px-3.5 py-2.5">
+                            <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/15 px-3.5 py-2.5">
                                 <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground shrink-0">
                                     Certeza
                                     <InfoTooltip
@@ -775,7 +775,7 @@ export function DeviceDetail() {
                     </Card>
 
                     <Card>
-                        <CardHeader className="px-5 py-3.5 border-b border-border/60 flex flex-row items-center justify-between gap-2">
+                        <CardHeader className="px-5 py-3.5 border-b border-border flex flex-row items-center justify-between gap-2">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Settings
                                     className="h-4 w-4 text-primary shrink-0"
@@ -886,7 +886,7 @@ export function DeviceDetail() {
                     </Card>
 
                     <Card>
-                        <CardHeader className="px-5 py-3.5 border-b border-border/60">
+                        <CardHeader className="px-5 py-3.5 border-b border-border">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Wrench
                                     className="h-4 w-4 text-primary shrink-0"
@@ -954,7 +954,7 @@ export function DeviceDetail() {
                 {/* Columna derecha: Consola unificada de Servicios y Seguridad */}
                 <div className="flex flex-col gap-4 lg:col-span-7">
                     {/* Switcher de pestañas Servicios / Seguridad */}
-                    <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                    <div className="flex items-center justify-between border-b border-border pb-2">
                         <div className="flex items-center gap-1.5">
                             <Button
                                 variant={rightTab === "services" ? "secondary" : "ghost"}
@@ -995,7 +995,7 @@ export function DeviceDetail() {
                     {rightTab === "services" ? (
                         <>
                             <Card>
-                        <CardHeader className="px-5 py-4 border-b border-border/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <CardHeader className="px-5 py-4 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-col gap-0.5">
                                 <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                     <Server
@@ -1111,7 +1111,7 @@ export function DeviceDetail() {
                         {/* Telemetría en vivo durante el escaneo de puertos */}
                         {scanning && (
                             <div
-                                className="border-b border-border/60 bg-primary/5 px-5 py-3.5"
+                                className="border-b border-border bg-primary/5 px-5 py-3.5"
                                 aria-live="polite"
                                 aria-atomic="true"
                             >
@@ -1176,7 +1176,7 @@ export function DeviceDetail() {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-lg border border-border/60">
+                                <div className="overflow-x-auto rounded-lg border border-border">
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="hover:bg-transparent">
@@ -1279,7 +1279,7 @@ export function DeviceDetail() {
                                 />
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-5 pb-5 pt-0">
-                                <div className="overflow-x-auto rounded-lg border border-border/60 mt-2">
+                                <div className="overflow-x-auto rounded-lg border border-border mt-2">
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="hover:bg-transparent">
@@ -1372,7 +1372,7 @@ export function DeviceDetail() {
                         </>
                     ) : (
                         <Card>
-                            <CardHeader className="px-5 py-4 border-b border-border/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <CardHeader className="px-5 py-4 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex flex-col gap-0.5">
                                     <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                         <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" aria-hidden />
@@ -1415,7 +1415,7 @@ export function DeviceDetail() {
                                         {findings.map((f) => (
                                             <div
                                                 key={f.id}
-                                                className="rounded-lg border border-border/70 bg-card p-4 flex flex-col gap-3 shadow-2xs transition-colors hover:border-border"
+                                                className="rounded-lg border border-border bg-card p-4 flex flex-col gap-3 shadow-2xs transition-colors hover:border-border"
                                             >
                                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                                     <div className="flex flex-col gap-1 min-w-0">
@@ -1478,7 +1478,7 @@ export function DeviceDetail() {
 
                                                 {/* Evidencia técnica con Modo Censura estricto */}
                                                 {f.evidence && (
-                                                    <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-2 flex flex-col gap-1 text-xs">
+                                                    <div className="rounded-md border border-border bg-muted/20 px-3 py-2 flex flex-col gap-1 text-xs">
                                                         <span className="text-[11px] font-medium text-muted-foreground">
                                                             Evidencia observada:
                                                         </span>
@@ -1490,12 +1490,12 @@ export function DeviceDetail() {
 
                                                 {/* Panel colapsable de remediación / solución */}
                                                 {f.remediation_advice && (
-                                                    <Collapsible className="rounded-md border border-border/40 bg-muted/10 overflow-hidden">
+                                                    <Collapsible className="rounded-md border border-border bg-muted/10 overflow-hidden">
                                                         <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-primary hover:bg-muted/30 transition-colors [&[data-state=open]>svg]:rotate-180">
                                                             <span>¿Cómo solucionar este problema?</span>
                                                             <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200" />
                                                         </CollapsibleTrigger>
-                                                        <CollapsibleContent className="px-3 pb-3 pt-1 text-xs text-muted-foreground leading-relaxed border-t border-border/40">
+                                                        <CollapsibleContent className="px-3 pb-3 pt-1 text-xs text-muted-foreground leading-relaxed border-t border-border">
                                                             {f.remediation_advice}
                                                         </CollapsibleContent>
                                                     </Collapsible>
@@ -1613,7 +1613,7 @@ function Field({
     copyable?: boolean;
 }) {
     return (
-        <div className="flex flex-col gap-1 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 min-w-0">
+        <div className="flex flex-col gap-1 rounded-lg border border-border bg-muted/15 px-3 py-2.5 min-w-0">
             <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                 {label}
                 {glossaryKey && (

@@ -92,22 +92,30 @@ pub async fn probe_network_health(
 ) -> Vec<NetworkHealthSample> {
     let mut samples = Vec::new();
 
-    // 1. Gateway
+    // 1. Gateway (ignora si es loopback)
     if let Some(gw) = gateway_ip {
-        let sample =
-            probe_target_health(network_id, "gateway", gw, 4, Duration::from_millis(800)).await;
-        samples.push(sample);
+        if !gw.is_loopback() {
+            let sample =
+                probe_target_health(network_id, "gateway", gw, 4, Duration::from_millis(800)).await;
+            samples.push(sample);
+        }
     }
 
-    // 2. DNS
-    let dns_target = dns_servers
-        .first()
-        .copied()
-        .unwrap_or_else(|| "1.1.1.1".parse().unwrap());
-    let target_type = if dns_servers.is_empty() {
-        "internet"
-    } else {
-        "dns"
+    // 2. DNS / Enlace de salida
+    // En Linux, `/etc/resolv.conf` suele apuntar a stubs locales en loopback (ej. 127.0.0.53 en
+    // systemd-resolved o 127.0.0.1 en dnsmasq). Medir RTT/jitter contra loopback arroja 0 ms
+    // y pérdida 0% engañosos, sin reflejar el enlace de salida real.
+    let non_loopback_dns = dns_servers.iter().copied().find(|ip| !ip.is_loopback());
+
+    let effective_dns = non_loopback_dns.or_else(|| {
+        crate::dns::discover_upstream_dns()
+            .into_iter()
+            .find(|ip| !ip.is_loopback())
+    });
+
+    let (dns_target, target_type) = match effective_dns {
+        Some(ip) => (ip, "dns"),
+        None => ("1.1.1.1".parse().unwrap(), "internet"),
     };
 
     let dns_sample = probe_target_health(
@@ -141,5 +149,49 @@ mod tests {
         assert_eq!(sample.network_id, "net-test");
         assert_eq!(sample.target_ip, "127.0.0.1");
         assert_eq!(sample.sample_count, 2);
+    }
+
+    #[tokio::test]
+    async fn test_probe_network_health_ignores_loopback_dns() {
+        let loopback_dns: Vec<IpAddr> =
+            vec!["127.0.0.53".parse().unwrap(), "127.0.0.1".parse().unwrap()];
+
+        let samples = probe_network_health(
+            "net-test",
+            Some("127.0.0.1".parse().unwrap()),
+            &loopback_dns,
+        )
+        .await;
+
+        // El gateway loopback debe haberse descartado
+        assert!(samples.iter().all(|s| s.target_type != "gateway"));
+
+        // El sample de DNS no debe apuntar a ninguna IP de loopback
+        let dns_sample = samples
+            .iter()
+            .find(|s| s.target_type == "dns" || s.target_type == "internet")
+            .expect("debe existir muestra de DNS o internet");
+
+        let target_ip: IpAddr = dns_sample.target_ip.parse().expect("IP válida");
+        assert!(
+            !target_ip.is_loopback(),
+            "La IP de destino de salud de DNS nunca debe ser loopback: {}",
+            dns_sample.target_ip
+        );
+    }
+
+    #[tokio::test]
+    async fn test_probe_network_health_prefers_non_loopback_dns() {
+        let mixed_dns: Vec<IpAddr> =
+            vec!["127.0.0.53".parse().unwrap(), "1.1.1.1".parse().unwrap()];
+
+        let samples = probe_network_health("net-test", None, &mixed_dns).await;
+
+        let dns_sample = samples
+            .iter()
+            .find(|s| s.target_type == "dns")
+            .expect("debe existir muestra dns");
+
+        assert_eq!(dns_sample.target_ip, "1.1.1.1");
     }
 }

@@ -91,7 +91,22 @@ fn from_netdev(iface: NetdevInterface) -> Result<LanInterface, DiscoveryError> {
         }),
         None => (None, None),
     };
-    let dns_servers = iface.dns_servers.clone();
+    let raw_dns = iface.dns_servers.clone();
+    let non_loopback: Vec<IpAddr> = raw_dns
+        .iter()
+        .copied()
+        .filter(|ip| !ip.is_loopback())
+        .collect();
+    let dns_servers = if !non_loopback.is_empty() {
+        non_loopback
+    } else {
+        let upstream = crate::dns::discover_upstream_dns();
+        if !upstream.is_empty() {
+            upstream
+        } else {
+            raw_dns
+        }
+    };
     Ok(LanInterface {
         name: iface.name,
         ip,

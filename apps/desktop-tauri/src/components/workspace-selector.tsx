@@ -29,7 +29,7 @@ export function WorkspaceSelector({ className }: { className?: string }) {
                     <DropdownMenuTrigger asChild>
                         <Button
                             variant="outline"
-                            className="w-full justify-between gap-2 px-3 py-2 h-auto text-left border-border/60 hover:bg-muted/50"
+                            className="w-full justify-between gap-2 px-3 py-2 h-auto text-left border-border hover:bg-muted/50"
                         >
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <span

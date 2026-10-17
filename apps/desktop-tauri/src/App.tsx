@@ -143,7 +143,7 @@ function useNavActive() {
 // Marca de la app: Discovery Scope (Opción C oficial), retícula táctica de escaneo
 // con 4 cuadrantes simétricos, ondas de radar concéntricas en Q1 y blip de host detectado en Q3.
 // - Modo oscuro (final-symbol-color.svg): Deep Void Navy (#090D16) + Electric Cyan (#06B6D4) + Sky Signal (#38BDF8).
-// - Modo claro (final-symbol-light.svg): Slate Tile (#F1F5F9, borde #E2E8F0) + Deep Cyan (#0891B2) + Blip (#0284C7).
+// - Modo claro (final-symbol-light.svg): Slate Tile (#F1F5F9, borde #B5BFCE) + Deep Cyan (#0891B2) + Blip (#0284C7).
 export function AppMark({ className }: { className?: string }) {
     const { theme } = useTheme();
     const isLight = theme === "light";
@@ -166,7 +166,7 @@ export function AppMark({ className }: { className?: string }) {
                     height="248"
                     rx="54"
                     fill="#F1F5F9"
-                    stroke="#E2E8F0"
+                    stroke="#B5BFCE"
                     strokeWidth="8"
                 />
             ) : (

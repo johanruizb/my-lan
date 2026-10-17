@@ -300,21 +300,21 @@ export function Settings() {
                                                 })
                                             }
                                             className={cn(
-                                                "group h-auto flex flex-col justify-between gap-2 rounded-lg border p-3.5 text-left transition-colors whitespace-normal font-normal",
+                                                "group h-full w-full flex flex-col items-stretch justify-between gap-2.5 rounded-lg border p-3.5 text-left transition-colors whitespace-normal font-normal",
                                                 active
                                                     ? "border-primary/60 bg-primary/10 hover:bg-primary/15"
-                                                    : "border-border bg-background/40 hover:border-border/80 hover:bg-muted/40",
+                                                    : "border-border bg-background/40 hover:border-border hover:bg-muted/40",
                                             )}
                                         >
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center justify-between gap-2">
+                                            <div className="flex w-full flex-col gap-1.5 text-left">
+                                                <div className="flex w-full items-center justify-between gap-2">
                                                     <span className="text-sm font-semibold text-foreground">
                                                         {p.label}
                                                     </span>
                                                     <span
                                                         aria-hidden
                                                         className={cn(
-                                                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                                                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors",
                                                             active
                                                                 ? "border-primary bg-primary/20"
                                                                 : "border-muted-foreground/40",
@@ -325,13 +325,20 @@ export function Settings() {
                                                         )}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs leading-relaxed text-muted-foreground">
+                                                <p className="min-h-[2.25rem] text-xs leading-relaxed text-muted-foreground text-left">
                                                     {p.description}
                                                 </p>
                                             </div>
-                                            <span className="border-t border-border/60 pt-2 text-[11px] text-muted-foreground/90">
-                                                {p.tradeoff}
-                                            </span>
+                                            <div
+                                                className={cn(
+                                                    "flex min-h-[2rem] w-full items-start border-t pt-2 text-left text-[11px] text-muted-foreground/90 transition-colors",
+                                                    active
+                                                        ? "border-primary/25 text-foreground/80"
+                                                        : "border-border",
+                                                )}
+                                            >
+                                                <span className="leading-snug">{p.tradeoff}</span>
+                                            </div>
                                         </Button>
                                     );
                                 })}
@@ -414,7 +421,7 @@ export function Settings() {
                                                         "h-auto flex flex-col items-center justify-center rounded-md border py-2 px-1 text-center text-xs transition-colors whitespace-normal font-normal",
                                                         active
                                                             ? "border-primary bg-primary/15 font-semibold text-primary hover:bg-primary/20 hover:text-primary"
-                                                            : "border-border bg-background/60 hover:border-border/80 hover:bg-muted/40 text-muted-foreground",
+                                                            : "border-border bg-background/60 hover:border-border hover:bg-muted/40 text-muted-foreground",
                                                     )}
                                                 >
                                                     <span>{item.label}</span>
@@ -474,7 +481,7 @@ export function Settings() {
 
                             {/* Panel de estado en vivo */}
                             {monitoringStatus && (
-                                <div className="flex flex-col gap-2.5 rounded-lg border border-border/80 bg-muted/20 p-3.5">
+                                <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-muted/20 p-3.5">
                                     <div className="flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                             <span
@@ -507,7 +514,7 @@ export function Settings() {
                                         )}
                                     </div>
 
-                                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground border-t border-border/60 pt-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground border-t border-border pt-2">
                                         <span>
                                             {monitoringStatus.last_scan_at
                                                 ? `Último análisis: ${new Date(monitoringStatus.last_scan_at).toLocaleTimeString()}`
@@ -619,7 +626,7 @@ export function Settings() {
                                     </div>
 
                                     {/* Cambio de IP/identidad en confiables */}
-                                    <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
+                                    <div className="flex items-center justify-between gap-4 border-t border-border pt-2.5">
                                         <div className="flex flex-col gap-0.5">
                                             <span id="notify-tampered-label" className="text-xs font-medium">
                                                 Cambio de IP en equipo confiable
@@ -637,7 +644,7 @@ export function Settings() {
                                     </div>
 
                                     {/* Caída o reconexión de Gateway */}
-                                    <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
+                                    <div className="flex items-center justify-between gap-4 border-t border-border pt-2.5">
                                         <div className="flex flex-col gap-0.5">
                                             <span id="notify-gateway-label" className="text-xs font-medium">
                                                 Estado del gateway / conexión
@@ -655,7 +662,7 @@ export function Settings() {
                                     </div>
 
                                     {/* Puertos críticos */}
-                                    <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
+                                    <div className="flex items-center justify-between gap-4 border-t border-border pt-2.5">
                                         <div className="flex flex-col gap-0.5">
                                             <span id="notify-ports-label" className="text-xs font-medium">
                                                 Puertos críticos recién abiertos
@@ -858,7 +865,7 @@ export function Settings() {
                                     />
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2.5">
+                                <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2.5">
                                     <span className="mr-1 text-[11px] text-muted-foreground">
                                         Campos protegidos:
                                     </span>

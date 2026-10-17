@@ -320,7 +320,7 @@ export function GdriveSyncDialog({
                     )}
 
                     {/* Card 1: Cuenta de Google Drive */}
-                    <div className="rounded-lg border border-border/60 bg-card p-3.5 space-y-2.5">
+                    <div className="rounded-lg border border-border bg-card p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Cloud className="h-4 w-4 text-cyan-500" />
@@ -374,7 +374,7 @@ export function GdriveSyncDialog({
                     </div>
 
                     {/* Card 2: Cifrado Zero-Knowledge (Contraseña Maestra) */}
-                    <div className="rounded-lg border border-border/60 bg-card p-3.5 space-y-2.5">
+                    <div className="rounded-lg border border-border bg-card p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Shield className="h-4 w-4 text-emerald-500" />
@@ -405,7 +405,7 @@ export function GdriveSyncDialog({
                             </div>
                         ) : (
                             <div className="space-y-3 pt-1">
-                                <div className="flex gap-2 border-b border-border/60 pb-2">
+                                <div className="flex gap-2 border-b border-border pb-2">
                                     <Button
                                         type="button"
                                         variant="ghost"
@@ -500,7 +500,7 @@ export function GdriveSyncDialog({
                                         {copiedMnemonic ? "Copiado" : "Copiar"}
                                     </Button>
                                 </div>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 font-mono text-[11px] bg-background/80 p-2.5 rounded border border-border/50">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 font-mono text-[11px] bg-background/80 p-2.5 rounded border border-border">
                                     {mnemonicDisplay.split(" ").map((word, i) => (
                                         <div key={i} className="flex gap-1 text-muted-foreground">
                                             <span className="opacity-40">{i + 1}.</span>
@@ -516,7 +516,7 @@ export function GdriveSyncDialog({
                     </div>
 
                     {/* Card 3: Estado y Sincronización del Workspace Activo */}
-                    <div className="rounded-lg border border-border/60 bg-card p-3.5 space-y-3">
+                    <div className="rounded-lg border border-border bg-card p-3.5 space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold flex items-center gap-2">
                                 <RefreshCw className={`h-4 w-4 text-cyan-500 ${isSyncing ? "animate-spin" : ""}`} />

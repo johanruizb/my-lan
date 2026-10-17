@@ -471,12 +471,14 @@ export interface PortCheckResult {
 export const startToolPing = (params: {
     target: string;
     sessionId: string;
+    count?: number | null;
     intervalMs?: number;
     timeoutMs?: number;
 }) =>
     invoke<void>("start_tool_ping_cmd", {
         target: params.target,
         sessionId: params.sessionId,
+        count: params.count ?? null,
         intervalMs: params.intervalMs ?? null,
         timeoutMs: params.timeoutMs ?? null,
     });

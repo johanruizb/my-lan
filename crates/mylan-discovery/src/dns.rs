@@ -29,6 +29,58 @@ pub fn system_resolver() -> Result<TokioResolver, DiscoveryError> {
         .map_err(|e| DiscoveryError::Dns(format!("construcción del resolver: {e}")))
 }
 
+/// Intenta descubrir servidores DNS upstream reales evitando direcciones de loopback (ej. 127.0.0.53 en Linux).
+///
+/// En distribuciones Linux modernas con `systemd-resolved` o `NetworkManager`,
+/// `/etc/resolv.conf` suele apuntar a un resolvedor stub local (127.0.0.53 o 127.0.0.1).
+/// Esta función busca en los archivos dinámicos del sistema para extraer los servidores
+/// DNS asignados por DHCP o red externa para no medir latencia RTT ficticia contra loopback.
+pub fn discover_upstream_dns() -> Vec<IpAddr> {
+    #[cfg(target_os = "linux")]
+    {
+        let candidate_paths = [
+            "/run/systemd/resolve/resolv.conf",
+            "/run/NetworkManager/no-stub-resolv.conf",
+            "/run/NetworkManager/resolv.conf",
+            "/run/resolvconf/resolv.conf",
+        ];
+
+        for path in candidate_paths {
+            if let Ok(content) = std::fs::read_to_string(path) {
+                let servers = parse_resolv_conf_nameservers(&content);
+                let non_loopback: Vec<IpAddr> =
+                    servers.into_iter().filter(|ip| !ip.is_loopback()).collect();
+                if !non_loopback.is_empty() {
+                    return non_loopback;
+                }
+            }
+        }
+    }
+
+    Vec::new()
+}
+
+/// Parsea directivas `nameserver <IP>` desde texto con sintaxis estándar de `resolv.conf`.
+pub fn parse_resolv_conf_nameservers(content: &str) -> Vec<IpAddr> {
+    let mut ips = Vec::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') || trimmed.starts_with(';') {
+            continue;
+        }
+        if let Some(rest) = trimmed.strip_prefix("nameserver") {
+            let candidate = rest.trim();
+            let first_token = candidate.split_whitespace().next().unwrap_or("");
+            if let Ok(ip) = first_token.parse::<IpAddr>() {
+                if !ips.contains(&ip) {
+                    ips.push(ip);
+                }
+            }
+        }
+    }
+    ips
+}
+
 /// Reverse DNS best-effort para una IP (usado por `traceroute.rs` por salto).
 ///
 /// Devuelve `None` ante cualquier fallo (NXDOMAIN típico en redes RFC1918):
@@ -295,5 +347,36 @@ mod tests {
     #[test]
     fn system_resolver_builds() {
         assert!(system_resolver().is_ok());
+    }
+
+    #[test]
+    fn test_parse_resolv_conf_nameservers() {
+        let sample = r#"
+# Generado por NetworkManager / systemd
+nameserver 1.1.1.1 # Cloudflare principal
+nameserver 8.8.8.8
+nameserver 1.1.1.1 # duplicado ignorado
+; nameserver 9.9.9.9
+nameserver 2606:4700:4700::1111
+nameserver no_es_una_ip
+search lan home
+"#;
+        let servers = parse_resolv_conf_nameservers(sample);
+        assert_eq!(servers.len(), 3);
+        assert_eq!(servers[0], "1.1.1.1".parse::<IpAddr>().unwrap());
+        assert_eq!(servers[1], "8.8.8.8".parse::<IpAddr>().unwrap());
+        assert_eq!(
+            servers[2],
+            "2606:4700:4700::1111".parse::<IpAddr>().unwrap()
+        );
+    }
+
+    #[test]
+    fn test_discover_upstream_dns_filters_loopback() {
+        let servers = discover_upstream_dns();
+        // En cualquier entorno donde se encuentre upstream, ninguna debe ser loopback
+        for ip in servers {
+            assert!(!ip.is_loopback(), "upstream DNS no debe ser loopback: {ip}");
+        }
     }
 }

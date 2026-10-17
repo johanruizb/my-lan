@@ -27,8 +27,8 @@
         --warning-foreground: 28 80% 15%;
         --popover: 0 0% 100%;
         --popover-foreground: 222.2 84% 4.9%;
-        --border: 214.3 31.8% 91.4%;
-        --input: 214.3 31.8% 91.4%;
+        --border: 215 20% 76%;
+        --input: 215 20% 76%;
         --ring: 192 88% 36%;
         /* #10: Radius 0.5rem (era 0.75rem). */
         --radius: 0.5rem;
@@ -57,8 +57,8 @@
         --warning-foreground: 28 80% 15%;
         --popover: 222 47% 9%;
         --popover-foreground: 210 40% 98%;
-        --border: 217.2 32.6% 16%;
-        --input: 217.2 32.6% 16%;
+        --border: 217.2 32.6% 25%;
+        --input: 217.2 32.6% 25%;
         --ring: 191 91% 48%;
     }
 }

@@ -10,8 +10,8 @@ colors:
   background-dark: "#080c14"
   card-light: "#ffffff"
   card-dark: "#0c1322"
-  border-light: "#e2e8f0"
-  border-dark: "#1b253b"
+  border-light: "#b5bfce"
+  border-dark: "#2d3e5a"
   text-light: "#020817"
   text-dark: "#f8fafc"
   muted-light: "#64748b"
@@ -107,9 +107,9 @@ La paleta cromática se inspira en las pantallas de radar y analizadores de espe
 
 ### Neutral
 - **Deep Void Navy (Fondo Oscuro)** (`#090D16` / `#080C14`): Lienzo base de la interfaz en modo oscuro. Absorbe el brillo para reducir la fatiga visual en sesiones prolongadas de auditoría.
-- **Dark Surface Card** (`#0C1322`): Superficie de tarjetas y contenedores en modo oscuro, con bordes nítidos de 1px en `#1B253B`.
+- **Dark Surface Card** (`#0C1322`): Superficie de tarjetas y contenedores en modo oscuro, con bordes nítidos de 1px en `#2D3E5A` (HSL: `217.2 32.6% 25%`, ratio de contraste 1.64:1 contra tarjeta y 1.73:1 contra el lienzo base `#080C14`), garantizando delimitación visual sin fatiga.
 - **Pure Slate Canvas (Fondo Claro)** (`#F8FAFC`): Lienzo base de la interfaz en modo claro, limpio y sobrio.
-- **Light Surface Card** (`#FFFFFF`): Fondo de tarjetas y tablas en modo claro, con bordes de 1px en `#E2E8F0`.
+- **Light Surface Card** (`#FFFFFF`): Fondo de tarjetas y tablas en modo claro, con bordes nítidos de 1px en `#B5BFCE` (HSL: `215 20% 76%`, ratio de contraste 1.90:1 contra tarjeta y 1.82:1 contra el lienzo base `#F8FAFC`), garantizando definición inmediata de superficies.
 - **Muted Foreground** (`#64748B` en claro / `#94A3B8` en oscuro): Metadatos secundarios, fechas relativas, etiquetas técnicas y banners inactivos.
 
 ### Semantic
@@ -160,7 +160,7 @@ MyLAN es un sistema plano por defecto (*flat-by-default*). La profundidad se com
 - **Active Sonar Glow** (`box-shadow: 0 0 15px rgba(56, 189, 248, 0.25)`): Resplandor táctico alrededor del nodo central del radar animado durante el descubrimiento de la red.
 
 ### Named Rules
-**The Crisp Border Doctrine.** Las tarjetas, modales y tablas definen su elevación mediante bordes exactos de 1px (`border-border`). Quedan prohibidas las sombras gruesas decorativas o los biseles emulados.
+**The Crisp Border Doctrine.** Las tarjetas, modales y tablas definen su elevación mediante bordes exactos de 1px (`border-border`). En un sistema plano por defecto, el borde es el elemento estructural primario que define la geometría y límites de cada superficie. Queda estrictamente prohibida la dilución artificial de opacidad en bordes estructurales (`border-border/30`, `border-border/40`, `border-border/50`, `border-border/60`); toda superficie delimitadora debe usar `border-border` sólido para evitar bordes imperceptibles y prevenir la fatiga visual. Quedan igualmente prohibidas las sombras gruesas decorativas o los biseles emulados.
 
 ## Shapes
 
@@ -175,7 +175,7 @@ MyLAN es un sistema plano por defecto (*flat-by-default*). La profundidad se com
 ### Buttons
 - **Shape:** 8px de radio (`rounded-md`).
 - **Primary:** Fondo cian primario (`#0891b2` en claro / `#06b6d4` en oscuro), texto blanco/oscuro de alto contraste, padding `8px 16px`. Hover con opacidad 90%.
-- **Outline / Ghost:** Borde de 1px en `#e2e8f0` / `#1b253b`, fondo transparente, hover con `bg-muted/40`.
+- **Outline / Ghost:** Borde de 1px en `#b5bfce` / `#2d3e5a`, fondo transparente, hover con `bg-muted/40`.
 - **CopyButton:** Botón de acción rápida cuadrado (20x20px o 24x24px), transparente en reposo, visible al pasar el ratón o navegar por teclado (`focus-visible:opacity-100`).
 
 ### Cards / Containers

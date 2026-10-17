@@ -165,6 +165,117 @@ describe("Tools Screen", () => {
         });
     });
 
+    it("respects ping packet limit configuration and presets", async () => {
+        renderWithProviders(<Tools />);
+
+        const targetInput = screen.getByPlaceholderText(/192\.168\.1\.1/);
+        fireEvent.change(targetInput, { target: { value: "1.1.1.1" } });
+
+        // Default limit is 10
+        const countInput = screen.getByTitle(/Cantidad de paquetes a enviar/i);
+        expect(countInput).toHaveValue(10);
+
+        // Click preset button 5
+        const preset5Btn = screen.getByRole("button", { name: "5" });
+        fireEvent.click(preset5Btn);
+        expect(countInput).toHaveValue(5);
+
+        // Click preset continuous
+        const continuousBtn = screen.getByRole("button", { name: /∞ Continuo/i });
+        fireEvent.click(continuousBtn);
+        expect(countInput).toHaveValue(null);
+
+        // Type custom limit
+        fireEvent.change(countInput, { target: { value: "25" } });
+        expect(countInput).toHaveValue(25);
+
+        fireEvent.click(screen.getByRole("button", { name: /Iniciar Ping/i }));
+
+        await waitFor(() => {
+            expect(startToolPingMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    target: "1.1.1.1",
+                    count: 25,
+                }),
+            );
+        });
+    });
+
+    it("cleans up packets and restores readiness HUD when clicking Limpiar", async () => {
+        let capturedSessionId = "";
+        startToolPingMock.mockImplementationOnce((params: { sessionId: string }) => {
+            capturedSessionId = params.sessionId;
+            return Promise.resolve();
+        });
+
+        renderWithProviders(<Tools />);
+
+        const targetInput = screen.getByPlaceholderText(/192\.168\.1\.1/);
+        fireEvent.change(targetInput, { target: { value: "1.1.1.1" } });
+        fireEvent.click(screen.getByRole("button", { name: /Iniciar Ping/i }));
+
+        await waitFor(() => {
+            expect(startToolPingMock).toHaveBeenCalled();
+        });
+
+        act(() => {
+            pingPacketCb!({
+                session_id: capturedSessionId,
+                packet: {
+                    seq: 1,
+                    target: "1.1.1.1",
+                    reachable: true,
+                    latency_ms: 12,
+                    jitter_ms: 0.5,
+                    method: "icmp",
+                },
+            });
+            pingSummaryCb!({
+                session_id: capturedSessionId,
+                summary: {
+                    target: "1.1.1.1",
+                    transmitted: 1,
+                    received: 1,
+                    packet_loss_percent: 0,
+                    min_rtt_ms: 12,
+                    avg_rtt_ms: 12,
+                    max_rtt_ms: 12,
+                    jitter_ms: 0.5,
+                },
+            });
+        });
+
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /Limpiar/i })).toBeInTheDocument();
+            expect(screen.getByText("Stream de paquetes (1/10)")).toBeInTheDocument();
+        });
+
+        // Click Limpiar
+        fireEvent.click(screen.getByRole("button", { name: /Limpiar/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText("Sondeo de latencia en espera")).toBeInTheDocument();
+            expect(screen.queryByText("Stream de paquetes")).not.toBeInTheDocument();
+            expect(screen.queryByText(/Transmitidos/i)).not.toBeInTheDocument();
+        });
+    });
+
+    it("reserves layout space in tool tabs so heartbeat does not shift tabs", () => {
+        renderWithProviders(<Tools />);
+
+        // Every tool tab button should have the reserved space (aria-hidden span with h-2 w-2)
+        const tabButtons = screen.getAllByRole("button", { name: /(Ping Interactivo|Traceroute Visual|DNS Lookup|Port Checker|Wake-on-LAN|Velocidad y Salud)/i });
+        expect(tabButtons.length).toBe(6);
+
+        tabButtons.forEach((btn) => {
+            const heartbeatSlot = btn.querySelector("span[aria-hidden='true']");
+            expect(heartbeatSlot).toBeInTheDocument();
+            expect(heartbeatSlot?.className).toContain("h-2");
+            expect(heartbeatSlot?.className).toContain("w-2");
+            expect(heartbeatSlot?.className).toContain("shrink-0");
+        });
+    });
+
     it("executes DNS lookup and displays resolved records", async () => {
         dnsLookupMock.mockResolvedValueOnce([
             {

@@ -4,6 +4,7 @@
 // (Vitest los hoista por archivo; los de un helper importado no se aplican
 // al test).
 
+import React from "react";
 import { render } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,13 +13,19 @@ import { deviceFixtures } from "../fixtures";
 export function renderWithProviders(
     ui: React.ReactElement,
     initialRoutes: string[] = ["/"],
+    options?: { strictMode?: boolean },
 ) {
+    const content = options?.strictMode ? (
+        <React.StrictMode>{ui}</React.StrictMode>
+    ) : (
+        ui
+    );
     const router = createMemoryRouter(
         [
             {
                 path: "*",
                 element: (
-                    <TooltipProvider delayDuration={0}>{ui}</TooltipProvider>
+                    <TooltipProvider delayDuration={0}>{content}</TooltipProvider>
                 ),
             },
         ],

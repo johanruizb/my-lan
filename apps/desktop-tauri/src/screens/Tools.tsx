@@ -126,6 +126,33 @@ const COMMON_DNS_TARGETS = [
     "wikipedia.org",
 ];
 
+// Indicador Heartbeat de estado activo con espacio reservado fijo (evita layout shift en tabs)
+function ToolTabHeartbeat({
+    active,
+    color = "bg-primary",
+}: {
+    active: boolean;
+    color?: string;
+}) {
+    return (
+        <span
+            className={cn(
+                "relative flex h-2 w-2 items-center justify-center shrink-0 transition-opacity duration-150",
+                active ? "opacity-100" : "opacity-0 pointer-events-none",
+            )}
+            aria-hidden="true"
+        >
+            <span
+                className={cn(
+                    "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:animate-none",
+                    color,
+                )}
+            />
+            <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", color)} />
+        </span>
+    );
+}
+
 // Componente de osciloscopio visual de latencia RTT
 function LatencyOscilloscope({ packets }: { packets: PingPacket[] }) {
     if (packets.length === 0) return null;
@@ -155,7 +182,7 @@ function LatencyOscilloscope({ packets }: { packets: PingPacket[] }) {
                     </span>
                 </div>
             </div>
-            <div className="h-20 w-full relative flex items-end gap-1 pt-4 pb-1 px-1 bg-muted/20 rounded border border-border/40 overflow-hidden">
+            <div className="h-20 w-full relative flex items-end gap-1 pt-4 pb-1 px-1 bg-muted/20 rounded border border-border overflow-hidden">
                 {/* Línea horizontal de promedio */}
                 {avgLat > 0 && (
                     <div
@@ -234,6 +261,7 @@ export function Tools() {
 
     // --- Ping State ---
     const [pingTarget, setPingTarget] = useState(initialIp);
+    const [pingCount, setPingCount] = useState<number | null>(10);
     const [pinging, setPinging] = useState(false);
     const [pingPackets, setPingPackets] = useState<PingPacket[]>([]);
     const [pingSummary, setPingSummary] = useState<PingStreamSummary | null>(null);
@@ -292,12 +320,12 @@ export function Tools() {
 
         Promise.all([
             onToolPingPacket((payload) => {
-                if (payload.session_id === pingSessionRef.current) {
+                if (pingSessionRef.current && payload.session_id === pingSessionRef.current) {
                     setPingPackets((prev) => [...prev.slice(-49), payload.packet]);
                 }
             }),
             onToolPingSummary((payload) => {
-                if (payload.session_id === pingSessionRef.current) {
+                if (pingSessionRef.current && payload.session_id === pingSessionRef.current) {
                     setPingSummary(payload.summary);
                     setPinging(false);
                 }
@@ -360,6 +388,7 @@ export function Tools() {
             await startToolPing({
                 target: pingTarget.trim(),
                 sessionId,
+                count: pingCount,
                 intervalMs: 1000,
                 timeoutMs: 1000,
             });
@@ -378,6 +407,20 @@ export function Tools() {
             }
             setPinging(false);
         }
+    }
+
+    function handleClearPing() {
+        if (pingSessionRef.current) {
+            try {
+                cancelTool(pingSessionRef.current)?.catch?.(() => {});
+            } catch {
+                // Ignore
+            }
+            pingSessionRef.current = null;
+        }
+        setPinging(false);
+        setPingPackets([]);
+        setPingSummary(null);
     }
 
     function handleCopyPingStream() {
@@ -527,7 +570,7 @@ export function Tools() {
     return (
         <div className={cn("flex flex-col", SECTION_GAP)}>
             {/* Cabecera Técnica de Consola */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border">
                 <div className="flex flex-col gap-0.5">
                     <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
@@ -553,7 +596,7 @@ export function Tools() {
                             Trazando ruta ({maskDisplay(traceTarget)})
                         </div>
                     ) : (
-                        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-border/50 text-[11px] text-muted-foreground font-mono">
+                        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-border text-[11px] text-muted-foreground font-mono">
                             <Terminal className="h-3 w-3" aria-hidden />
                             Motor de Diagnóstico Listo
                         </div>
@@ -564,7 +607,7 @@ export function Tools() {
             {/* Selector de Herramientas / Workbench Tab Strip */}
             <nav
                 aria-label="Pestañas de herramientas"
-                className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/60 overflow-x-auto shadow-xs"
+                className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/30 border border-border overflow-x-auto shadow-xs"
             >
                 <Button
                     type="button"
@@ -583,7 +626,7 @@ export function Tools() {
                 >
                     <Activity className={cn("h-3.5 w-3.5", activeTab === "ping" ? "text-primary" : "")} aria-hidden />
                     <span>Ping Interactivo</span>
-                    {pinging && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />}
+                    <ToolTabHeartbeat active={pinging} color="bg-primary" />
                 </Button>
 
                 <Button
@@ -603,7 +646,7 @@ export function Tools() {
                 >
                     <Compass className={cn("h-3.5 w-3.5", activeTab === "traceroute" ? "text-indigo-400" : "")} aria-hidden />
                     <span>Traceroute Visual</span>
-                    {tracing && <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />}
+                    <ToolTabHeartbeat active={tracing} color="bg-indigo-500" />
                 </Button>
 
                 <Button
@@ -623,6 +666,7 @@ export function Tools() {
                 >
                     <Globe className={cn("h-3.5 w-3.5", activeTab === "dns" ? "text-sky-400" : "")} aria-hidden />
                     <span>DNS Lookup</span>
+                    <ToolTabHeartbeat active={dnsLoading} color="bg-sky-400" />
                 </Button>
 
                 <Button
@@ -642,6 +686,7 @@ export function Tools() {
                 >
                     <Server className={cn("h-3.5 w-3.5", activeTab === "ports" ? "text-emerald-400" : "")} aria-hidden />
                     <span>Port Checker</span>
+                    <ToolTabHeartbeat active={portChecking} color="bg-emerald-400" />
                 </Button>
 
                 <Button
@@ -661,6 +706,7 @@ export function Tools() {
                 >
                     <Power className={cn("h-3.5 w-3.5", activeTab === "wol" ? "text-amber-400" : "")} aria-hidden />
                     <span>Wake-on-LAN</span>
+                    <ToolTabHeartbeat active={wolSending} color="bg-amber-400" />
                 </Button>
 
                 <Button
@@ -680,6 +726,7 @@ export function Tools() {
                 >
                     <Zap className="h-3.5 w-3.5 text-amber-500" aria-hidden />
                     <span>Velocidad y Salud</span>
+                    <ToolTabHeartbeat active={false} color="bg-amber-500" />
                 </Button>
             </nav>
 
@@ -743,10 +790,73 @@ export function Tools() {
                                             </Button>
                                         )}
                                     </div>
+
+                                    {/* Selector de límite de pings enviados */}
+                                    <div className="flex items-center justify-between gap-2 pt-1">
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span className="font-medium text-foreground">Límite de pings:</span>
+                                            <Input
+                                                id="ping-count-input"
+                                                type="number"
+                                                min={1}
+                                                max={1000}
+                                                placeholder="∞"
+                                                value={pingCount ?? ""}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.trim();
+                                                    if (val === "" || val === "0") {
+                                                        setPingCount(null);
+                                                    } else {
+                                                        const n = parseInt(val, 10);
+                                                        setPingCount(isNaN(n) ? null : Math.max(1, n));
+                                                    }
+                                                }}
+                                                disabled={pinging}
+                                                className="w-16 h-7.5 font-mono text-xs px-2"
+                                                title="Cantidad de paquetes a enviar (dejar vacío o pulsar ∞ para sondeo continuo)"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {[5, 10, 20].map((num) => (
+                                                <Button
+                                                    key={num}
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    disabled={pinging}
+                                                    onClick={() => setPingCount(num)}
+                                                    className={cn(
+                                                        "h-6.5 px-2 text-[11px] font-mono",
+                                                        pingCount === num
+                                                            ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                                                            : "text-muted-foreground hover:text-foreground",
+                                                    )}
+                                                >
+                                                    {num}
+                                                </Button>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                disabled={pinging}
+                                                onClick={() => setPingCount(null)}
+                                                className={cn(
+                                                    "h-6.5 px-2 text-[11px] font-mono",
+                                                    pingCount === null
+                                                        ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                                                        : "text-muted-foreground hover:text-foreground",
+                                                )}
+                                                title="Sondeo continuo sin límite"
+                                            >
+                                                ∞ Continuo
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Objetivos rápidos predefinidos */}
-                                <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                     <span className="text-[11px] font-semibold text-muted-foreground">
                                         Atajos y Objetivos Rápidos
                                     </span>
@@ -772,7 +882,7 @@ export function Tools() {
 
                                 {/* Dispositivos en la LAN activa */}
                                 {lanDevices.length > 0 && (
-                                    <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                    <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                         <span className="text-[11px] font-semibold text-muted-foreground">
                                             Dispositivos detectados en LAN
                                         </span>
@@ -795,7 +905,7 @@ export function Tools() {
                                 )}
 
                                 {/* Especificaciones del motor de sondeo */}
-                                <div className="rounded-lg bg-muted/20 border border-border/40 p-3 text-[11px] flex flex-col gap-1.5 text-muted-foreground">
+                                <div className="rounded-lg bg-muted/20 border border-border p-3 text-[11px] flex flex-col gap-1.5 text-muted-foreground">
                                     <div className="flex items-center justify-between">
                                         <span className="font-semibold text-foreground">Protocolo:</span>
                                         <span className="font-mono">ICMP Echo + TCP SYN fallback</span>
@@ -803,6 +913,12 @@ export function Tools() {
                                     <div className="flex items-center justify-between">
                                         <span className="font-semibold text-foreground">Intervalo / Timeout:</span>
                                         <span className="font-mono">1000 ms / 1000 ms</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-foreground">Límite / Modo:</span>
+                                        <span className="font-mono">
+                                            {pingCount ? `${pingCount} pings (${pingCount}s)` : "Continuo (Sin límite)"}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="font-semibold text-foreground">Cálculo Jitter:</span>
@@ -817,7 +933,10 @@ export function Tools() {
                     <div className="lg:col-span-7 flex flex-col gap-4">
                         {pingPackets.length === 0 ? (
                             /* Estado de Espera / Readiness HUD */
-                            <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[360px]">
+                            <div
+                                key="ping-readiness-hud"
+                                className="rounded-xl border border-dashed border-border bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[360px]"
+                            >
                                 <div className="h-12 w-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                                     <Activity className="h-6 w-6" aria-hidden />
                                 </div>
@@ -830,7 +949,7 @@ export function Tools() {
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-lg pt-2 text-left">
-                                    <div className="rounded-lg border bg-background/50 p-2.5">
+                                    <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
                                         <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                                             LAN Local
                                         </span>
@@ -841,7 +960,7 @@ export function Tools() {
                                             Cable / Wi-Fi 6
                                         </span>
                                     </div>
-                                    <div className="rounded-lg border bg-background/50 p-2.5">
+                                    <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
                                         <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                                             Fibra FTTH
                                         </span>
@@ -852,7 +971,7 @@ export function Tools() {
                                             CDN & Nodos
                                         </span>
                                     </div>
-                                    <div className="rounded-lg border bg-background/50 p-2.5">
+                                    <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
                                         <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                                             4G / DSL
                                         </span>
@@ -863,7 +982,7 @@ export function Tools() {
                                             Móvil común
                                         </span>
                                     </div>
-                                    <div className="rounded-lg border bg-background/50 p-2.5">
+                                    <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
                                         <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                                             Jitter RFC 3550
                                         </span>
@@ -878,7 +997,7 @@ export function Tools() {
                             </div>
                         ) : (
                             /* Telemetría activa: KPIs + Osciloscopio + Consola Terminal */
-                            <div className="flex flex-col gap-4">
+                            <div key="ping-active-telemetry" className="flex flex-col gap-4">
                                 {/* Grid de Estadísticas / KPI HUD */}
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                                     <div className="rounded-xl border bg-card p-3 text-center shadow-xs">
@@ -951,11 +1070,11 @@ export function Tools() {
 
                                 {/* Stream de Paquetes tipo Consola Terminal */}
                                 <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs flex flex-col">
-                                    <div className="flex items-center justify-between px-3.5 py-2 border-b border-border/60 bg-muted/30">
+                                    <div className="flex items-center justify-between px-3.5 py-2 border-b border-border bg-muted/30">
                                         <div className="flex items-center gap-2">
                                             <Terminal className="h-3.5 w-3.5 text-primary" aria-hidden />
                                             <span className="text-xs font-semibold text-foreground font-mono">
-                                                Stream de paquetes ({pingPackets.length})
+                                                Stream de paquetes ({pingPackets.length}{pingCount ? `/${pingCount}` : ""})
                                             </span>
                                             {pinging && (
                                                 <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -985,7 +1104,7 @@ export function Tools() {
                                                     type="button"
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => setPingPackets([])}
+                                                    onClick={handleClearPing}
                                                     className="h-7 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
                                                     title="Limpiar paquetes"
                                                 >
@@ -1003,7 +1122,7 @@ export function Tools() {
                                             .map((pkt) => (
                                                 <div
                                                     key={pkt.seq}
-                                                    className="flex items-center justify-between border-b border-border/30 pb-1 last:border-0 hover:bg-muted/30 px-1.5 py-0.5 rounded transition-colors"
+                                                    className="flex items-center justify-between border-b border-border pb-1 last:border-0 hover:bg-muted/30 px-1.5 py-0.5 rounded transition-colors"
                                                 >
                                                     <div className="flex items-center gap-2 truncate">
                                                         <span className="text-muted-foreground text-[11px] w-8 shrink-0">
@@ -1121,7 +1240,7 @@ export function Tools() {
                                 </div>
 
                                 {/* Atajos rápidos de trazado */}
-                                <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                     <span className="text-[11px] font-semibold text-muted-foreground">
                                         Objetivos de Red
                                     </span>
@@ -1142,7 +1261,7 @@ export function Tools() {
                                     </div>
                                 </div>
 
-                                <div className="rounded-lg bg-muted/20 border border-border/40 p-3 text-[11px] flex flex-col gap-1 text-muted-foreground">
+                                <div className="rounded-lg bg-muted/20 border border-border p-3 text-[11px] flex flex-col gap-1 text-muted-foreground">
                                     <span className="font-semibold text-foreground">Topología de Salto (TTL):</span>
                                     <span>
                                         Incrementa progresivamente el tiempo de vida (TTL) del paquete IP para forzar el retorno de ICMP Time Exceeded (RFC 1393) desde cada enrutador intermedio.
@@ -1155,7 +1274,7 @@ export function Tools() {
                     {/* Mapa Visual de Saltos y Tabla de Rutas */}
                     <div className="lg:col-span-7 flex flex-col gap-4">
                         {traceHops.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[340px]">
+                            <div key="trace-readiness-hud" className="rounded-xl border border-dashed border-border bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[340px]">
                                 <div className="h-12 w-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                                     <Compass className="h-6 w-6" aria-hidden />
                                 </div>
@@ -1190,7 +1309,7 @@ export function Tools() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-3">
+                            <div key="trace-active-map" className="flex flex-col gap-3">
                                 {/* Carrusel/Cadena visual interactiva de nodos */}
                                 <div className="rounded-xl border bg-card p-3 shadow-xs overflow-x-auto">
                                     <div className="flex items-center gap-2 min-w-max pb-1">
@@ -1234,7 +1353,7 @@ export function Tools() {
 
                                 {/* Tabla completa de saltos */}
                                 <div className="rounded-xl border bg-card overflow-hidden shadow-xs">
-                                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-muted/20">
+                                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
                                         <div className="flex items-center gap-2 text-xs font-semibold">
                                             <Compass className="h-3.5 w-3.5 text-indigo-400" />
                                             <span>Detalle de saltos ({traceHops.length})</span>
@@ -1257,7 +1376,7 @@ export function Tools() {
                                                 <TableHead className="p-2.5 text-right">Latencia RTT</TableHead>
                                             </TableRow>
                                         </TableHeader>
-                                        <TableBody className="divide-y divide-border/40">
+                                        <TableBody className="divide-y divide-border">
                                             {traceHops.map((hop) => {
                                                 const lat = hop.latency_ms;
                                                 const latBadgeClass =
@@ -1424,7 +1543,7 @@ export function Tools() {
                                 </div>
 
                                 {/* Selector rápido de tipos de registro */}
-                                <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                     <span className="text-[11px] font-semibold text-muted-foreground">
                                         Tipos de Registro Rápidos
                                     </span>
@@ -1450,7 +1569,7 @@ export function Tools() {
                                 </div>
 
                                 {/* Dominios sugeridos */}
-                                <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                     <span className="text-[11px] font-semibold text-muted-foreground">
                                         Dominios sugeridos
                                     </span>
@@ -1476,7 +1595,7 @@ export function Tools() {
                     {/* Inspector de Registros DNS */}
                     <div className="lg:col-span-7 flex flex-col gap-4">
                         {dnsRecords.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[340px]">
+                            <div className="rounded-xl border border-dashed border-border bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[340px]">
                                 <div className="h-12 w-12 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
                                     <Globe className="h-6 w-6" aria-hidden />
                                 </div>
@@ -1537,7 +1656,7 @@ export function Tools() {
                             </div>
                         ) : (
                             <div className="rounded-xl border bg-card overflow-hidden shadow-xs flex flex-col">
-                                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-muted/20">
+                                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
                                     <div className="flex items-center gap-2">
                                         <Globe className="h-3.5 w-3.5 text-sky-400" />
                                         <span className="text-xs font-semibold text-foreground font-mono">
@@ -1569,7 +1688,7 @@ export function Tools() {
                                             <TableHead className="p-2.5 text-right w-20">TTL</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody className="divide-y divide-border/40">
+                                    <TableBody className="divide-y divide-border">
                                         {dnsRecords.map((r, idx) => (
                                             <TableRow
                                                 key={`${r.record_type}-${r.value}-${idx}`}
@@ -1675,7 +1794,7 @@ export function Tools() {
                                 </div>
 
                                 {/* Accesos rápidos a puertos comunes */}
-                                <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                     <span className="text-[11px] font-semibold text-muted-foreground">
                                         Puertos y Servicios Frecuentes
                                     </span>
@@ -1706,7 +1825,7 @@ export function Tools() {
                     {/* HUD de Resultado del Puerto */}
                     <div className="lg:col-span-7 flex flex-col gap-4">
                         {!portResult ? (
-                            <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[320px]">
+                            <div className="rounded-xl border border-dashed border-border bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[320px]">
                                 <div className="h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                                     <Server className="h-6 w-6" aria-hidden />
                                 </div>
@@ -1747,7 +1866,7 @@ export function Tools() {
                             </div>
                         ) : (
                             <div className="rounded-xl border bg-card p-5 shadow-xs flex flex-col gap-4">
-                                <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                                <div className="flex items-center justify-between pb-3 border-b border-border">
                                     <div className="flex flex-col">
                                         <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                                             Host y Puerto Auditado
@@ -1797,7 +1916,7 @@ export function Tools() {
                                 </div>
 
                                 {portResult.banner && (
-                                    <div className="mt-2 text-xs bg-muted/40 rounded-lg border border-border/60 p-3 font-mono break-all text-foreground">
+                                    <div className="mt-2 text-xs bg-muted/40 rounded-lg border border-border p-3 font-mono break-all text-foreground">
                                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">
                                             Banner de Servicio Detectado:
                                         </span>
@@ -1884,7 +2003,7 @@ export function Tools() {
 
                                 {/* Dispositivos LAN con MAC conocida */}
                                 {lanDevices.filter((d) => d.mac).length > 0 && (
-                                    <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
+                                    <div className="flex flex-col gap-2 pt-1 border-t border-border">
                                         <span className="text-[11px] font-semibold text-muted-foreground">
                                             Equipos con MAC detectada en LAN
                                         </span>
@@ -1941,7 +2060,7 @@ export function Tools() {
                             <p className="text-xs text-muted-foreground leading-relaxed">
                                 El paquete mágico es una trama de capa de enlace transmitida vía socket de difusión (Broadcast UDP, comúnmente puertos 7 o 9). Contiene una cabecera de sincronización seguida de la dirección MAC del dispositivo repetida exactamente 16 veces.
                             </p>
-                            <div className="rounded-lg bg-muted/20 border border-border/50 p-3 font-mono text-[11px] flex flex-col gap-1.5">
+                            <div className="rounded-lg bg-muted/20 border border-border p-3 font-mono text-[11px] flex flex-col gap-1.5">
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Cabecera de Sincronización:</span>
                                     <span className="text-primary font-bold">FF:FF:FF:FF:FF:FF (6 bytes)</span>

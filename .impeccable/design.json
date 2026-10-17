@@ -99,7 +99,7 @@
       "refersTo": "card",
       "description": "Tarjeta de dispositivo en cuadrícula de inventario con estado y atajos.",
       "html": "<div class=\"ds-card-device\"><div class=\"ds-card-header\"><span class=\"ds-card-title\">192.168.1.1</span><span class=\"ds-badge-open\">Online</span></div><div class=\"ds-card-meta\"><span>Router</span> · <span class=\"ds-mono\">44:48:89:FA:D3:0D</span></div></div>",
-      "css": ".ds-card-device { padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s ease; } .ds-card-device:hover { border-color: #0891b2; } .ds-card-header { display: flex; justify-content: space-between; align-items: center; } .ds-card-title { font-weight: 700; font-size: 15px; font-family: monospace; } .ds-card-meta { font-size: 12px; color: #64748b; } .ds-mono { font-family: monospace; }"
+      "css": ".ds-card-device { padding: 16px; border-radius: 12px; border: 1px solid #b5bfce; background: #ffffff; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s ease; } .ds-card-device:hover { border-color: #0891b2; } .ds-card-header { display: flex; justify-content: space-between; align-items: center; } .ds-card-title { font-weight: 700; font-size: 15px; font-family: monospace; } .ds-card-meta { font-size: 12px; color: #64748b; } .ds-mono { font-family: monospace; }"
     }
   ],
   "narrative": {
@@ -129,7 +129,7 @@
       },
       {
         "name": "The Crisp Border Doctrine",
-        "body": "Las tarjetas, modales y tablas definen su elevación mediante bordes exactos de 1px (border-border). Quedan prohibidas las sombras gruesas decorativas.",
+        "body": "Las tarjetas, modales y tablas definen su elevación mediante bordes exactos de 1px (border-border). Queda estrictamente prohibida la dilución artificial de opacidad en bordes estructurales (border-border/30 a /60) y las sombras decorativas.",
         "section": "elevation"
       }
     ],

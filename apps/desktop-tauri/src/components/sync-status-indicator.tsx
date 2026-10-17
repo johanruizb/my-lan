@@ -35,7 +35,7 @@ export function SyncStatusIndicator({ className, showLabel }: SyncStatusIndicato
     let indicatorIcon = <Cloud className="h-3.5 w-3.5 opacity-60" />;
     let label = "Nube";
     let tooltipText = "Google Drive Desconectado. Clic para configurar.";
-    let badgeClass = "text-muted-foreground border-border/60 hover:bg-muted/50";
+    let badgeClass = "text-muted-foreground border-border hover:bg-muted/50";
 
     if (isSyncing) {
         indicatorIcon = <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />;

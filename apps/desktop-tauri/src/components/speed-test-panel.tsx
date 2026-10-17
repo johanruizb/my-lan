@@ -85,50 +85,55 @@ export function SpeedTestPanel() {
     }
 
     useEffect(() => {
-        let active = true;
+        // Patrón disposed: la Promise de listen() resuelve tras el round-trip
+        // IPC, DESPUÉS del primer cleanup de StrictMode. Sin este flag, el
+        // unlisten llega tarde y queda registrado (listener zombie que
+        // duplica cada evento). Si la Promise resuelve tras el unmount
+        // (disposed), desregistramos inmediatamente.
+        let disposed = false;
         const unlistens: (() => void)[] = [];
-
-        const setupListeners = async () => {
-            if (typeof onSpeedTestProgress === "function") {
-                const unlisten = await onSpeedTestProgress((payload) => {
-                    if (!active) return;
-                    if (payload.session_id === speedSessionRef.current) {
-                        setSpeedProgress(payload.progress);
-                    }
-                });
-                if (typeof unlisten === "function") {
-                    if (active) unlistens.push(unlisten);
-                    else unlisten();
-                }
-            }
-
-            if (typeof onSpeedTestDone === "function") {
-                const unlisten = await onSpeedTestDone((payload) => {
-                    if (!active) return;
-                    if (payload.session_id === speedSessionRef.current) {
-                        if (toastedSessionsRef.current.has(payload.session_id)) return;
-                        toastedSessionsRef.current.add(payload.session_id);
-                        setSpeedTesting(false);
-                        if (payload.result) {
-                            setSpeedResult(payload.result);
-                            setSpeedHistory((prev) => [payload.result!, ...prev]);
-                            toast("Test de velocidad completado exitosamente.", "success");
-                        } else if (payload.error) {
-                            toast(`Test de velocidad finalizado o cancelado: ${payload.error}`, "info");
-                        }
-                    }
-                });
-                if (typeof unlisten === "function") {
-                    if (active) unlistens.push(unlisten);
-                    else unlisten();
-                }
-            }
+        const register = (
+            promiseLike: Promise<unknown> | undefined,
+            pending: (() => void)[],
+        ) => {
+            if (typeof promiseLike?.then !== "function") return;
+            promiseLike
+                .then((u) => {
+                    if (disposed) (u as (() => void) | undefined)?.();
+                    else if (typeof u === "function") pending.push(u);
+                })
+                .catch(() => {});
         };
 
-        setupListeners();
+        register(
+            onSpeedTestProgress?.((payload) => {
+                if (payload.session_id === speedSessionRef.current) {
+                    setSpeedProgress(payload.progress);
+                }
+            }),
+            unlistens,
+        );
+
+        register(
+            onSpeedTestDone?.((payload) => {
+                if (payload.session_id === speedSessionRef.current) {
+                    if (toastedSessionsRef.current.has(payload.session_id)) return;
+                    toastedSessionsRef.current.add(payload.session_id);
+                    setSpeedTesting(false);
+                    if (payload.result) {
+                        setSpeedResult(payload.result);
+                        setSpeedHistory((prev) => [payload.result!, ...prev]);
+                        toast("Test de velocidad completado exitosamente.", "success");
+                    } else if (payload.error) {
+                        toast(`Test de velocidad finalizado o cancelado: ${payload.error}`, "info");
+                    }
+                }
+            }),
+            unlistens,
+        );
 
         return () => {
-            active = false;
+            disposed = true;
             unlistens.forEach((u) => u());
             if (speedSessionRef.current) {
                 try {
@@ -206,9 +211,23 @@ export function SpeedTestPanel() {
         }
     }
 
-    // Separa la muestra más reciente para gateway y dns
+    // Helper para identificar direcciones loopback
+    function isLoopbackIp(ip: string | null | undefined): boolean {
+        if (!ip) return false;
+        return ip.startsWith("127.") || ip === "::1" || ip === "localhost";
+    }
+
+    // Separa la muestra más reciente para gateway y dns (priorizando no-loopback)
     const latestGateway = healthSamples.find((s) => s.target_type === "gateway");
-    const latestDns = healthSamples.find((s) => s.target_type === "dns" || s.target_type === "internet");
+    const latestDns =
+        healthSamples.find(
+            (s) =>
+                (s.target_type === "dns" || s.target_type === "internet") &&
+                !isLoopbackIp(s.target_ip),
+        ) ??
+        healthSamples.find(
+            (s) => s.target_type === "dns" || s.target_type === "internet",
+        );
 
     return (
         <div className="flex flex-col gap-6">
@@ -257,7 +276,7 @@ export function SpeedTestPanel() {
                 <CardContent className="p-5 pt-2 flex flex-col gap-5">
                     {/* Barra de progreso de la medición activa */}
                     {speedTesting && (
-                        <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-muted/40 border border-border/60">
+                        <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-muted/40 border border-border">
                             <div className="flex items-center justify-between text-xs">
                                 <span className="font-medium text-foreground flex items-center gap-2">
                                     <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />
@@ -278,7 +297,7 @@ export function SpeedTestPanel() {
 
                     {/* Banner del servidor detectado */}
                     {(speedProgress?.server_info || speedResult?.server_name) && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-md bg-muted/20 border border-border/40 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-md bg-muted/20 border border-border text-xs">
                             <div className="flex items-center gap-2 text-muted-foreground">
                                 <Server className="h-3.5 w-3.5 text-primary" />
                                 <span>Servidor:</span>
@@ -297,7 +316,7 @@ export function SpeedTestPanel() {
                     {/* Panel de Métricas Principales */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {/* Descarga */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border/80 shadow-sm relative overflow-hidden">
+                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <ArrowDown className="h-4 w-4 text-emerald-500" />
@@ -318,7 +337,7 @@ export function SpeedTestPanel() {
                         </div>
 
                         {/* Subida */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border/80 shadow-sm relative overflow-hidden">
+                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <ArrowUp className="h-4 w-4 text-cyan-500" />
@@ -339,7 +358,7 @@ export function SpeedTestPanel() {
                         </div>
 
                         {/* Latencia RTT */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border/80 shadow-sm relative overflow-hidden">
+                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <Activity className="h-4 w-4 text-amber-500" />
@@ -356,7 +375,7 @@ export function SpeedTestPanel() {
                         </div>
 
                         {/* Jitter RFC 3550 */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border/80 shadow-sm relative overflow-hidden">
+                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <Radio className="h-4 w-4 text-purple-500" />
@@ -379,13 +398,13 @@ export function SpeedTestPanel() {
 
                     {/* Historial de Tests de Velocidad */}
                     {speedHistory.length > 0 && (
-                        <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
+                        <div className="flex flex-col gap-2 pt-2 border-t border-border">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Historial de mediciones recientes
                             </span>
-                            <div className="rounded-md border border-border/70 overflow-hidden">
+                            <div className="rounded-md border border-border overflow-hidden">
                                 <Table className="text-xs text-left">
-                                    <TableHeader className="bg-muted/50 text-muted-foreground font-medium border-b border-border/60">
+                                    <TableHeader className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                                         <TableRow>
                                             <TableHead className="py-2 px-3">Fecha y Hora</TableHead>
                                             <TableHead className="py-2 px-3">Servidor</TableHead>
@@ -395,7 +414,7 @@ export function SpeedTestPanel() {
                                             <TableHead className="py-2 px-3 text-right">Jitter</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody className="divide-y divide-border/40 font-mono">
+                                    <TableBody className="divide-y divide-border font-mono">
                                         {speedHistory.map((item) => (
                                             <TableRow key={item.id} className="hover:bg-muted/20">
                                                 <TableCell className="py-2 px-3 text-muted-foreground font-sans">
@@ -464,7 +483,7 @@ export function SpeedTestPanel() {
                     {/* Tarjetas de estado Gateway y DNS */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Gateway */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border/80 shadow-sm">
+                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Wifi className="h-4 w-4 text-primary" />
@@ -490,7 +509,7 @@ export function SpeedTestPanel() {
                             </div>
 
                             {latestGateway ? (
-                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-border/50 text-xs">
+                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-border text-xs">
                                     <div>
                                         <span className="text-muted-foreground block text-[11px]">IP Destino</span>
                                         <span className="font-mono font-medium">{displayIp(latestGateway.target_ip)}</span>
@@ -520,7 +539,7 @@ export function SpeedTestPanel() {
                         </div>
 
                         {/* DNS Principal */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border/80 shadow-sm">
+                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Globe className="h-4 w-4 text-cyan-500" />
@@ -529,45 +548,56 @@ export function SpeedTestPanel() {
                                 {latestDns && (
                                     <span
                                         className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                                            (latestDns.rtt_ms ?? 999) < 30 && latestDns.loss_pct === 0
-                                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                                : (latestDns.rtt_ms ?? 999) < 60
-                                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                                  : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
+                                            isLoopbackIp(latestDns.target_ip)
+                                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                                : (latestDns.rtt_ms ?? 999) < 30 && latestDns.loss_pct === 0
+                                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                                  : (latestDns.rtt_ms ?? 999) < 60
+                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                                    : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
                                         }`}
                                     >
-                                        {(latestDns.rtt_ms ?? 999) < 30 && latestDns.loss_pct === 0
-                                            ? "Excelente"
-                                            : (latestDns.rtt_ms ?? 999) < 60
-                                              ? "Aceptable"
-                                              : "Degradado"}
+                                        {isLoopbackIp(latestDns.target_ip)
+                                            ? "Stub Local (No representativo)"
+                                            : (latestDns.rtt_ms ?? 999) < 30 && latestDns.loss_pct === 0
+                                              ? "Excelente"
+                                              : (latestDns.rtt_ms ?? 999) < 60
+                                                ? "Aceptable"
+                                                : "Degradado"}
                                     </span>
                                 )}
                             </div>
 
                             {latestDns ? (
-                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-border/50 text-xs">
-                                    <div>
-                                        <span className="text-muted-foreground block text-[11px]">IP Resolvedor</span>
-                                        <span className="font-mono font-medium">{displayIp(latestDns.target_ip)}</span>
+                                <>
+                                    <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-border text-xs">
+                                        <div>
+                                            <span className="text-muted-foreground block text-[11px]">IP Resolvedor</span>
+                                            <span className="font-mono font-medium">{displayIp(latestDns.target_ip)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground block text-[11px]">Latencia RTT</span>
+                                            <span className="font-mono font-medium">
+                                                {latestDns.rtt_ms != null ? `${latestDns.rtt_ms} ms` : "Inalcanzable"}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground block text-[11px]">Jitter RFC 3550</span>
+                                            <span className="font-mono font-medium">{latestDns.jitter_ms.toFixed(1)} ms</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground block text-[11px]">Pérdida / Método</span>
+                                            <span className="font-mono font-medium">
+                                                {latestDns.loss_pct.toFixed(0)}% ({latestDns.method})
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span className="text-muted-foreground block text-[11px]">Latencia RTT</span>
-                                        <span className="font-mono font-medium">
-                                            {latestDns.rtt_ms != null ? `${latestDns.rtt_ms} ms` : "Inalcanzable"}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-muted-foreground block text-[11px]">Jitter RFC 3550</span>
-                                        <span className="font-mono font-medium">{latestDns.jitter_ms.toFixed(1)} ms</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-muted-foreground block text-[11px]">Pérdida / Método</span>
-                                        <span className="font-mono font-medium">
-                                            {latestDns.loss_pct.toFixed(0)}% ({latestDns.method})
-                                        </span>
-                                    </div>
-                                </div>
+                                    {isLoopbackIp(latestDns.target_ip) && (
+                                        <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded p-2">
+                                            Muestra previa registrada contra el stub DNS loopback local (127.0.0.X). Pulsa &quot;Sondear Ahora&quot; para medir contra el servidor upstream real.
+                                        </p>
+                                    )}
+                                </>
                             ) : (
                                 <p className="text-xs text-muted-foreground italic mt-2">
                                     Aún no hay muestras registradas. Pulsa &quot;Sondear Ahora&quot; para medir.
@@ -578,13 +608,13 @@ export function SpeedTestPanel() {
 
                     {/* Tabla de Muestras de Salud */}
                     {healthSamples.length > 0 && (
-                        <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
+                        <div className="flex flex-col gap-2 pt-2 border-t border-border">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                 Registros recientes de salud de enlace
                             </span>
-                            <div className="rounded-md border border-border/70 overflow-hidden">
+                            <div className="rounded-md border border-border overflow-hidden">
                                 <Table className="text-xs text-left">
-                                    <TableHeader className="bg-muted/50 text-muted-foreground font-medium border-b border-border/60">
+                                    <TableHeader className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                                         <TableRow>
                                             <TableHead className="py-2 px-3">Fecha y Hora</TableHead>
                                             <TableHead className="py-2 px-3">Objetivo</TableHead>
@@ -595,7 +625,7 @@ export function SpeedTestPanel() {
                                             <TableHead className="py-2 px-3 text-right">Método</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody className="divide-y divide-border/40 font-mono">
+                                    <TableBody className="divide-y divide-border font-mono">
                                         {healthSamples.slice(0, 8).map((sample) => (
                                             <TableRow key={sample.id} className="hover:bg-muted/20">
                                                 <TableCell className="py-2 px-3 text-muted-foreground font-sans">
@@ -605,10 +635,28 @@ export function SpeedTestPanel() {
                                                     {sample.target_type}
                                                 </TableCell>
                                                 <TableCell className="py-2 px-3 text-foreground">
-                                                    {displayIp(sample.target_ip)}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span>{displayIp(sample.target_ip)}</span>
+                                                        {isLoopbackIp(sample.target_ip) && (
+                                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                                                                stub local
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="py-2 px-3 text-right font-medium">
-                                                    {sample.rtt_ms != null ? `${sample.rtt_ms} ms` : "-"}
+                                                    {isLoopbackIp(sample.target_ip) ? (
+                                                        <span
+                                                            className="text-muted-foreground text-[11px] italic"
+                                                            title="Medición sobre interfaz loopback (no representativa)"
+                                                        >
+                                                            0 ms (loopback)
+                                                        </span>
+                                                    ) : sample.rtt_ms != null ? (
+                                                        `${sample.rtt_ms} ms`
+                                                    ) : (
+                                                        "-"
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="py-2 px-3 text-right text-muted-foreground">
                                                     {sample.jitter_ms.toFixed(1)} ms

@@ -61,6 +61,7 @@ pub async fn start_tool_ping_cmd(
     state: State<'_, DesktopState>,
     target: String,
     session_id: String,
+    count: Option<u32>,
     interval_ms: Option<u64>,
     timeout_ms: Option<u64>,
 ) -> Result<(), String> {
@@ -82,8 +83,13 @@ pub async fn start_tool_ping_cmd(
         let sid = session_id_clone.clone();
         let app_emit = app_clone.clone();
 
-        let summary_res =
-            mylan_discovery::ping_stream(ip, interval, timeout, cancel_token_clone, move |pkt| {
+        let summary_res = mylan_discovery::ping_stream(
+            ip,
+            interval,
+            timeout,
+            count,
+            cancel_token_clone,
+            move |pkt| {
                 let _ = app_emit.emit(
                     "tool:ping_packet",
                     serde_json::json!({
@@ -91,8 +97,9 @@ pub async fn start_tool_ping_cmd(
                         "packet": pkt,
                     }),
                 );
-            })
-            .await;
+            },
+        )
+        .await;
 
         if let Ok(summary) = summary_res {
             let _ = app_clone.emit(
@@ -405,13 +412,26 @@ pub async fn run_health_probe_cmd(
                 crate::commands::latest_network_id(&conn)?.unwrap_or_else(|| "default".to_string())
             }
         };
-        let (gw, dns) = if let Ok(Some(net)) = mylan_db::network_repo::get_network(&conn, &net_id) {
-            (net.gateway_ip, net.dns_servers)
-        } else if let Ok(iface) = mylan_discovery::detect_interface(None) {
-            (iface.gateway_ip, iface.dns_servers)
-        } else {
-            (None, Vec::new())
-        };
+        let (gw, dns) =
+            if let Ok(Some(mut net)) = mylan_db::network_repo::get_network(&conn, &net_id) {
+                let mut dns = net.dns_servers;
+                if dns.is_empty() || dns.iter().all(|ip| ip.is_loopback()) {
+                    if let Ok(iface) = mylan_discovery::detect_interface(None) {
+                        if !iface.dns_servers.is_empty()
+                            && !iface.dns_servers.iter().all(|ip| ip.is_loopback())
+                        {
+                            dns = iface.dns_servers.clone();
+                            net.dns_servers = dns.clone();
+                            let _ = mylan_db::network_repo::upsert_network(&conn, &net);
+                        }
+                    }
+                }
+                (net.gateway_ip, dns)
+            } else if let Ok(iface) = mylan_discovery::detect_interface(None) {
+                (iface.gateway_ip, iface.dns_servers)
+            } else {
+                (None, Vec::new())
+            };
         (net_id, gw, dns)
     };
 

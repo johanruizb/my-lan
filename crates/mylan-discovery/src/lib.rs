@@ -43,8 +43,8 @@ pub mod wol;
 
 pub use arp::{arp_entries_to_observations, read_arp_cache};
 pub use dns::{
-    dns_lookup_host, dns_lookup_with_provider, dns_lookup_with_resolver, resolve_host,
-    resolver_for_provider,
+    discover_upstream_dns, dns_lookup_host, dns_lookup_with_provider, dns_lookup_with_resolver,
+    parse_resolv_conf_nameservers, resolve_host, resolver_for_provider,
 };
 pub use error::DiscoveryError;
 pub use health::{probe_network_health, probe_target_health};

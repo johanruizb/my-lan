@@ -1,4 +1,6 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import React from "react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Tools } from "@/screens/Tools";
 import { renderWithProviders } from "./helpers";
@@ -11,7 +13,11 @@ const mockGetRecentSpeedTests = vi.fn();
 const mockGetNetworkHealthSamples = vi.fn();
 const mockRunHealthProbe = vi.fn();
 const toastMock = vi.fn();
-let speedTestDoneCallbacks: ((payload: any) => void)[] = [];
+// Callbacks registrados como Tauri: cada listen() añade el callback a la
+// lista de listeners activos y devuelve el unlisten en una Promise que
+// resuelve DESPUÉS (round-trip IPC), reproduciendo el race de StrictMode.
+const activeDoneCbs: Array<(payload: any) => void> = [];
+let speedTestDoneCb: ((payload: any) => void) | null = null;
 
 vi.mock("@/lib/tauri", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/lib/tauri")>();
@@ -27,14 +33,13 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
         runHealthProbe: (networkId?: string) => mockRunHealthProbe(networkId),
         onSpeedTestProgress: vi.fn().mockResolvedValue(() => {}),
         onSpeedTestDone: (cb: (payload: any) => void) => {
-            speedTestDoneCallbacks.push(cb);
-            // Simula la asincronía real de Tauri: el unlisten llega luego de un microtask.
-            return new Promise<() => void>((resolve) => {
-                setTimeout(() => {
-                    resolve(() => {
-                        speedTestDoneCallbacks = speedTestDoneCallbacks.filter((c) => c !== cb);
-                    });
-                }, 5);
+            speedTestDoneCb = cb;
+            activeDoneCbs.push(cb);
+            return new Promise((resolve) => {
+                setTimeout(() => resolve(() => {
+                    const idx = activeDoneCbs.indexOf(cb);
+                    if (idx >= 0) activeDoneCbs.splice(idx, 1);
+                }), 0);
             });
         },
         onToolPingPacket: vi.fn().mockResolvedValue(() => {}),
@@ -51,7 +56,8 @@ vi.mock("@/components/ui/toast", () => ({
 describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        speedTestDoneCallbacks = [];
+        speedTestDoneCb = null;
+        activeDoneCbs.length = 0;
     });
 
     it("muestra un único toast cuando el evento speedtest_done se dispara dos veces para la misma sesión", async () => {
@@ -75,7 +81,7 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
 
         await waitFor(() => {
             expect(mockStartSpeedTest).toHaveBeenCalled();
-            expect(speedTestDoneCallbacks.length).toBeGreaterThan(0);
+            expect(speedTestDoneCb).toBeDefined();
         });
 
         const sessionId = mockStartSpeedTest.mock.calls[0][0];
@@ -97,8 +103,8 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
         };
 
         act(() => {
-            speedTestDoneCallbacks.forEach((cb) => cb({ session_id: sessionId, result, error: null }));
-            speedTestDoneCallbacks.forEach((cb) => cb({ session_id: sessionId, result, error: null }));
+            speedTestDoneCb!({ session_id: sessionId, result, error: null });
+            speedTestDoneCb!({ session_id: sessionId, result, error: null });
         });
 
         await waitFor(() => {
@@ -110,91 +116,64 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
         });
     });
 
-    it("evita toasts duplicados ante doble suscripción por re-montaje del panel", async () => {
+    it("un solo toast cuando StrictMode deja listeners zombie por el race de unlisten", async () => {
         mockGetRecentSpeedTests.mockResolvedValue([]);
         mockGetNetworkHealthSamples.mockResolvedValue([]);
         mockStartSpeedTest.mockResolvedValue(undefined);
-
-        const { unmount } = renderWithProviders(
-            <CensorshipProvider initialEnabled={false}>
-                <Tools />
-            </CensorshipProvider>,
-            ["/tools?tool=speed"],
-        );
-
-        await waitFor(() => {
-            expect(screen.getByRole("button", { name: /Iniciar Test/i })).toBeInTheDocument();
-        });
-
-        fireEvent.click(screen.getByRole("button", { name: /Iniciar Test/i }));
-
-        await waitFor(() => {
-            expect(mockStartSpeedTest).toHaveBeenCalled();
-        });
-
-        const firstSessionId = mockStartSpeedTest.mock.calls[0][0];
-
-        // Simular re-montaje rápido (StrictMode / cambio de pestaña): desmontar
-        // ANTES de que Tauri resuelva el unlisten, reproduciendo el escenario
-        // que deja listeners colgados en la app real.
-        unmount();
-
-        // Esperar a que la promesa del primer listener se resuelva y se limpie.
-        await new Promise((resolve) => setTimeout(resolve, 20));
 
         renderWithProviders(
             <CensorshipProvider initialEnabled={false}>
                 <Tools />
             </CensorshipProvider>,
             ["/tools?tool=speed"],
+            { strictMode: true },
         );
 
         await waitFor(() => {
             expect(screen.getByRole("button", { name: /Iniciar Test/i })).toBeInTheDocument();
         });
 
-        fireEvent.click(screen.getByRole("button", { name: /Iniciar Test/i }));
-
-        await waitFor(() => {
-            expect(mockStartSpeedTest).toHaveBeenCalledTimes(2);
-            expect(speedTestDoneCallbacks.length).toBe(1);
+        // Flush de micro/macro-tareas: las Promises de listen() resuelven tras
+        // el primer cleanup de StrictMode (round-trip IPC simulado).
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
         });
 
-        const secondSessionId = mockStartSpeedTest.mock.calls[1][0];
+        // Con el patrón disposed, el listener del primer setup se desregistra
+        // solo cuando su Promise resuelve tras el cleanup: queda EXACTAMENTE 1.
+        expect(activeDoneCbs.length).toBe(1);
+
+        fireEvent.click(screen.getByRole("button", { name: /Iniciar Test/i }));
+        await waitFor(() => expect(mockStartSpeedTest).toHaveBeenCalled());
+
+        const sessionId = mockStartSpeedTest.mock.calls[0][0];
         const result: SpeedTestResult = {
-            id: "st-remount",
+            id: "st-strict",
             network_id: "net-1",
             server_name: "Cloudflare (BOG)",
             server_host: "speed.cloudflare.com",
             server_city: "Bogotá",
             server_country: "CO",
-            download_mbps: 200.0,
-            upload_mbps: 100.0,
-            latency_ms: 8,
-            jitter_ms: 0.5,
+            download_mbps: 120.0,
+            upload_mbps: 60.0,
+            latency_ms: 9,
+            jitter_ms: 0.9,
             bufferbloat_ms: null,
             retransmits: null,
             protocol: "cloudflare",
-            created_at: "2026-10-16T12:00:00Z",
+            created_at: "2026-10-16T12:30:00Z",
         };
 
-        act(() => {
-            speedTestDoneCallbacks.forEach((cb) => cb({ session_id: secondSessionId, result, error: null }));
+        await act(async () => {
+            activeDoneCbs.slice().forEach((cb) =>
+                cb({ session_id: sessionId, result, error: null }),
+            );
+            await Promise.resolve();
         });
 
         await waitFor(() => {
             expect(toastMock).toHaveBeenCalledTimes(1);
-            expect(toastMock).toHaveBeenCalledWith(
-                "Test de velocidad completado exitosamente.",
-                "success",
-            );
         });
-
-        // El listener del primer montaje debe haber quedado inactivo: eventos de su sesión no generan toast.
-        expect(toastMock).not.toHaveBeenCalledWith(
-            expect.stringContaining(firstSessionId),
-            expect.anything(),
-        );
     });
 
     it("renderiza la pestaña 'Velocidad y Salud' y muestra métricas históricas", async () => {
@@ -358,6 +337,38 @@ describe("Tools Screen - Speed & Network Health (Fase 9)", () => {
         await waitFor(() => {
             expect(screen.queryByText("192.168.1.254")).not.toBeInTheDocument();
             expect(screen.getAllByText("192.168.*.*").length).toBeGreaterThan(0);
+        });
+    });
+
+    it("identifica y marca muestras previas con DNS loopback (stub local) en vez de calificarlas como excelente", async () => {
+        mockGetRecentSpeedTests.mockResolvedValue([]);
+        mockGetNetworkHealthSamples.mockResolvedValue([
+            {
+                id: "h-loopback",
+                network_id: "net-1",
+                target_type: "dns",
+                target_ip: "127.0.0.53",
+                rtt_ms: 0,
+                jitter_ms: 0.0,
+                loss_pct: 0.0,
+                sample_count: 4,
+                probes_failed: 0,
+                method: "icmp",
+                created_at: "2026-10-16T12:00:00Z",
+            },
+        ]);
+
+        renderWithProviders(
+            <CensorshipProvider initialEnabled={false}>
+                <Tools />
+            </CensorshipProvider>,
+            ["/tools?tool=speed"],
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText("Stub Local (No representativo)")).toBeInTheDocument();
+            expect(screen.getByText("stub local")).toBeInTheDocument();
+            expect(screen.getByText("0 ms (loopback)")).toBeInTheDocument();
         });
     });
 });
