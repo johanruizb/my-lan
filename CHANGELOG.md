@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Robustez en migraciones y accesibilidad de componentes**: ejecución segura de migración v8 desactivando temporalmente foreign keys durante la migración y estandarización accesible de botones en diálogos y paneles.
 - **Notificaciones Toast al estándar shadcn/ui**: reescritura del componente `Toast` conforme a la especificación oficial de shadcn/ui y sustitución del fondo sólido plano por superficies translúcidas con iconos contextuales de Lucide (`CheckCircle2`, `AlertCircle`, `AlertTriangle`, `Info`).
 
+### Fixed
+- **Alineación y continuidad en tarjetas de dispositivos**: estandarización de la altura de tarjetas en cuadrícula (`h-full`), alineación horizontal uniforme de badges e indicador de última vez visto en el pie de tarjeta, y preservación del renglón técnico con indicador para dispositivos sin MAC detectada.
+
 ## [0.6.2] - 2026-10-16 (441fd22)
 
 ### Added

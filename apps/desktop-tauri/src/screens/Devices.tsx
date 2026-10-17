@@ -633,99 +633,104 @@ export function Devices({
                                         <li
                                             key={d.id}
                                             role="listitem"
-                                            className="list-none cv-auto"
+                                            className="list-none cv-auto h-full"
                                         >
                                             <Link
                                                 to={devicePath}
                                                 aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
-                                                className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             >
-                                                <Card className="group relative border border-border/40 overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/40">
-                                                    <CardContent className="flex flex-col gap-3 p-4">
-                                                        <div className="flex items-center justify-between gap-3">
-                                                            <div className="flex min-w-0 items-center gap-3">
-                                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                                                                    <Icon
-                                                                        className="h-5 w-5 text-primary"
+                                                <Card className="group relative flex h-full flex-col border border-border/40 overflow-hidden shadow-sm transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-md">
+                                                    <CardContent className="flex flex-1 flex-col justify-between gap-3 p-4">
+                                                        <div className="flex flex-col gap-2.5">
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <div className="flex min-w-0 items-center gap-3">
+                                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                                                                        <Icon
+                                                                            className="h-5 w-5 text-primary"
+                                                                            aria-hidden
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex min-w-0 flex-col">
+                                                                        <span className="truncate font-bold text-foreground text-sm">
+                                                                            <MaskedValue
+                                                                                field={
+                                                                                    d.display_name
+                                                                                        ? "display_name"
+                                                                                        : d.hostname
+                                                                                          ? "hostname"
+                                                                                          : d.primary_ip
+                                                                                            ? "primary_ip"
+                                                                                            : "id"
+                                                                                }
+                                                                                value={
+                                                                                    d.display_name ??
+                                                                                    d.hostname ??
+                                                                                    d.primary_ip ??
+                                                                                    d.id
+                                                                                }
+                                                                            />
+                                                                        </span>
+                                                                        <span className="truncate text-xs text-muted-foreground">
+                                                                            {deviceLabel(
+                                                                                d.device_type,
+                                                                            )}
+                                                                            {d.vendor
+                                                                                ? ` · ${d.vendor}`
+                                                                                : ""}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
+                                                                    <ChevronRight
+                                                                        className="h-4 w-4"
                                                                         aria-hidden
                                                                     />
                                                                 </div>
-                                                                <div className="flex min-w-0 flex-col">
-                                                                    <span className="truncate font-bold text-foreground text-sm">
+                                                            </div>
+
+                                                            <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-muted-foreground min-h-[1.25rem]">
+                                                                {(d.display_name ||
+                                                                    d.hostname) && (
+                                                                    <span className="truncate">
                                                                         <MaskedValue
-                                                                            field={
-                                                                                d.display_name
-                                                                                    ? "display_name"
-                                                                                    : d.hostname
-                                                                                      ? "hostname"
-                                                                                      : d.primary_ip
-                                                                                        ? "primary_ip"
-                                                                                        : "id"
-                                                                            }
+                                                                            field="primary_ip"
                                                                             value={
-                                                                                d.display_name ??
-                                                                                d.hostname ??
                                                                                 d.primary_ip ??
                                                                                 d.id
                                                                             }
                                                                         />
                                                                     </span>
-                                                                    <span className="truncate text-xs text-muted-foreground">
-                                                                        {deviceLabel(
-                                                                            d.device_type,
-                                                                        )}
-                                                                        {d.vendor
-                                                                            ? ` · ${d.vendor}`
-                                                                            : ""}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background/50 text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5">
-                                                                <ChevronRight
-                                                                    className="h-4 w-4"
-                                                                    aria-hidden
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-muted-foreground">
-                                                            {(d.display_name ||
-                                                                d.hostname) && (
-                                                                <span className="truncate">
-                                                                    <MaskedValue
-                                                                        field="primary_ip"
-                                                                        value={
-                                                                            d.primary_ip ??
-                                                                            d.id
-                                                                        }
-                                                                    />
-                                                                </span>
-                                                            )}
-                                                            {(d.display_name ||
-                                                                d.hostname) &&
-                                                                d.primary_mac && (
-                                                                    <span
-                                                                        aria-hidden
-                                                                    >
-                                                                        ·
-                                                                    </span>
                                                                 )}
-                                                            {d.primary_mac && (
-                                                                <span className="truncate uppercase">
-                                                                    <MaskedValue
-                                                                        field="primary_mac"
-                                                                        value={
-                                                                            d.primary_mac
-                                                                        }
-                                                                        mono
-                                                                    />
-                                                                </span>
-                                                            )}
+                                                                {(d.display_name ||
+                                                                    d.hostname) &&
+                                                                    d.primary_mac && (
+                                                                        <span
+                                                                            aria-hidden
+                                                                        >
+                                                                            ·
+                                                                        </span>
+                                                                    )}
+                                                                {d.primary_mac ? (
+                                                                    <span className="truncate uppercase">
+                                                                        <MaskedValue
+                                                                            field="primary_mac"
+                                                                            value={
+                                                                                d.primary_mac
+                                                                            }
+                                                                            mono
+                                                                        />
+                                                                    </span>
+                                                                ) : !(d.display_name || d.hostname) ? (
+                                                                    <span className="truncate text-muted-foreground/60 text-[11px] font-sans">
+                                                                        Sin MAC detectada
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
                                                         </div>
 
-                                                        {/* #14: estado + confianza en la primera fila (texto plano,
-                                                            sin pills); "Visto" en la segunda, alineado a la derecha. */}
-                                                        <div className="flex flex-col gap-1.5 text-xs">
+                                                        {/* Estado, confianza y última vez visto unificados con continuidad visual */}
+                                                        <div className="mt-auto pt-3 border-t border-border/30 flex flex-wrap items-center justify-between gap-y-1.5 gap-x-2 text-xs">
                                                             <div className="flex items-center gap-x-3">
                                                                 <OnlineBadge
                                                                     isOnline={
@@ -736,16 +741,14 @@ export function Devices({
                                                                     device={d}
                                                                 />
                                                             </div>
-                                                            <div className="flex justify-end">
-                                                                <span className="whitespace-nowrap text-muted-foreground">
-                                                                    Visto{" "}
-                                                                    <RelativeTime
-                                                                        value={
-                                                                            d.last_seen_at
-                                                                        }
-                                                                    />
-                                                                </span>
-                                                            </div>
+                                                            <span className="whitespace-nowrap text-muted-foreground text-[11px]">
+                                                                Visto{" "}
+                                                                <RelativeTime
+                                                                    value={
+                                                                        d.last_seen_at
+                                                                    }
+                                                                />
+                                                            </span>
                                                         </div>
                                                     </CardContent>
                                                 </Card>

@@ -294,4 +294,28 @@ describe("Devices screen (AC-22)", () => {
         expect(screen.getByRole("button", { name: "Copiar MAC" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Copiar Vendor" })).toBeInTheDocument();
     });
+
+    it("en vista de tarjetas muestra 'Sin MAC detectada' cuando el dispositivo carece de MAC y de nombre", async () => {
+        const customDevices = [
+            makeDevice({
+                id: "dev-local-host",
+                primary_ip: "192.168.1.4",
+                hostname: null,
+                display_name: null,
+                primary_mac: null,
+                device_type: "unknown",
+            }),
+        ];
+        listDevicesMock.mockResolvedValue(customDevices);
+
+        renderWithProviders(<Devices />);
+        await waitFor(() => {
+            expect(screen.getByText(/Dispositivos \(1\)/)).toBeInTheDocument();
+        });
+
+        // 192.168.1.4 aparece como título principal
+        expect(screen.getByText("192.168.1.4")).toBeInTheDocument();
+        // El renglón técnico mantiene continuidad visual mostrando que no tiene MAC
+        expect(screen.getByText("Sin MAC detectada")).toBeInTheDocument();
+    });
 });
