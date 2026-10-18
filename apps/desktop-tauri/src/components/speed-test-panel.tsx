@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
     Activity,
-    AlertCircle,
     ArrowDown,
     ArrowUp,
-    CheckCircle2,
-    Clock,
     Globe,
     Loader2,
     Play,
@@ -32,7 +29,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
 import { useCensorship } from "@/components/censorship-provider";
 import {

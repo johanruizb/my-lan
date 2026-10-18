@@ -23,7 +23,8 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
         listDevices: (ws?: string) => mockListDevices(ws),
         getSecurityFindings: (net?: string) => mockGetSecurityFindings(net),
         getSecurityScore: (net?: string) => mockGetSecurityScore(net),
-        getRecentSpeedTests: (params?: any) => mockGetRecentSpeedTests(params),
+        getRecentSpeedTests: (params?: { networkId?: string; limit?: number }) =>
+            mockGetRecentSpeedTests(params),
         getNetworkHealthSamples: (net?: string, lim?: number) =>
             mockGetNetworkHealthSamples(net, lim),
         getAppVersion: () => mockGetAppVersion(),
@@ -69,9 +70,9 @@ describe("Executive PDF Report & Export Modal (Fase 10)", () => {
         vendor: "Apple, Inc.",
         manufacturer: null,
         model: null,
-        device_type: "nas" as any,
+        device_type: "nas",
         os_family: "Linux",
-        confidence: 90 as any,
+        confidence: 90,
         first_seen_at: "2026-10-16T10:00:00Z",
         last_seen_at: "2026-10-16T12:00:00Z",
         is_trusted: true,

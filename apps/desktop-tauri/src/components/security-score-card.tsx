@@ -9,7 +9,6 @@ import {
     RefreshCw,
     AlertTriangle,
     Info,
-    ChevronRight,
     Loader2,
 } from "lucide-react";
 import {
@@ -23,10 +22,9 @@ import { cn } from "@/lib/utils";
 
 interface SecurityScoreCardProps {
     className?: string;
-    onViewFindings?: () => void;
 }
 
-export function SecurityScoreCard({ className, onViewFindings }: SecurityScoreCardProps) {
+export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
     const [score, setScore] = useState<number | null>(null);
     const [findings, setFindings] = useState<SecurityFinding[]>([]);
     const [loading, setLoading] = useState(false);
@@ -98,7 +96,6 @@ export function SecurityScoreCard({ className, onViewFindings }: SecurityScoreCa
     const lowCount = openFindings.filter((f) => f.severity === "low").length;
 
     const displayScore = score ?? 100;
-    const isGood = displayScore >= 85;
     const isWarning = displayScore >= 60 && displayScore < 85;
     const isDanger = displayScore < 60;
 

@@ -1,11 +1,14 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Tools } from "@/screens/Tools";
 import { renderWithProviders } from "./helpers";
 import { CensorshipProvider } from "@/components/censorship-provider";
-import type { NetworkHealthSample, SpeedTestResult } from "@/lib/tauri";
+import type {
+    NetworkHealthSample,
+    SpeedTestDoneEvent,
+    SpeedTestResult,
+} from "@/lib/tauri";
 
 const mockStartSpeedTest = vi.fn();
 const mockCancelTool = vi.fn();
@@ -16,8 +19,8 @@ const toastMock = vi.fn();
 // Callbacks registrados como Tauri: cada listen() añade el callback a la
 // lista de listeners activos y devuelve el unlisten en una Promise que
 // resuelve DESPUÉS (round-trip IPC), reproduciendo el race de StrictMode.
-const activeDoneCbs: Array<(payload: any) => void> = [];
-let speedTestDoneCb: ((payload: any) => void) | null = null;
+const activeDoneCbs: Array<(payload: SpeedTestDoneEvent) => void> = [];
+let speedTestDoneCb: ((payload: SpeedTestDoneEvent) => void) | null = null;
 
 vi.mock("@/lib/tauri", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/lib/tauri")>();
@@ -32,7 +35,7 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
             mockGetNetworkHealthSamples(networkId, limit),
         runHealthProbe: (networkId?: string) => mockRunHealthProbe(networkId),
         onSpeedTestProgress: vi.fn().mockResolvedValue(() => {}),
-        onSpeedTestDone: (cb: (payload: any) => void) => {
+        onSpeedTestDone: (cb: (payload: SpeedTestDoneEvent) => void) => {
             speedTestDoneCb = cb;
             activeDoneCbs.push(cb);
             return new Promise((resolve) => {

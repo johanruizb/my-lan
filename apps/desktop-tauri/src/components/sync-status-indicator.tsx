@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cloud, CloudAlert, RefreshCw, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Cloud, CloudAlert, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getGdriveSyncStatus, type GdriveSyncStatus } from "@/lib/tauri";

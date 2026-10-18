@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Tools } from "@/screens/Tools";
 import { renderWithProviders } from "./helpers";
+import type { PingPacket, PingStreamSummary } from "@/lib/tauri";
 
 const startToolPingMock = vi.fn().mockResolvedValue(undefined);
 const startToolTracerouteMock = vi.fn().mockResolvedValue(undefined);
@@ -11,10 +12,8 @@ const dnsLookupMock = vi.fn();
 const sendWolMock = vi.fn();
 const checkPortMock = vi.fn();
 
-let pingPacketCb: ((payload: any) => void) | null = null;
-let pingSummaryCb: ((payload: any) => void) | null = null;
-let traceHopCb: ((payload: any) => void) | null = null;
-let traceDoneCb: ((payload: any) => void) | null = null;
+let pingPacketCb: ((payload: { session_id: string; packet: PingPacket }) => void) | null = null;
+let pingSummaryCb: ((payload: { session_id: string; summary: PingStreamSummary }) => void) | null = null;
 
 vi.mock("@/lib/tauri", () => ({
     startToolPing: (params: unknown) => startToolPingMock(params),
@@ -25,30 +24,20 @@ vi.mock("@/lib/tauri", () => ({
     sendWol: (mac: string, broadcastIp?: string) => sendWolMock(mac, broadcastIp),
     checkPort: (target: string, port: number, timeoutMs?: number) =>
         checkPortMock(target, port, timeoutMs),
-    onToolPingPacket: (cb: any) => {
+    onToolPingPacket: (cb: (payload: { session_id: string; packet: PingPacket }) => void) => {
         pingPacketCb = cb;
         return Promise.resolve(() => {
             pingPacketCb = null;
         });
     },
-    onToolPingSummary: (cb: any) => {
+    onToolPingSummary: (cb: (payload: { session_id: string; summary: PingStreamSummary }) => void) => {
         pingSummaryCb = cb;
         return Promise.resolve(() => {
             pingSummaryCb = null;
         });
     },
-    onToolTraceHop: (cb: any) => {
-        traceHopCb = cb;
-        return Promise.resolve(() => {
-            traceHopCb = null;
-        });
-    },
-    onToolTraceDone: (cb: any) => {
-        traceDoneCb = cb;
-        return Promise.resolve(() => {
-            traceDoneCb = null;
-        });
-    },
+    onToolTraceHop: () => Promise.resolve(() => {}),
+    onToolTraceDone: () => Promise.resolve(() => {}),
 }));
 
 vi.mock("@/components/censorship-provider", () => ({
@@ -72,8 +61,6 @@ describe("Tools Screen", () => {
         startToolTracerouteMock.mockResolvedValue(undefined);
         pingPacketCb = null;
         pingSummaryCb = null;
-        traceHopCb = null;
-        traceDoneCb = null;
     });
 
     it("renders default Ping Interactivo tab and tool selector buttons", () => {

@@ -78,7 +78,7 @@ export function GdriveSyncDialog({
                 title: "Autorización en progreso",
                 description: "Se abrió la ventana del navegador. Autoriza a MyLAN para continuar.",
             });
-        } catch (e: any) {
+        } catch (e) {
             toast({
                 title: "Error al iniciar conexión",
                 description: String(e),
@@ -104,7 +104,7 @@ export function GdriveSyncDialog({
                 title: "Cuenta desconectada",
                 description: "Google Drive ha sido desvinculado de este equipo.",
             });
-        } catch (e: any) {
+        } catch (e) {
             toast({
                 title: "Error al desconectar",
                 description: String(e),
@@ -142,7 +142,7 @@ export function GdriveSyncDialog({
                 title: "Clave Maestra configurada",
                 description: "Cifrado Zero-Knowledge activo. Guarda tu frase de recuperación.",
             });
-        } catch (e: any) {
+        } catch (e) {
             toast({
                 title: "Error al configurar clave",
                 description: String(e),
@@ -172,7 +172,7 @@ export function GdriveSyncDialog({
                 title: "Clave Maestra restaurada",
                 description: "Se restauró correctamente el acceso Zero-Knowledge.",
             });
-        } catch (e: any) {
+        } catch (e) {
             toast({
                 title: "Error al restaurar clave",
                 description: String(e),
@@ -221,7 +221,7 @@ export function GdriveSyncDialog({
                     description: "El Workspace ya se encuentra totalmente sincronizado.",
                 });
             }
-        } catch (e: any) {
+        } catch (e) {
             toast({
                 title: "Error en la sincronización",
                 description: String(e),
@@ -246,7 +246,7 @@ export function GdriveSyncDialog({
                         ? "Se adoptó la versión de la nube. La copia local quedó en backup preventivo."
                         : "Se conservó la versión local y se sobrescribió Google Drive.",
             });
-        } catch (e: any) {
+        } catch (e) {
             toast({
                 title: "Error resolviendo conflicto",
                 description: String(e),

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 import { GdriveSyncDialog } from "@/components/gdrive-sync-dialog";
-import { WorkspaceProvider, DEFAULT_WORKSPACE } from "@/components/workspace-provider";
+import { WorkspaceProvider } from "@/components/workspace-provider";
 import type { GdriveSyncStatus, SyncOutcome } from "@/lib/tauri";
 
 const {

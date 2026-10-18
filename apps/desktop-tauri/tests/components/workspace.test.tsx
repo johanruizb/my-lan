@@ -9,7 +9,12 @@ import {
     WorkspaceProvider,
     DEFAULT_WORKSPACE,
 } from "@/components/workspace-provider";
-import type { Workspace } from "@/lib/tauri";
+import type {
+    CreateWorkspacePayload,
+    Settings,
+    UpdateWorkspacePayload,
+    Workspace,
+} from "@/lib/tauri";
 
 const mockListWorkspaces = vi.fn();
 const mockCreateWorkspace = vi.fn();
@@ -23,11 +28,11 @@ vi.mock("@/lib/tauri", async (importOriginal) => {
     return {
         ...actual,
         listWorkspaces: () => mockListWorkspaces(),
-        createWorkspace: (payload: any) => mockCreateWorkspace(payload),
-        updateWorkspace: (payload: any) => mockUpdateWorkspace(payload),
+        createWorkspace: (payload: CreateWorkspacePayload) => mockCreateWorkspace(payload),
+        updateWorkspace: (payload: UpdateWorkspacePayload) => mockUpdateWorkspace(payload),
         deleteWorkspace: (id: string) => mockDeleteWorkspace(id),
         getSettings: () => mockGetSettings(),
-        setSettings: (s: any) => mockSetSettings(s),
+        setSettings: (s: Settings) => mockSetSettings(s),
     };
 });
 
