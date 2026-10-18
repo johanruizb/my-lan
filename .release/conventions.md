@@ -14,4 +14,5 @@
 - User approved minor bump to `0.6.0` for Discovery Scope branding and auto-updater features.
 - User approved patch bump to `0.6.1` for desktop layout elevation, Discovery Scope sidebar AppMark icon sync, and Linux updater manifest support.
 - User approved patch bump to `0.6.2` for unified Red view, live NetworkHeader telemetry, light Discovery Scope branding symbol variant, and quick device detail actions.
+- User approved major bump to `1.0.0` for culmination of Phases 5-11 (continuous monitoring, OS alerts, interactive tools suite, security audit engine, Cloudflare speed test, multi-site workspaces & PDF reports, and Google Drive zero-knowledge sync).
 - Ship gate: prompt Go gate summary before push and triggering the GitHub Actions release workflow.

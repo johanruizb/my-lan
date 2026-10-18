@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-17 (19bbbfd)
+
 ### Added
 - **Sincronización Serverless Zero-Knowledge con Google Drive**: respaldo y sincronización cifrada de extremo a extremo (Argon2id + XChaCha20-Poly1305) en la carpeta privada `appDataFolder` de Google Drive sin servidor intermedio, con frase de recuperación mnemónica de 12 palabras (BIP-39), resolución de conflictos con respaldo preventivo y gestión de credenciales en el llavero seguro del sistema operativo.
 - **Espacios de trabajo multi-sitio y reportes ejecutivos en PDF**: partición lógica de inventarios por ubicación física o cliente en la misma base de datos, con selector rápido en la barra lateral y exportación de informes ejecutivos de red y seguridad en formato PDF y JSON con enmascaramiento estricto de Modo Censura.
@@ -20,10 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rediseño y layout workbench de Herramientas de red**: interfaz en dos columnas para diagnóstico de red con osciloscopio SVG de latencia RTT en tiempo real, atajos de destino predefinidos, HUD interactivo en espera y cadena visual de saltos en Traceroute.
 - **Robustez en migraciones y accesibilidad de componentes**: ejecución segura de migración v8 desactivando temporalmente foreign keys durante la migración y estandarización accesible de botones en diálogos y paneles.
 - **Notificaciones Toast al estándar shadcn/ui**: reescritura del componente `Toast` conforme a la especificación oficial de shadcn/ui y sustitución del fondo sólido plano por superficies translúcidas con iconos contextuales de Lucide (`CheckCircle2`, `AlertCircle`, `AlertTriangle`, `Info`).
+- **Doctrina de bordes nítidos y alto contraste (The Crisp Border Doctrine)**: aumento de contraste en bordes y superficies en temas claro y oscuro, eliminando opacidades artificiales en tarjetas, tablas y divisores.
 
 ### Fixed
 - **Accesibilidad, jerarquía y flujos de usuario (Auditoría UX)**: estandarización de encabezados `h1` semánticos en vistas principales, breadcrumbs jerárquicos con preservación de filtros en detalle de dispositivo, validación en línea de formularios, confirmaciones modales para acciones destructivas y optimización de objetivos táctiles en navegación móvil.
 - **Alineación y continuidad en tarjetas de dispositivos**: estandarización de la altura de tarjetas en cuadrícula (`h-full`), alineación horizontal uniforme de badges e indicador de última vez visto en el pie de tarjeta, y preservación del renglón técnico con indicador para dispositivos sin MAC detectada.
+
+**Full changelog:** https://github.com/johanruizb/my-lan/compare/v0.6.2...v1.0.0
 
 ## [0.6.2] - 2026-10-16 (441fd22)
 

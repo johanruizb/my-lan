@@ -1,7 +1,7 @@
 {
   "name": "mylan-workspace",
   "private": true,
-  "version": "0.6.2",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "(test -x apps/desktop-tauri/node_modules/.bin/tauri || npm --prefix apps/desktop-tauri install) && npm run --prefix apps/desktop-tauri tauri -- dev",
