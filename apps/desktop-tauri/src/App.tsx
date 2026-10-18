@@ -436,10 +436,6 @@ function AppShell() {
             </aside>
 
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                {/* h1 para lectores de pantalla. */}
-                <h1 className="sr-only" translate="no">
-                    MyLAN
-                </h1>
                 {/* #37: barra superior solo en móvil (desktop tiene el brand en
                     la sidebar). El resumen del último descubrimiento vive en la
                     cabecera de la vista Red (ADR-0007). */}
@@ -475,7 +471,7 @@ function AppShell() {
                                 end={n.end}
                                 className={({ isActive }) =>
                                     cn(
-                                        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "flex min-h-[44px] items-center gap-1.5 rounded-md px-2.5 py-2.5 text-xs font-medium touch-manipulation transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         navActive(n, isActive)
                                             ? "bg-primary/10 text-foreground"
                                             : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -493,7 +489,7 @@ function AppShell() {
                         variant="ghost"
                         size="sm"
                         onClick={openAbout}
-                        className="h-auto gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="h-auto min-h-[44px] gap-1.5 px-2.5 py-2.5 text-xs font-medium touch-manipulation text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                         <Info className="h-3.5 w-3.5" aria-hidden />
                         <span>Acerca de</span>

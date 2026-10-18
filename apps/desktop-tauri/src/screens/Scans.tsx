@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
@@ -20,7 +20,6 @@ import { RelativeTime } from "@/components/relative-time";
 import {
     History,
     Loader2,
-    ShieldAlert,
     AlertCircle,
     CircleCheck,
     CircleX,
@@ -84,6 +83,7 @@ function scanTypeLabel(scanType: string): string {
 
 export function Scans() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [history, setHistory] = useState<ScanSummaryDto[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyError, setHistoryError] = useState<string | null>(null);
@@ -111,11 +111,16 @@ export function Scans() {
             className={cn("flex flex-col", SECTION_GAP)}
             aria-busy={historyLoading}
         >
+            <div className="flex flex-col gap-0.5">
+                <h1 className="text-xl font-bold tracking-tight">Historial</h1>
+                <p className="text-xs text-muted-foreground">
+                    Registro y trazabilidad de todos los escaneos y descubrimientos ejecutados en la red.
+                </p>
+            </div>
             <section aria-label="Historial de descubrimientos">
-                <h2 className="sr-only">Historial de descubrimientos</h2>
                 <Card>
                     <CardHeader variant="toolbar">
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle as="h2" className="flex items-center gap-2">
                             <History
                                 className="h-5 w-5 text-primary"
                                 aria-hidden
@@ -258,6 +263,11 @@ export function Scans() {
                                                                 scanTargetPath(
                                                                     s,
                                                                 ),
+                                                                {
+                                                                    state: {
+                                                                        from: `${location.pathname}${location.search}`,
+                                                                    },
+                                                                },
                                                             );
                                                         }}
                                                         className="cursor-pointer cv-auto-row"
@@ -273,6 +283,9 @@ export function Scans() {
                                                                     to={scanTargetPath(
                                                                         s,
                                                                     )}
+                                                                    state={{
+                                                                        from: `${location.pathname}${location.search}`,
+                                                                    }}
                                                                     className="w-fit rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                                     aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
                                                                 >

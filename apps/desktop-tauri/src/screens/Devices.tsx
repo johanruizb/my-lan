@@ -22,14 +22,12 @@ import {
     Download,
     Loader2,
     Network as NetworkIcon,
-    ShieldAlert,
     AlertCircle,
     Play,
     ChevronRight,
     RefreshCw,
     ChevronDown,
     ArrowLeft,
-    FileText,
 } from "lucide-react";
 import {
     Table,
@@ -258,17 +256,25 @@ export function Devices({
             aria-busy={loading}
         >
             {!preview && (
-                <Link
-                    to="/"
-                    className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                    Volver a la red
-                </Link>
+                <div className="flex flex-col gap-1">
+                    <Link
+                        to="/"
+                        className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <ArrowLeft className="h-4 w-4" aria-hidden />
+                        Volver a la red
+                    </Link>
+                    <div className="flex flex-col gap-0.5">
+                        <h1 className="text-xl font-bold tracking-tight">Dispositivos</h1>
+                        <p className="text-xs text-muted-foreground">
+                            Inventario completo de equipos y servicios detectados en la red local.
+                        </p>
+                    </div>
+                </div>
             )}
             <Card className="border border-border shadow-sm overflow-hidden">
                 <CardHeader variant="toolbar">
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle as="h2" className="flex items-center gap-2">
                         <NetworkIcon
                             className="h-5 w-5 text-primary"
                             aria-hidden
@@ -637,6 +643,9 @@ export function Devices({
                                         >
                                             <Link
                                                 to={devicePath}
+                                                state={{
+                                                    from: `${location.pathname}${location.search}`,
+                                                }}
                                                 aria-label={`Dispositivo ${censorshipEnabled ? maskValue("primary_ip", d.primary_ip ?? d.id) : (d.primary_ip ?? d.id)}: ${deviceLabel(d.device_type)}`}
                                                 className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             >
@@ -856,6 +865,11 @@ export function Devices({
                                                             return;
                                                         navigate(
                                                             `/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`,
+                                                            {
+                                                                state: {
+                                                                    from: `${location.pathname}${location.search}`,
+                                                                },
+                                                            },
                                                         );
                                                     }}
                                                     className="group cursor-pointer cv-auto-row"
@@ -985,6 +999,9 @@ export function Devices({
                                                         <div className="flex justify-end">
                                                             <Link
                                                                 to={`/devices/${encodeURIComponent(d.primary_ip ?? d.id)}`}
+                                                                state={{
+                                                                    from: `${location.pathname}${location.search}`,
+                                                                }}
                                                                 className="flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-[border-color,background-color,color,transform] duration-200 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary group-hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                                 aria-label={`Abrir dispositivo ${d.primary_ip ?? d.id}: ${deviceLabel(d.device_type)}`}
                                                             >

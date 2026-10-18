@@ -9,17 +9,14 @@ import {
     Compass,
     Copy,
     Globe,
-    Layers,
     Loader2,
     Play,
     Power,
     RotateCcw,
     Search,
     Server,
-    ShieldCheck,
     Square,
     Terminal,
-    Wifi,
     Wrench,
     Zap,
 } from "lucide-react";
@@ -255,7 +252,7 @@ export function Tools() {
     const initialMac = searchParams.get("mac") || "";
 
     const [activeTab, setActiveTab] = useState<ToolTab>(initialTool);
-    const [lanDevices, setLanDevices] = useState<
+    const [lanDevices] = useState<
         { ip: string; mac?: string; hostname?: string; name?: string }[]
     >([]);
 
@@ -266,6 +263,7 @@ export function Tools() {
     const [pingPackets, setPingPackets] = useState<PingPacket[]>([]);
     const [pingSummary, setPingSummary] = useState<PingStreamSummary | null>(null);
     const [copiedPing, setCopiedPing] = useState(false);
+    const [pingError, setPingError] = useState<string | null>(null);
     const pingSessionRef = useRef<string | null>(null);
 
     // --- Traceroute State ---
@@ -273,6 +271,7 @@ export function Tools() {
     const [maxHops, setMaxHops] = useState(30);
     const [tracing, setTracing] = useState(false);
     const [traceHops, setTraceHops] = useState<TraceHop[]>([]);
+    const [traceError, setTraceError] = useState<string | null>(null);
     const traceSessionRef = useRef<string | null>(null);
 
     // --- DNS State ---
@@ -375,9 +374,11 @@ export function Tools() {
     // Handlers para Ping
     async function handleStartPing() {
         if (!pingTarget.trim()) {
+            setPingError("Ingresa una IP o dominio para hacer ping.");
             toast("Ingresa una IP o dominio para hacer ping.", "info");
             return;
         }
+        setPingError(null);
         const sessionId = `ping-${Date.now()}`;
         pingSessionRef.current = sessionId;
         setPingPackets([]);
@@ -441,9 +442,11 @@ export function Tools() {
     // Handlers para Traceroute
     async function handleStartTraceroute() {
         if (!traceTarget.trim()) {
+            setTraceError("Ingresa una IP o dominio para traceroute.");
             toast("Ingresa una IP o dominio para traceroute.", "info");
             return;
         }
+        setTraceError(null);
         const sessionId = `trace-${Date.now()}`;
         traceSessionRef.current = sessionId;
         setTraceHops([]);
@@ -572,12 +575,12 @@ export function Tools() {
             {/* Cabecera Técnica de Consola */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border">
                 <div className="flex flex-col gap-0.5">
-                    <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+                    <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
                             <Wrench className="h-4 w-4" aria-hidden />
                         </span>
                         Herramientas de red
-                    </h2>
+                    </h1>
                     <p className="text-xs text-muted-foreground">
                         Utilidades interactivas de diagnóstico rápido, sondeo y control para tu red local e Internet.
                     </p>
@@ -739,7 +742,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                     <Activity className="h-4 w-4 text-primary" aria-hidden />
                                     Sondeo Ping en tiempo real
                                 </CardTitle>
@@ -749,14 +752,20 @@ export function Tools() {
                             </CardHeader>
                             <CardContent className="p-4 sm:p-5 pt-1 flex flex-col gap-4">
                                 <div className="flex flex-col gap-2.5">
-                                    <label className="text-xs font-medium text-foreground">
+                                    <label htmlFor="ping-target-input" className="text-xs font-medium text-foreground">
                                         Destino de sondeo
                                     </label>
                                     <div className="flex gap-2">
                                         <Input
+                                            id="ping-target-input"
                                             placeholder="IP o dominio (ej. 192.168.1.1 o cloudflare.com)"
                                             value={pingTarget}
-                                            onChange={(e) => setPingTarget(e.target.value)}
+                                            aria-invalid={Boolean(pingError)}
+                                            aria-describedby={pingError ? "ping-target-error" : undefined}
+                                            onChange={(e) => {
+                                                setPingTarget(e.target.value);
+                                                if (pingError && e.target.value.trim()) setPingError(null);
+                                            }}
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter") {
                                                     if (pinging) handleStopPing();
@@ -790,6 +799,11 @@ export function Tools() {
                                             </Button>
                                         )}
                                     </div>
+                                    {pingError && (
+                                        <p id="ping-target-error" className="text-xs text-destructive" role="alert">
+                                            {pingError}
+                                        </p>
+                                    )}
 
                                     {/* Selector de límite de pings enviados */}
                                     <div className="flex items-center justify-between gap-2 pt-1">
@@ -868,7 +882,10 @@ export function Tools() {
                                                 variant="outline"
                                                 size="sm"
                                                 disabled={pinging}
-                                                onClick={() => setPingTarget(tgt.target)}
+                                                onClick={() => {
+                                                    setPingTarget(tgt.target);
+                                                    if (pingError) setPingError(null);
+                                                }}
                                                 className={cn(
                                                     "h-7 text-[11px] font-mono px-2.5",
                                                     pingTarget === tgt.target ? "border-primary/50 bg-primary/5" : "",
@@ -894,7 +911,10 @@ export function Tools() {
                                                     variant="outline"
                                                     size="sm"
                                                     disabled={pinging}
-                                                    onClick={() => setPingTarget(dev.ip)}
+                                                    onClick={() => {
+                                                        setPingTarget(dev.ip);
+                                                        if (pingError) setPingError(null);
+                                                    }}
                                                     className="h-6 text-[10px] font-mono px-2 text-muted-foreground hover:text-foreground"
                                                 >
                                                     {dev.name ? `${dev.name} (${maskDisplay(dev.ip)})` : maskDisplay(dev.ip)}
@@ -941,9 +961,9 @@ export function Tools() {
                                     <Activity className="h-6 w-6" aria-hidden />
                                 </div>
                                 <div className="max-w-md flex flex-col gap-1">
-                                    <h4 className="text-sm font-semibold text-foreground">
+                                    <h3 className="text-sm font-semibold text-foreground">
                                         Sondeo de latencia en espera
-                                    </h4>
+                                    </h3>
                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                         Selecciona un destino a la izquierda y pulsa Iniciar Ping para comenzar la captura en tiempo real de latencia, varianza de jitter y pérdida de paquetes.
                                     </p>
@@ -1170,7 +1190,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                     <Compass className="h-4 w-4 text-indigo-400" aria-hidden />
                                     Trazado de ruta (Traceroute)
                                 </CardTitle>
@@ -1181,13 +1201,19 @@ export function Tools() {
                             <CardContent className="p-4 sm:p-5 pt-1 flex flex-col gap-4">
                                 <div className="flex flex-col gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-medium text-foreground">
+                                        <label htmlFor="trace-target-input" className="text-xs font-medium text-foreground">
                                             Host o IP de destino
                                         </label>
                                         <Input
+                                            id="trace-target-input"
                                             placeholder="IP o dominio (ej. 1.1.1.1 o debian.org)"
                                             value={traceTarget}
-                                            onChange={(e) => setTraceTarget(e.target.value)}
+                                            aria-invalid={Boolean(traceError)}
+                                            aria-describedby={traceError ? "trace-target-error" : undefined}
+                                            onChange={(e) => {
+                                                setTraceTarget(e.target.value);
+                                                if (traceError && e.target.value.trim()) setTraceError(null);
+                                            }}
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter") {
                                                     if (tracing) handleStopTraceroute();
@@ -1197,6 +1223,11 @@ export function Tools() {
                                             disabled={tracing}
                                             className="font-mono text-xs"
                                         />
+                                        {traceError && (
+                                            <p id="trace-target-error" className="text-xs text-destructive" role="alert">
+                                                {traceError}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3 pt-1">
@@ -1252,7 +1283,10 @@ export function Tools() {
                                                 variant="outline"
                                                 size="sm"
                                                 disabled={tracing}
-                                                onClick={() => setTraceTarget(tgt.target)}
+                                                onClick={() => {
+                                                    setTraceTarget(tgt.target);
+                                                    if (traceError) setTraceError(null);
+                                                }}
                                                 className="h-7 text-[11px] font-mono px-2.5"
                                             >
                                                 {tgt.label}
@@ -1279,9 +1313,9 @@ export function Tools() {
                                     <Compass className="h-6 w-6" aria-hidden />
                                 </div>
                                 <div className="max-w-md flex flex-col gap-1">
-                                    <h4 className="text-sm font-semibold text-foreground">
+                                    <h3 className="text-sm font-semibold text-foreground">
                                         Mapeo de ruta en espera
-                                    </h4>
+                                    </h3>
                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                         Inicia un trazado de ruta para visualizar el tránsito de paquetes a través de los nodos de tu ISP, backbones globales y puntos de intercambio IXP.
                                     </p>
@@ -1444,7 +1478,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                     <Globe className="h-4 w-4 text-sky-400" aria-hidden />
                                     Consulta DNS Multidominio
                                 </CardTitle>
@@ -1600,9 +1634,9 @@ export function Tools() {
                                     <Globe className="h-6 w-6" aria-hidden />
                                 </div>
                                 <div className="max-w-md flex flex-col gap-1">
-                                    <h4 className="text-sm font-semibold text-foreground">
+                                    <h3 className="text-sm font-semibold text-foreground">
                                         Inspector de registros DNS listo
-                                    </h4>
+                                    </h3>
                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                         Consulta registros de resolución directa o inversa para diagnosticar propagación DNS, configuraciones SPF/DKIM y asignaciones de red.
                                     </p>
@@ -1728,7 +1762,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                     <Server className="h-4 w-4 text-emerald-400" aria-hidden />
                                     Comprobación rápida de puerto (Port Checker)
                                 </CardTitle>
@@ -1830,9 +1864,9 @@ export function Tools() {
                                     <Server className="h-6 w-6" aria-hidden />
                                 </div>
                                 <div className="max-w-md flex flex-col gap-1">
-                                    <h4 className="text-sm font-semibold text-foreground">
+                                    <h3 className="text-sm font-semibold text-foreground">
                                         Sondeo puntual de socket TCP
-                                    </h4>
+                                    </h3>
                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                         Evalúa el ciclo de sincronización TCP SYN/ACK para comprobar la disponibilidad inmediata de servicios como SSH, servidores HTTP o bases de datos.
                                     </p>
@@ -1938,7 +1972,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                     <Power className="h-4 w-4 text-amber-400" aria-hidden />
                                     Encendido remoto Wake-on-LAN (WoL)
                                 </CardTitle>
@@ -2053,9 +2087,9 @@ export function Tools() {
                         <div className="rounded-xl border bg-card p-5 shadow-xs flex flex-col gap-3">
                             <div className="flex items-center gap-2">
                                 <Power className="h-4 w-4 text-amber-400" />
-                                <h4 className="text-sm font-semibold text-foreground">
+                                <h3 className="text-sm font-semibold text-foreground">
                                     Estructura del Magic Packet (IEEE 802.3)
-                                </h4>
+                                </h3>
                             </div>
                             <p className="text-xs text-muted-foreground leading-relaxed">
                                 El paquete mágico es una trama de capa de enlace transmitida vía socket de difusión (Broadcast UDP, comúnmente puertos 7 o 9). Contiene una cabecera de sincronización seguida de la dirección MAC del dispositivo repetida exactamente 16 veces.

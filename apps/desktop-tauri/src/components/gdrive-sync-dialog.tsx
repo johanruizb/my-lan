@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
     Cloud,
-    CloudAlert,
     Shield,
     ShieldCheck,
     Key,
@@ -12,7 +11,6 @@ import {
     LogOut,
     AlertTriangle,
     ExternalLink,
-    FileCheck,
 } from "lucide-react";
 import {
     Dialog,
@@ -67,6 +65,7 @@ export function GdriveSyncDialog({
     const [activeTab, setActiveTab] = useState<"new_key" | "restore_key">("new_key");
     const [showKeyForm, setShowKeyForm] = useState(false);
     const [pendingConflict, setPendingConflict] = useState<Extract<SyncOutcome, { status: "conflict" }> | null>(null);
+    const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
     // Iniciar flujo OAuth 2.0 PKCE con Google
     const handleStartAuth = async () => {
@@ -93,6 +92,7 @@ export function GdriveSyncDialog({
     const handleDisconnect = async () => {
         try {
             await disconnectGdrive();
+            setConfirmDisconnect(false);
             onStatusChange({
                 is_authenticated: false,
                 email: null,
@@ -237,7 +237,7 @@ export function GdriveSyncDialog({
     const handleResolveConflict = async (resolution: "adopt_cloud" | "keep_local_and_overwrite") => {
         setIsSyncing(true);
         try {
-            const outcome = await resolveSyncConflict(activeWorkspace.id, resolution);
+            await resolveSyncConflict(activeWorkspace.id, resolution);
             setPendingConflict(null);
             toast({
                 title: "Conflicto resuelto",
@@ -259,7 +259,13 @@ export function GdriveSyncDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) setConfirmDisconnect(false);
+                onOpenChange(isOpen);
+            }}
+        >
             <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <div className="flex items-center gap-2">
@@ -341,14 +347,39 @@ export function GdriveSyncDialog({
                                     <span className="text-muted-foreground">Cuenta activa: </span>
                                     <strong className="text-foreground">{status.email || "Google Drive"}</strong>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleDisconnect}
-                                    className="h-7 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                                >
-                                    <LogOut className="h-3 w-3 mr-1" /> Desconectar
-                                </Button>
+                                {confirmDisconnect ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[11px] text-destructive font-medium">¿Desconectar?</span>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={handleDisconnect}
+                                            className="h-7 px-2 text-xs"
+                                        >
+                                            Confirmar
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setConfirmDisconnect(false)}
+                                            className="h-7 px-2 text-xs"
+                                        >
+                                            Cancelar
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setConfirmDisconnect(true)}
+                                        className="h-7 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                                    >
+                                        <LogOut className="h-3 w-3 mr-1" /> Desconectar
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-2 pt-1">

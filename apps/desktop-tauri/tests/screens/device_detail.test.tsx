@@ -2,7 +2,7 @@
 // Verifica que al pulsar "Editar", rellenar `display_name` y pulsar "Guardar"
 // se llama a `updateDevice` con el `id` del device y el field `displayName`.
 
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DeviceDetail } from "@/screens/DeviceDetail";
@@ -261,5 +261,39 @@ describe("DeviceDetail screen (AC-18)", () => {
                 expect.any(String),
             );
         });
+    });
+
+    it("renderiza breadcrumb semántico con nav aria-label y jerarquía de encabezados h1/h2", async () => {
+        renderWithProviders(
+            <Routes>
+                <Route path="/devices/:ip" element={<DeviceDetail />} />
+            </Routes>,
+            ["/devices/192.168.1.1"],
+        );
+
+        const breadcrumbNav = await screen.findByRole("navigation", {
+            name: "Breadcrumb",
+        });
+        expect(breadcrumbNav).toBeInTheDocument();
+
+        // Links del breadcrumb
+        const redLink = screen.getByRole("link", { name: "Red" });
+        expect(redLink).toHaveAttribute("href", "/");
+
+        const devicesLink = screen.getByRole("link", { name: "Dispositivos" });
+        expect(devicesLink).toHaveAttribute("href", "/devices");
+
+        // Página actual marcada con aria-current="page"
+        const currentItem = within(breadcrumbNav).getByText("Nombre viejo");
+        expect(currentItem.closest("[aria-current]")).toHaveAttribute("aria-current", "page");
+
+        // Botón de retorno dedicado
+        const backBtn = screen.getByRole("button", { name: /Volver a dispositivos/i });
+        expect(backBtn).toBeInTheDocument();
+
+        // Encabezado principal y tarjetas h2
+        expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+        const h2Headings = screen.getAllByRole("heading", { level: 2 });
+        expect(h2Headings.length).toBeGreaterThanOrEqual(3);
     });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, Link, useBlocker, useBeforeUnload } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation, useBlocker, useBeforeUnload } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     ArrowLeft,
+    ChevronRight,
     Loader2,
     Play,
     Square,
@@ -234,7 +235,20 @@ function FindingStatusBadge({ status }: { status: string }) {
 
 export function DeviceDetail() {
     const { ip = "" } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
+
+    const handleBack = useCallback(() => {
+        if (location.state?.from) {
+            navigate(location.state.from);
+        } else if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate("/devices");
+        }
+    }, [location.state, navigate]);
+
     const [detail, setDetail] = useState<DeviceDetailDto | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [profile, setProfile] = useState("normal");
@@ -541,13 +555,16 @@ export function DeviceDetail() {
                 title="No se pudo cargar el dispositivo"
                 description={error}
                 action={
-                    <Link
-                        to="/devices"
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background h-8 px-3 text-xs font-medium hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBack}
+                        className="gap-1.5 text-xs"
                     >
                         <ArrowLeft className="h-4 w-4" aria-hidden />
                         Volver a dispositivos
-                    </Link>
+                    </Button>
                 }
             />
         );
@@ -575,13 +592,45 @@ export function DeviceDetail() {
             className={cn("flex flex-col", SECTION_GAP)}
             aria-busy={scanning}
         >
-            <Link
-                to="/devices"
-                className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Volver a dispositivos
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBack}
+                    className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                    aria-label="Volver a dispositivos"
+                >
+                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                    <span>Volver a dispositivos</span>
+                </Button>
+                <div className="h-4 w-px bg-border hidden sm:block" aria-hidden />
+                <nav aria-label="Breadcrumb" className="flex items-center text-xs text-muted-foreground">
+                    <ol className="flex flex-wrap items-center gap-1.5 list-none p-0 m-0">
+                        <li className="flex items-center gap-1.5">
+                            <Link
+                                to="/"
+                                className="hover:text-foreground transition-colors"
+                            >
+                                Red
+                            </Link>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden />
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                            <Link
+                                to={location.state?.from?.startsWith("/devices") ? location.state.from : "/devices"}
+                                className="hover:text-foreground transition-colors"
+                            >
+                                Dispositivos
+                            </Link>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden />
+                        </li>
+                        <li className="flex items-center gap-1.5 font-medium text-foreground truncate max-w-[200px] sm:max-w-none" aria-current="page">
+                            {d?.display_name ?? d?.hostname ?? "Detalle"}
+                        </li>
+                    </ol>
+                </nav>
+            </div>
 
             {/* #18: Dossier de identidad sin duplicar MAC/Vendor (que viven en la matriz técnica inferior). */}
             <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
@@ -616,7 +665,7 @@ export function DeviceDetail() {
                                             <CopyButton
                                                 value={d.primary_ip}
                                                 label="IP"
-                                                className="h-5 w-5"
+                                                className="min-h-[36px] min-w-[36px]"
                                             />
                                         )}
                                 </h1>
@@ -643,7 +692,7 @@ export function DeviceDetail() {
                                             <CopyButton
                                                 value={d.primary_ip}
                                                 label="IP"
-                                                className="h-4 w-4"
+                                                className="min-h-[36px] min-w-[36px]"
                                             />
                                         </div>
                                     )}
@@ -707,7 +756,7 @@ export function DeviceDetail() {
                 <div className="flex flex-col gap-6 lg:col-span-5">
                     <Card>
                         <CardHeader className="px-5 py-3.5 border-b border-border">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Info
                                     className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
@@ -776,7 +825,7 @@ export function DeviceDetail() {
 
                     <Card>
                         <CardHeader className="px-5 py-3.5 border-b border-border flex flex-row items-center justify-between gap-2">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Settings
                                     className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
@@ -887,7 +936,7 @@ export function DeviceDetail() {
 
                     <Card>
                         <CardHeader className="px-5 py-3.5 border-b border-border">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Wrench
                                     className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
@@ -997,7 +1046,7 @@ export function DeviceDetail() {
                             <Card>
                         <CardHeader className="px-5 py-4 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-col gap-0.5">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                     <Server
                                         className="h-4 w-4 text-primary shrink-0"
                                         aria-hidden
@@ -1374,7 +1423,7 @@ export function DeviceDetail() {
                         <Card>
                             <CardHeader className="px-5 py-4 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex flex-col gap-0.5">
-                                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                    <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                         <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" aria-hidden />
                                         Auditoría de Seguridad del Dispositivo ({findings.length})
                                     </CardTitle>
@@ -1426,9 +1475,9 @@ export function DeviceDetail() {
                                                                 {f.rule_id}
                                                             </span>
                                                         </div>
-                                                        <h4 className="text-sm font-semibold text-foreground pt-1">
+                                                        <h3 className="text-sm font-semibold text-foreground pt-1">
                                                             {f.title}
-                                                        </h4>
+                                                        </h3>
                                                     </div>
 
                                                     {/* Botones de acción según status */}

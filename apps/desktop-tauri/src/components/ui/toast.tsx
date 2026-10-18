@@ -33,6 +33,7 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 export type ToastVariant =
     | "default"
+    | "info"
     | "success"
     | "warning"
     | "error"
@@ -44,6 +45,8 @@ const toastVariants = cva(
         variants: {
             variant: {
                 default:
+                    "border-border bg-card/95 text-card-foreground backdrop-blur supports-[backdrop-filter]:bg-card/85",
+                info:
                     "border-border bg-card/95 text-card-foreground backdrop-blur supports-[backdrop-filter]:bg-card/85",
                 success:
                     "border-emerald-500/30 bg-card/95 text-card-foreground backdrop-blur supports-[backdrop-filter]:bg-card/85 dark:border-emerald-500/40",
@@ -61,6 +64,7 @@ const toastVariants = cva(
 
 const toastDurations: Record<ToastVariant, number> = {
     default: 4000,
+    info: 4000,
     success: 3500,
     warning: 4500,
     error: 6000,

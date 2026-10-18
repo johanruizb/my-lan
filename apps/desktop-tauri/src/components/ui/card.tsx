@@ -22,12 +22,17 @@ export function CardHeader({
     );
 }
 
+export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
+    as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+}
+
 export function CardTitle({
+    as: Comp = "h3",
     className,
     ...props
-}: HTMLAttributes<HTMLHeadingElement>) {
+}: CardTitleProps) {
     return (
-        <h3
+        <Comp
             className={cn("text-lg font-semibold leading-none", className)}
             {...props}
         />

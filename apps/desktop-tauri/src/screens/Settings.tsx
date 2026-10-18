@@ -190,15 +190,19 @@ export function Settings() {
         setIsSyncingNow(true);
         try {
             const outcome = await syncWorkspace(activeWorkspace.id);
-            if (outcome.status === "success") {
-                toast(`Sincronización exitosa: ${outcome.action} (${outcome.devices_synced} dispositivos).`, "success");
+            if (outcome.status === "uploaded") {
+                toast("Sincronización exitosa: subido a la nube.", "success");
                 const s = await getGdriveSyncStatus();
                 setGdriveStatus(s);
+            } else if (outcome.status === "downloaded") {
+                toast(`Sincronización exitosa: descargado (${outcome.summary.devices_imported} dispositivos importados).`, "success");
+                const s = await getGdriveSyncStatus();
+                setGdriveStatus(s);
+            } else if (outcome.status === "up_to_date") {
+                toast("La sincronización ya está al día.", "default");
             } else if (outcome.status === "conflict") {
                 toast("Conflicto de sincronización detectado. Abre el asistente para resolverlo.", "warning");
                 setSyncDialogOpen(true);
-            } else {
-                toast(outcome.message, "info");
             }
         } catch (e) {
             toast(`Error sincronizando: ${e}`, "error");
@@ -240,9 +244,9 @@ export function Settings() {
             {/* Cabecera de página compacta con acceso rápido al tour */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-col gap-0.5">
-                    <h2 className="text-xl font-bold tracking-tight">
+                    <h1 className="text-xl font-bold tracking-tight">
                         Ajustes
-                    </h2>
+                    </h1>
                     <p className="text-sm text-muted-foreground">
                         Configuración de descubrimiento, privacidad, interfaz y
                         almacenamiento local de{" "}
@@ -266,7 +270,7 @@ export function Settings() {
                 <div className="flex flex-col gap-4 lg:col-span-7">
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <Gauge
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -349,7 +353,7 @@ export function Settings() {
                     {/* Monitoreo continuo 24/7 y bandeja (Fase 5: Desktop Watch) */}
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <Activity
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -570,7 +574,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <Bell
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -685,7 +689,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <Database
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -772,7 +776,7 @@ export function Settings() {
                 <div className="flex flex-col gap-4 lg:col-span-5">
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <Palette
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -888,7 +892,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <Cloud className="h-4 w-4 text-primary" aria-hidden />
                                 Sincronización en la Nube (Google Drive)
                             </CardTitle>
@@ -1021,7 +1025,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
                                 <RefreshCw
                                     className="h-4 w-4 text-primary"
                                     aria-hidden

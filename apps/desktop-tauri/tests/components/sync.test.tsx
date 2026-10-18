@@ -245,4 +245,61 @@ describe("Zero-Knowledge Google Drive Sync (Fase 11)", () => {
             expect(mockResolveSyncConflict).toHaveBeenCalledWith("default", "adopt_cloud");
         });
     });
+
+    it("requiere confirmación explícita de dos pasos antes de desconectar Google Drive", async () => {
+        const authenticatedStatus: GdriveSyncStatus = {
+            is_authenticated: true,
+            email: "alice@example.com",
+            has_master_key: true,
+            last_synced_at: "2026-10-16T12:00:00Z",
+            last_synced_epoch: 1792150000,
+        };
+        const onStatusChangeMock = vi.fn();
+        mockDisconnectGdrive.mockResolvedValue(undefined);
+
+        render(
+            <WorkspaceProvider>
+                <GdriveSyncDialog
+                    open={true}
+                    onOpenChange={vi.fn()}
+                    status={authenticatedStatus}
+                    onStatusChange={onStatusChangeMock}
+                    onSyncStart={vi.fn()}
+                    onSyncEnd={vi.fn()}
+                />
+            </WorkspaceProvider>,
+        );
+
+        // Primer clic en "Desconectar"
+        const disconnectBtn = screen.getByRole("button", { name: /Desconectar/i });
+        fireEvent.click(disconnectBtn);
+
+        // Debe solicitar confirmación sin ejecutar la acción destructiva de inmediato
+        expect(screen.getByText("¿Desconectar?")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Confirmar" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+        expect(mockDisconnectGdrive).not.toHaveBeenCalled();
+
+        // Si cancela, vuelve al estado inicial sin desconectar
+        const cancelBtn = screen.getByRole("button", { name: "Cancelar" });
+        fireEvent.click(cancelBtn);
+        expect(screen.queryByText("¿Desconectar?")).not.toBeInTheDocument();
+        expect(mockDisconnectGdrive).not.toHaveBeenCalled();
+
+        // Al pulsar de nuevo y confirmar, ahora sí se ejecuta la desconexión
+        const disconnectAgainBtn = screen.getByRole("button", { name: /Desconectar/i });
+        fireEvent.click(disconnectAgainBtn);
+        const confirmBtn = screen.getByRole("button", { name: "Confirmar" });
+        fireEvent.click(confirmBtn);
+
+        await waitFor(() => {
+            expect(mockDisconnectGdrive).toHaveBeenCalled();
+            expect(onStatusChangeMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    is_authenticated: false,
+                    email: null,
+                }),
+            );
+        });
+    });
 });

@@ -95,6 +95,7 @@ export function useNetworkName(): NetworkNameContextValue {
             source: "auto",
             cidr: "",
             editName: async () => {},
+            refresh: async () => {},
         };
     }
     return ctx;

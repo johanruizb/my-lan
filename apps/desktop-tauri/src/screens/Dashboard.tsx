@@ -21,6 +21,12 @@ export function Dashboard() {
 
     return (
         <div className={cn("flex flex-col", SECTION_GAP)}>
+            <div className="flex flex-col gap-0.5">
+                <h1 className="text-xl font-bold tracking-tight">Red</h1>
+                <p className="text-xs text-muted-foreground">
+                    Estado de la red local, auditoría de seguridad y dispositivos conectados.
+                </p>
+            </div>
             <NetworkHeader profile={profile} onProfileChange={setProfile} />
             <SecurityScoreCard />
             <Devices variant="preview" />

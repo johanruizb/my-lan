@@ -366,4 +366,60 @@ describe("Tools Screen", () => {
             );
         });
     });
+
+    it("muestra error inline con role=alert y aria-invalid al intentar iniciar ping con destino vacío", async () => {
+        renderWithProviders(<Tools />, ["/tools?tool=ping"]);
+
+        const pingButton = screen.getByRole("button", { name: /Iniciar Ping/i });
+        fireEvent.click(pingButton);
+
+        await waitFor(() => {
+            expect(screen.getByRole("alert")).toHaveTextContent(
+                "Ingresa una IP o dominio para hacer ping.",
+            );
+        });
+
+        const input = screen.getByPlaceholderText(/192.168.1.1 o cloudflare.com/i);
+        expect(input).toHaveAttribute("aria-invalid", "true");
+        expect(startToolPingMock).not.toHaveBeenCalled();
+
+        // Escribir en el input limpia el error inline
+        fireEvent.change(input, { target: { value: "1.1.1.1" } });
+        expect(input).toHaveAttribute("aria-invalid", "false");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("muestra error inline con role=alert y aria-invalid al intentar iniciar traceroute con destino vacío", async () => {
+        renderWithProviders(<Tools />, ["/tools?tool=traceroute"]);
+
+        const traceInput = screen.getByPlaceholderText(/1.1.1.1 o debian.org/i);
+        fireEvent.change(traceInput, { target: { value: "" } });
+
+        const traceButton = screen.getByRole("button", { name: /Trazar ruta/i });
+        fireEvent.click(traceButton);
+
+        await waitFor(() => {
+            expect(screen.getByRole("alert")).toHaveTextContent(
+                "Ingresa una IP o dominio para traceroute.",
+            );
+        });
+
+        expect(traceInput).toHaveAttribute("aria-invalid", "true");
+        expect(startToolTracerouteMock).not.toHaveBeenCalled();
+
+        // Escribir en el input limpia el error inline
+        fireEvent.change(traceInput, { target: { value: "8.8.8.8" } });
+        expect(traceInput).toHaveAttribute("aria-invalid", "false");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("mantiene jerarquía de encabezados con h1 y h2 sin saltos", () => {
+        renderWithProviders(<Tools />, ["/tools?tool=ping"]);
+
+        const h1 = screen.getByRole("heading", { level: 1 });
+        expect(h1).toHaveTextContent("Herramientas de red");
+
+        const h2 = screen.getByRole("heading", { level: 2 });
+        expect(h2).toHaveTextContent("Sondeo Ping en tiempo real");
+    });
 });

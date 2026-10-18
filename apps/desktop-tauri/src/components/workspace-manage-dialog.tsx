@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "./workspace-provider";
 import { useToast } from "@/components/ui/toast";
@@ -83,12 +84,14 @@ export function WorkspaceManageDialog({
 
     const [mode, setMode] = useState<"create" | "manage" | "edit">(initialMode);
     const [editingWs, setEditingWs] = useState<Workspace | null>(null);
+    const [deletingWs, setDeletingWs] = useState<Workspace | null>(null);
 
     // Form fields
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [color, setColor] = useState(PRESET_COLORS[0]);
     const [icon, setIcon] = useState("network");
+    const [nameError, setNameError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     function startCreate() {
@@ -96,6 +99,7 @@ export function WorkspaceManageDialog({
         setDescription("");
         setColor(PRESET_COLORS[0]);
         setIcon("network");
+        setNameError(null);
         setEditingWs(null);
         setMode("create");
     }
@@ -106,15 +110,17 @@ export function WorkspaceManageDialog({
         setDescription(ws.description ?? "");
         setColor(ws.color);
         setIcon(ws.icon);
+        setNameError(null);
         setMode("edit");
     }
 
     async function handleSave() {
         const trimmed = name.trim();
         if (!trimmed) {
-            toast("El nombre del workspace es obligatorio", "error");
+            setNameError("El nombre del workspace es obligatorio");
             return;
         }
+        setNameError(null);
 
         setSaving(true);
         try {
@@ -145,19 +151,18 @@ export function WorkspaceManageDialog({
         }
     }
 
-    async function handleDelete(ws: Workspace) {
+    function handleDelete(ws: Workspace) {
         if (ws.id === "default") {
             toast("El workspace por defecto no puede ser eliminado", "error");
             return;
         }
-        if (
-            !confirm(
-                `¿Deseas eliminar el workspace "${ws.name}"? Los datos asociados se moverán al workspace por defecto.`,
-            )
-        ) {
-            return;
-        }
+        setDeletingWs(ws);
+    }
 
+    async function confirmDeleteWorkspace() {
+        if (!deletingWs) return;
+        const ws = deletingWs;
+        setDeletingWs(null);
         try {
             await deleteWorkspace(ws.id);
             toast(`Workspace "${ws.name}" eliminado`, "success");
@@ -167,7 +172,17 @@ export function WorkspaceManageDialog({
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <>
+            <Dialog
+                open={open}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setDeletingWs(null);
+                        setNameError(null);
+                    }
+                    onOpenChange(isOpen);
+                }}
+            >
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
                     <DialogTitle>
@@ -239,7 +254,7 @@ export function WorkspaceManageDialog({
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-2">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -266,28 +281,38 @@ export function WorkspaceManageDialog({
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4 py-2">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground">
-                                Nombre del Workspace
-                            </label>
+                        <FormField
+                            label="Nombre del Workspace"
+                            htmlFor="ws-name-input"
+                            required
+                            error={nameError || undefined}
+                        >
                             <Input
+                                id="ws-name-input"
                                 value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                aria-invalid={Boolean(nameError)}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (nameError && e.target.value.trim()) {
+                                        setNameError(null);
+                                    }
+                                }}
                                 placeholder="Ej. Oficina Principal, Laboratorio, Casa..."
                                 autoFocus
                             />
-                        </div>
+                        </FormField>
 
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-muted-foreground">
-                                Descripción (opcional)
-                            </label>
+                        <FormField
+                            label="Descripción (opcional)"
+                            htmlFor="ws-desc-input"
+                        >
                             <Input
+                                id="ws-desc-input"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Notas o detalles de este espacio..."
                             />
-                        </div>
+                        </FormField>
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold text-muted-foreground">
@@ -380,5 +405,39 @@ export function WorkspaceManageDialog({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Modal de confirmación para eliminar workspace */}
+        <Dialog
+            open={Boolean(deletingWs)}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) setDeletingWs(null);
+            }}
+        >
+            <DialogContent className="sm:max-w-[420px]">
+                <DialogHeader>
+                    <DialogTitle>Eliminar Workspace</DialogTitle>
+                    <DialogDescription>
+                        ¿Deseas eliminar el workspace "{deletingWs?.name}"? Los datos asociados se moverán al workspace por defecto.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDeletingWs(null)}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={confirmDeleteWorkspace}
+                    >
+                        Eliminar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

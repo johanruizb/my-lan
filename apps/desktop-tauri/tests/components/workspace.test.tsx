@@ -165,4 +165,68 @@ describe("Workspace Management (Fase 10)", () => {
         const deleteButtons = screen.queryAllByTitle("Eliminar workspace");
         expect(deleteButtons.length).toBe(1);
     });
+
+    it("muestra error inline con role=alert y aria-invalid al intentar guardar workspace vacío", async () => {
+        render(
+            <WorkspaceProvider>
+                <WorkspaceManageDialog
+                    open={true}
+                    onOpenChange={vi.fn()}
+                    initialMode="create"
+                />
+            </WorkspaceProvider>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText("Crear Nuevo Workspace")).toBeInTheDocument();
+        });
+
+        const saveBtn = screen.getByRole("button", {
+            name: /Guardar Workspace/i,
+        });
+        fireEvent.click(saveBtn);
+
+        await waitFor(() => {
+            expect(screen.getByRole("alert")).toHaveTextContent(
+                "El nombre del workspace es obligatorio",
+            );
+        });
+
+        const nameInput = screen.getByPlaceholderText(/Oficina Principal/i);
+        expect(nameInput).toHaveAttribute("aria-invalid", "true");
+        expect(mockCreateWorkspace).not.toHaveBeenCalled();
+    });
+
+    it("solicita confirmación modal Radix antes de eliminar un workspace", async () => {
+        mockDeleteWorkspace.mockResolvedValue(undefined);
+        render(
+            <WorkspaceProvider>
+                <WorkspaceManageDialog
+                    open={true}
+                    onOpenChange={vi.fn()}
+                    initialMode="manage"
+                />
+            </WorkspaceProvider>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText("Gestionar Workspaces")).toBeInTheDocument();
+        });
+
+        const deleteBtn = screen.getByTitle("Eliminar workspace");
+        fireEvent.click(deleteBtn);
+
+        // Debe desplegar el modal de confirmación
+        await waitFor(() => {
+            expect(screen.getByText(/¿Deseas eliminar el workspace "Oficina Central"?/i)).toBeInTheDocument();
+        });
+
+        // Encontrar botón Eliminar en el diálogo modal
+        const modalDeleteBtn = screen.getByRole("button", { name: "Eliminar" });
+        fireEvent.click(modalDeleteBtn);
+
+        await waitFor(() => {
+            expect(mockDeleteWorkspace).toHaveBeenCalledWith("ws-office");
+        });
+    });
 });
