@@ -139,21 +139,26 @@ export function Devices({
         setSearchParams({}, { replace: true });
     }, [setSearchParams]);
 
+    const requestIdRef = useRef(0);
     const refresh = useCallback(async () => {
+        const requestId = ++requestIdRef.current;
         setLoading(true);
         try {
             const rows = await listDevices(activeWorkspace.id);
+            if (requestId !== requestIdRef.current) return;
             setDevices(rows);
             setError(null);
         } catch (e) {
+            if (requestId !== requestIdRef.current) return;
             setError(String(e));
             setDevices([]);
         } finally {
-            setLoading(false);
+            if (requestId === requestIdRef.current) setLoading(false);
         }
     }, [activeWorkspace.id]);
 
     useEffect(() => {
+        setDevices([]);
         refresh();
     }, [refresh]);
 

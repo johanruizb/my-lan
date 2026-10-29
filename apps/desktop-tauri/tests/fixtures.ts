@@ -27,9 +27,9 @@ export function makeDevice(overrides: Partial<Device> = {}): Device {
     };
 }
 
-// AC-18: fixtures variados para cubrir las 3 ramas de `deriveTrustState`
-// (trusted/recognized/unknown) + offline. Valores numéricos-string para
-// `confidence` (el backend serializa `Confidence(u8)` como número, no "high").
+// AC-18: fixtures variados (trusted, no confiable, offline y tipos de
+// dispositivo). `confidence` es numérico porque el backend serializa
+// `Confidence(u8)` como número.
 export const deviceFixtures: Device[] = [
     // (a) trusted + online + router.
     makeDevice({

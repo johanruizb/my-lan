@@ -35,7 +35,9 @@ pub fn run(ctx: &AppContext) -> anyhow::Result<()> {
             println!("Dispositivos    : {count}");
         }
         Err(e) => {
-            println!("Dispositivos    : (DB no disponible: {e})");
+            // `status` se usa en health-checks/scripts: un fallo de DB debe
+            // producir exit code != 0, no un falso "todo bien".
+            anyhow::bail!("Dispositivos    : (DB no disponible: {e})");
         }
     }
     Ok(())
@@ -73,12 +75,9 @@ mod tests {
     }
 
     #[test]
-    fn run_db_unavailable_does_not_propagate_error() {
-        // Si la DB no es abrible, `run` NO propaga el error: lo imprime y devuelve Ok.
-        // Usamos un path inválido ( directorio como si fuera fichero ) para forzar
-        // el fallo de `open_db` sin tocar `detect_interface` (que va antes).
-        // Construye un ctx cuyo db_path es un directorio existente (no un fichero):
-        // rusqlite::open falla al abrir un directorio como DB.
+    fn run_db_unavailable_propagates_error() {
+        // Si la DB no es abrible, `run` devuelve Err para que scripts y
+        // health-checks reciban un exit code distinto de 0.
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = AppContext {
             db_path: tmp.path().to_path_buf(), // directorio, no fichero
@@ -86,14 +85,10 @@ mod tests {
             verbose: false,
         };
         let result = run(&ctx);
-        // En hosts Unix/CI con interfaz de red, `detect_interface` Ok → el
-        // error de DB se atrapa en el `match` → `run` devuelve Ok (contrato:
-        // "no propaga el error de DB no disponible"). En plataformas sin
-        // interfaz garantizada, solo verificamos que no entra en pánico.
         #[cfg(unix)]
         assert!(
-            result.is_ok(),
-            "run no debe propagar el error de DB no disponible: {res:?}",
+            result.is_err(),
+            "run debe propagar el error de DB no disponible: {res:?}",
             res = result
         );
         #[cfg(not(unix))]

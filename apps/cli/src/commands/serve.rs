@@ -9,7 +9,7 @@ use crate::ctx::AppContext;
 ///
 /// Requiere `mylan-agent.toml` (default `~/.config/mylan/mylan-agent.toml` o
 /// `--config`). El token del API se carga/crea bajo el directorio de datos.
-pub async fn run(ctx: &AppContext, port: u16) -> Result<()> {
+pub async fn run(ctx: &AppContext, port: Option<u16>) -> Result<()> {
     let config_path = mylan_agent::AgentConfig::default_config_path().ok_or_else(|| {
         anyhow!(
             "no se pudo resolver config path (sin $HOME); crea \
@@ -17,6 +17,7 @@ pub async fn run(ctx: &AppContext, port: u16) -> Result<()> {
         )
     })?;
     let cfg = mylan_agent::AgentConfig::load(&config_path)?;
+    let port = port.unwrap_or(cfg.api_port).max(1);
     let db_path = cfg.db_path()?;
     // C2 fix: token derivado del db_path del config (no de default_token_path
     // que necesita $HOME, ausente bajo systemd/Docker).
@@ -107,7 +108,7 @@ mod tests {
         let _xdg = EnvGuard::set("XDG_CONFIG_HOME", Some(tmp.path().as_os_str()));
 
         let rt = tokio::runtime::Runtime::new().expect("tokio rt");
-        let result = rt.block_on(run(&ctx, 43117));
+        let result = rt.block_on(run(&ctx, Some(43117)));
 
         assert!(result.is_err(), "run debe errar si el config no existe");
         let msg = format!("{}", result.unwrap_err());
@@ -129,7 +130,7 @@ mod tests {
         let _home = EnvGuard::remove("HOME");
 
         let rt = tokio::runtime::Runtime::new().expect("tokio rt");
-        let result = rt.block_on(run(&ctx, 43117));
+        let result = rt.block_on(run(&ctx, Some(43117)));
 
         assert!(result.is_err(), "run sin HOME/XDG debe errar");
     }

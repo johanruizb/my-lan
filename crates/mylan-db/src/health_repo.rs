@@ -4,7 +4,7 @@ use rusqlite::{params, Connection};
 
 use mylan_core::{NetworkHealthSample, SpeedTestResult};
 
-use crate::error::{map_sqlite, DbResult};
+use crate::error::{map_sqlite, DbError, DbResult};
 
 /// Inserta una nueva muestra puntual de salud de red.
 pub fn insert_health_sample(conn: &Connection, sample: &NetworkHealthSample) -> DbResult<()> {
@@ -230,20 +230,22 @@ fn row_to_speed_test(row: &rusqlite::Row<'_>) -> rusqlite::Result<SpeedTestResul
 /// Purga registros de salud y tests de velocidad más antiguos que `max_days` días.
 /// Devuelve `(deleted_health_samples, deleted_speed_tests)`.
 pub fn prune_health_and_speed_data(conn: &Connection, max_days: u32) -> DbResult<(usize, usize)> {
-    let modifier = format!("-{max_days} days");
+    // Corte calculado en Rust: comparar `created_at` directamente permite usar
+    // los índices; envolver la columna en `datetime()` forzaba un full scan.
+    let cutoff = (time::OffsetDateTime::now_utc() - time::Duration::days(i64::from(max_days)))
+        .format(&time::format_description::well_known::Rfc3339)
+        .map_err(|e| DbError::Domain(format!("formato de fecha de purga: {e}")))?;
     let deleted_health = conn
         .execute(
-            "DELETE FROM network_health_samples
-             WHERE datetime(created_at) < datetime('now', ?1)",
-            params![modifier],
+            "DELETE FROM network_health_samples WHERE created_at < ?1",
+            params![cutoff],
         )
         .map_err(map_sqlite)?;
 
     let deleted_speed = conn
         .execute(
-            "DELETE FROM speed_tests
-             WHERE datetime(created_at) < datetime('now', ?1)",
-            params![modifier],
+            "DELETE FROM speed_tests WHERE created_at < ?1",
+            params![cutoff],
         )
         .map_err(map_sqlite)?;
 

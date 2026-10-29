@@ -97,7 +97,7 @@ export function SpeedTestPanel() {
             promiseLike
                 .then((u) => {
                     if (disposed) (u as (() => void) | undefined)?.();
-                    else if (typeof u === "function") pending.push(u);
+                    else if (typeof u === "function") pending.push(u as () => void);
                 })
                 .catch(() => {});
         };

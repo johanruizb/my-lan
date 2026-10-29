@@ -1,15 +1,26 @@
 //! Puntuación de confianza (`Confidence`) de una clasificación de dispositivo.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Confianza en una inferencia (vendor / `device_type`), acotada a `0..=100`.
 ///
 /// Serializa como el entero subyacente (la DB la guarda como `INTEGER`). El orden
 /// natural permite la precedencia de merge: gana la mayor confianza.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(transparent)]
 #[derive(Default)]
 pub struct Confidence(u8);
+
+impl<'de> Deserialize<'de> for Confidence {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Pasar siempre por `new` mantiene el invariante 0..=100 incluso al
+        // deserializar snapshots importados o datos corruptos.
+        Ok(Self::new(u8::deserialize(deserializer)?))
+    }
+}
 
 impl Confidence {
     /// Construye una confianza acotando el valor a `0..=100`.
@@ -53,5 +64,11 @@ mod tests {
         assert_eq!(json, "86");
         let back: Confidence = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(back, Confidence::new(86));
+    }
+
+    #[test]
+    fn deserialize_clamps_out_of_range_values() {
+        let back: Confidence = serde_json::from_str("250").expect("deserialize");
+        assert_eq!(back.score(), 100);
     }
 }

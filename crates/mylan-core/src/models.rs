@@ -101,7 +101,7 @@ impl Device {
     /// se actualiza a la más reciente observada (DHCP); el hostname se rellena si
     /// falta. `seen_at` actualiza `last_seen_at`.
     pub fn merge_observation(&mut self, obs: &Observation, seen_at: impl Into<String>) {
-        if self.primary_mac.is_none() {
+        if self.primary_mac.is_none_or(|m| m.is_zero()) {
             if let Some(mac) = obs.mac.filter(|m| !m.is_zero()) {
                 self.primary_mac = Some(mac);
             }
@@ -117,16 +117,18 @@ impl Device {
 
     /// Aplica una clasificación de fingerprint respetando precedencia de
     /// confianza: solo sustituye `device_type`/`confidence` si la nueva confianza
-    /// es mayor o igual a la actual. Devuelve `true` si hubo cambio.
+    /// es mayor o igual a la actual y el tipo entrante no es `Unknown` (misma
+    /// regla que `device_repo::merge_for_update`). Devuelve `true` si cambió algo.
     pub fn apply_classification(
         &mut self,
         device_type: DeviceType,
         confidence: Confidence,
     ) -> bool {
-        if confidence >= self.confidence {
+        if confidence >= self.confidence && device_type != DeviceType::Unknown {
+            let changed = self.device_type != device_type || self.confidence != confidence;
             self.device_type = device_type;
             self.confidence = confidence;
-            true
+            changed
         } else {
             false
         }
@@ -500,6 +502,28 @@ mod tests {
         assert!(device.apply_classification(DeviceType::Nas, Confidence::new(90)));
         assert_eq!(device.device_type, DeviceType::Nas);
         assert_eq!(device.confidence, Confidence::new(90));
+    }
+
+    #[test]
+    fn classification_never_downgrades_to_unknown_or_reports_noop() {
+        let mut device = Device::new("dev-1", "net-1", "2026-06-27T00:00:00Z");
+        assert!(device.apply_classification(DeviceType::Camera, Confidence::new(75)));
+        assert!(!device.apply_classification(DeviceType::Unknown, Confidence::new(90)));
+        assert_eq!(device.device_type, DeviceType::Camera);
+        assert_eq!(device.confidence, Confidence::new(75));
+
+        assert!(!device.apply_classification(DeviceType::Camera, Confidence::new(75)));
+    }
+
+    #[test]
+    fn merge_observation_replaces_zero_mac() {
+        let mut device = Device::new("dev-1", "net-1", "2026-06-27T00:00:00Z");
+        device.primary_mac = Some(mac("00:00:00:00:00:00"));
+        let obs = Observation::new(crate::observation::Source::ArpCache)
+            .with_mac(mac("aa:bb:cc:dd:ee:ff"))
+            .with_ip(ip("192.168.1.5"));
+        device.merge_observation(&obs, "2026-06-27T00:00:01Z");
+        assert_eq!(device.primary_mac, Some(mac("aa:bb:cc:dd:ee:ff")));
     }
 
     #[test]

@@ -17,6 +17,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { SECTION_GAP } from "@/lib/design-tokens";
 import { RelativeTime } from "@/components/relative-time";
+import { MaskedValue } from "@/components/masked-value";
+import { useCensorship } from "@/components/censorship-provider";
+import { maskValue } from "@/lib/censor";
 import {
     History,
     Loader2,
@@ -75,6 +78,7 @@ function scanTypeLabel(scanType: string): string {
 export function Scans() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { censorshipEnabled } = useCensorship();
     const [history, setHistory] = useState<ScanSummaryDto[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyError, setHistoryError] = useState<string | null>(null);
@@ -231,10 +235,20 @@ export function Scans() {
                                                     !isPorts &&
                                                     (s.hosts_alive > 0 ||
                                                         s.hosts_new > 0);
-                                                const targetLabel =
+                                                const targetValue =
                                                     isPorts && s.target_ip
                                                         ? s.target_ip
-                                                        : "Red local";
+                                                        : null;
+                                                const targetLabel =
+                                                    targetValue ?? "Red local";
+                                                const ariaTarget =
+                                                    targetValue &&
+                                                    censorshipEnabled
+                                                        ? maskValue(
+                                                              "target_ip",
+                                                              targetValue,
+                                                          )
+                                                        : targetLabel;
                                                 return (
                                                     <TableRow
                                                         key={s.id}
@@ -278,11 +292,16 @@ export function Scans() {
                                                                         from: `${location.pathname}${location.search}`,
                                                                     }}
                                                                     className="w-fit rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                                    aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${targetLabel})`}
+                                                                    aria-label={`Abrir ${scanTypeLabel(s.scan_type)} ${s.profile} del ${s.started_at} (${ariaTarget})`}
                                                                 >
-                                                                    {
+                                                                    {targetValue ? (
+                                                                        <MaskedValue
+                                                                            field="target_ip"
+                                                                            value={targetValue}
+                                                                        />
+                                                                    ) : (
                                                                         targetLabel
-                                                                    }
+                                                                    )}
                                                                 </Link>
                                                                 {hasDiscovery && (
                                                                     <span className="text-xs text-muted-foreground">

@@ -251,6 +251,7 @@ export function DeviceDetail() {
 
     const [rightTab, setRightTab] = useState<"services" | "security">("services");
     const [findings, setFindings] = useState<SecurityFinding[]>([]);
+    const [findingsError, setFindingsError] = useState<string | null>(null);
     const [loadingFindings, setLoadingFindings] = useState(false);
     const [reloadingAudit, setReloadingAudit] = useState(false);
 
@@ -259,13 +260,15 @@ export function DeviceDetail() {
         if (!id) return;
         try {
             setLoadingFindings(true);
-            const list =
-                typeof getSecurityFindings === "function"
-                    ? await getSecurityFindings({ deviceId: id }).catch(() => [])
-                    : [];
+            setFindingsError(null);
+            if (typeof getSecurityFindings !== "function") {
+                throw new Error("API de hallazgos no disponible");
+            }
+            const list = await getSecurityFindings({ deviceId: id });
             setFindings(list);
-        } catch {
-            // Silencioso
+        } catch (e) {
+            setFindings([]);
+            setFindingsError(e instanceof Error ? e.message : String(e));
         } finally {
             setLoadingFindings(false);
         }
@@ -1428,6 +1431,25 @@ export function DeviceDetail() {
                                     <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                         Cargando hallazgos…
+                                    </div>
+                                ) : findingsError ? (
+                                    <div
+                                        role="alert"
+                                        className="flex flex-col items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
+                                    >
+                                        <span className="font-medium text-destructive-strong">
+                                            No se pudieron cargar los hallazgos
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            {findingsError}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => loadFindings()}
+                                        >
+                                            Reintentar
+                                        </Button>
                                     </div>
                                 ) : findings.length === 0 ? (
                                     <EmptyState

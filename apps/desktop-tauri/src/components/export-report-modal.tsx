@@ -20,9 +20,7 @@ import {
     getSecurityFindings,
     getSecurityScore,
     listDevices,
-    type Device,
     type NetworkHealthSample,
-    type SecurityFinding,
     type SpeedTestResult,
 } from "@/lib/tauri";
 import { useNetworkName } from "@/lib/use-network-name";
@@ -46,6 +44,10 @@ export function ExportReportModal({ open, onOpenChange }: ExportReportModalProps
     async function handleExport() {
         setGenerating(true);
         try {
+            const netId = networkCidr ?? undefined;
+            // Los datos de inventario, hallazgos y score son obligatorios: un
+            // fallo de IPC debe abortar el informe, no producir un PDF que
+            // afirme "100/100 y sin vulnerabilidades".
             const [
                 devices,
                 findings,
@@ -54,15 +56,13 @@ export function ExportReportModal({ open, onOpenChange }: ExportReportModalProps
                 healthSamples,
                 version,
             ] = await Promise.all([
-                listDevices(activeWorkspace.id).catch(() => [] as Device[]),
-                getSecurityFindings(networkCidr).catch(
-                    () => [] as SecurityFinding[],
-                ),
-                getSecurityScore(networkCidr).catch(() => 100),
-                getRecentSpeedTests({ networkId: networkCidr, limit: 1 }).catch(
+                listDevices(activeWorkspace.id),
+                getSecurityFindings({ networkId: netId }),
+                getSecurityScore(netId),
+                getRecentSpeedTests({ networkId: netId, limit: 1 }).catch(
                     () => [] as SpeedTestResult[],
                 ),
-                getNetworkHealthSamples(networkCidr, 1).catch(
+                getNetworkHealthSamples(netId, 1).catch(
                     () => [] as NetworkHealthSample[],
                 ),
                 getAppVersion().catch(() => "1.0"),

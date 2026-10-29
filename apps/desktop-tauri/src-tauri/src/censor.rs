@@ -107,17 +107,21 @@ pub fn mask_service_row(r: &mut ServiceExportRow) {
     }
 }
 
-/// Enmascara los campos IP/MAC de un `serde_json::Value` que representa un
+/// Enmascara los campos IP/MAC/CIDR de un `serde_json::Value` que representa un
 /// `Device` serializado. Sobreescribe `primary_ip` (si es string) con
-/// [`mask_ip`] y `primary_mac` con [`mask_mac`]. `hostname`/`display_name` ya
-/// vienen enmascarados por [`mask_device`] sobre el struct.
+/// [`mask_ip`], `primary_mac` con [`mask_mac`] sólo si no es `null`, y
+/// `network_id` (CIDR) con [`mask_cidr`]. `hostname`/`display_name` ya vienen
+/// enmascarados por [`mask_device`] sobre el struct.
 pub fn mask_device_value(v: &mut serde_json::Value) {
     if let Some(obj) = v.as_object_mut() {
         if let Some(ip) = obj.get("primary_ip").and_then(|i| i.as_str()) {
             obj["primary_ip"] = serde_json::Value::String(mask_ip(ip));
         }
-        if obj.contains_key("primary_mac") {
+        if obj.get("primary_mac").and_then(|m| m.as_str()).is_some() {
             obj["primary_mac"] = serde_json::Value::String(mask_mac().to_string());
+        }
+        if let Some(cidr) = obj.get("network_id").and_then(|c| c.as_str()) {
+            obj["network_id"] = serde_json::Value::String(mask_cidr(cidr));
         }
     }
 }

@@ -699,13 +699,6 @@ export interface Workspace {
     updated_at: string;
 }
 
-export interface WorkspaceStats {
-    device_count: number;
-    network_count: number;
-    online_device_count: number;
-    open_findings_count: number;
-}
-
 export interface CreateWorkspacePayload {
     id?: string;
     name: string;
@@ -724,9 +717,6 @@ export interface UpdateWorkspacePayload {
 
 export const listWorkspaces = () => invoke<Workspace[]>("list_workspaces_cmd");
 
-export const getWorkspace = (id: string) =>
-    invoke<Workspace | null>("get_workspace_cmd", { id });
-
 export const createWorkspace = (payload: CreateWorkspacePayload) =>
     invoke<Workspace>("create_workspace_cmd", { payload });
 
@@ -735,15 +725,6 @@ export const updateWorkspace = (payload: UpdateWorkspacePayload) =>
 
 export const deleteWorkspace = (id: string) =>
     invoke<void>("delete_workspace_cmd", { id });
-
-export const getWorkspaceStats = (id: string) =>
-    invoke<WorkspaceStats>("get_workspace_stats_cmd", { id });
-
-export const assignNetworkWorkspace = (networkId: string, workspaceId: string) =>
-    invoke<void>("assign_network_workspace_cmd", { networkId, workspaceId });
-
-export const detectWorkspaceForNetwork = (networkId: string) =>
-    invoke<string>("detect_workspace_for_network_cmd", { networkId });
 
 // --- Sincronización Serverless con Google Drive (Pilar 7 / Fase 11) ---
 

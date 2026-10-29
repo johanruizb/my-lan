@@ -103,8 +103,10 @@ impl Observation {
         if self.ip.is_none() {
             self.ip = other.ip;
         }
-        if self.mac.is_none() {
-            self.mac = other.mac;
+        if self.mac.is_none_or(|m| m.is_zero()) {
+            if let Some(mac) = other.mac.filter(|m| !m.is_zero()) {
+                self.mac = Some(mac);
+            }
         }
         if self.hostname.is_none() {
             self.hostname.clone_from(&other.hostname);
@@ -207,6 +209,18 @@ mod tests {
         );
         assert_eq!(base.hints.get("tcp.ports").map(String::as_str), Some("80"));
         assert_eq!(base.source, Source::ArpCache); // self source preserved
+    }
+
+    #[test]
+    fn merge_replaces_zero_mac_with_real_mac() {
+        let mut base = Observation::new(Source::ArpCache)
+            .with_mac(mac("00:00:00:00:00:00"))
+            .with_ip(ip("192.168.1.5"));
+        let other = Observation::new(Source::ArpCache)
+            .with_mac(mac("aa:bb:cc:dd:ee:ff"))
+            .with_ip(ip("192.168.1.5"));
+        base.merge_from(&other);
+        assert_eq!(base.mac, Some(mac("aa:bb:cc:dd:ee:ff")));
     }
 
     #[test]

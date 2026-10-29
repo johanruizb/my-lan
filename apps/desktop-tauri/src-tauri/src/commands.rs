@@ -8,12 +8,11 @@
 //! un `scan_ports` concurrente emite `scan:progress` (AC-12).
 
 use std::collections::BTreeMap;
-use std::net::IpAddr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use mylan_core::{
-    aggregate, Device, DeviceIdentity, Enricher, Network, Observation, Scan, ScanKind, ScanStatus,
+    aggregate, Device, DeviceIdentity, Network, Observation, Scan, ScanKind, ScanStatus,
     ScanSummary, Service,
 };
 use mylan_db::device_repo::UpsertOutcome;
@@ -65,7 +64,7 @@ fn clone_for_blocking(state: &State<'_, DesktopState>) -> Result<rusqlite::Conne
 /// (compilado via `CARGO_MANIFEST_DIR`); empaquetado, al `signatures/` del
 /// `resource_dir` de Tauri. Si ninguno existe, `Fingerprint::load` fallará y el
 /// llamador degrada a `noop_enricher`.
-fn resolve_signatures_dir(app: &AppHandle) -> PathBuf {
+pub(crate) fn resolve_signatures_dir(app: &AppHandle) -> PathBuf {
     if let Ok(res) = app.path().resource_dir() {
         let candidate = res.join("signatures");
         if candidate.is_dir() {
@@ -74,15 +73,6 @@ fn resolve_signatures_dir(app: &AppHandle) -> PathBuf {
     }
     // Dev fallback: repo-root/signatures relativo al crate del backend.
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../signatures")
-}
-
-/// Construye el `Enricher` de fingerprint, degradando a no-op si falla la carga
-/// (mismo patrón que `apps/cli/src/commands/scan.rs::build_enricher`).
-fn build_enricher(signatures_dir: &Path, gateway_ip: Option<IpAddr>) -> Enricher {
-    match mylan_fingerprint::Fingerprint::load(signatures_dir, gateway_ip) {
-        Ok(fp) => fp.enricher(),
-        Err(_) => mylan_core::noop_enricher(),
-    }
 }
 
 /// Rellena los campos de persistencia de un `Service` (patrón de
@@ -327,7 +317,7 @@ pub async fn run_discovery_cmd(
     // El enricher y la conexión se preparan ANTES de registrar el token: así un
     // fallo de setup no deja un token zombie en `scan_tokens`.
     let signatures_dir = resolve_signatures_dir(&app);
-    let enricher = build_enricher(&signatures_dir, iface.gateway_ip);
+    let enricher = mylan_fingerprint::build_enricher(&signatures_dir, iface.gateway_ip);
     let conn = clone_for_blocking(&state)?;
 
     // Registra el token de cancelación bajo `scan_id` (lo reutiliza `cancel_scan_cmd`).
@@ -722,10 +712,13 @@ pub async fn get_settings_cmd(state: State<'_, DesktopState>) -> Result<Settings
 
 #[tauri::command]
 pub async fn set_settings_cmd(
-    settings: Settings,
+    mut settings: Settings,
     app: AppHandle,
     state: State<'_, DesktopState>,
 ) -> Result<(), String> {
+    // Rango soportado por el monitor; evita intervalos 0 (pánico de tokio) y
+    // desbordamientos al comparar el doble del intervalo tras suspensión.
+    settings.monitoring_interval_secs = settings.monitoring_interval_secs.clamp(30, 86_400);
     let path = settings_path(&app);
     let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     tokio::fs::write(&path, json)
@@ -897,6 +890,7 @@ pub async fn export_devices_cmd(
                             "last_seen_at",
                             "is_trusted",
                             "is_hidden",
+                            "is_online",
                             "notes",
                         ])
                         .map_err(|e| e.to_string())?;
@@ -912,7 +906,7 @@ pub async fn export_devices_cmd(
                             };
                             let record = vec![
                                 crate::censor::csv_str(&d.id),
-                                crate::censor::csv_str(&d.network_id),
+                                crate::censor::mask_cidr(&d.network_id),
                                 mac,
                                 ip,
                                 crate::censor::csv_str(&d.hostname),
@@ -927,6 +921,7 @@ pub async fn export_devices_cmd(
                                 crate::censor::csv_str(&d.last_seen_at),
                                 crate::censor::csv_str(&d.is_trusted),
                                 crate::censor::csv_str(&d.is_hidden),
+                                crate::censor::csv_str(&d.is_online),
                                 crate::censor::csv_str(&d.notes),
                             ];
                             wtr.write_record(record.iter().map(String::as_str))
@@ -1148,15 +1143,6 @@ pub fn list_workspaces_cmd(
 }
 
 #[tauri::command]
-pub fn get_workspace_cmd(
-    id: String,
-    state: State<'_, DesktopState>,
-) -> Result<Option<mylan_core::Workspace>, String> {
-    let conn = state.db.lock().map_err(|e| e.to_string())?;
-    mylan_db::workspace_repo::get_workspace(&conn, &id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn create_workspace_cmd(
     payload: CreateWorkspaceDto,
     state: State<'_, DesktopState>,
@@ -1200,38 +1186,6 @@ pub fn update_workspace_cmd(
 pub fn delete_workspace_cmd(id: String, state: State<'_, DesktopState>) -> Result<(), String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     mylan_db::workspace_repo::delete_workspace(&conn, &id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn get_workspace_stats_cmd(
-    id: String,
-    state: State<'_, DesktopState>,
-) -> Result<mylan_db::workspace_repo::WorkspaceStats, String> {
-    let conn = state.db.lock().map_err(|e| e.to_string())?;
-    mylan_db::workspace_repo::get_workspace_stats(&conn, &id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn assign_network_workspace_cmd(
-    network_id: String,
-    workspace_id: String,
-    state: State<'_, DesktopState>,
-) -> Result<(), String> {
-    let conn = state.db.lock().map_err(|e| e.to_string())?;
-    mylan_db::workspace_repo::assign_network_to_workspace(&conn, &network_id, &workspace_id)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn detect_workspace_for_network_cmd(
-    network_id: String,
-    state: State<'_, DesktopState>,
-) -> Result<String, String> {
-    let conn = state.db.lock().map_err(|e| e.to_string())?;
-    let ws_id = mylan_db::workspace_repo::get_network_workspace(&conn, &network_id)
-        .map_err(|e| e.to_string())?
-        .unwrap_or_else(|| "default".to_string());
-    Ok(ws_id)
 }
 
 // ---------------------------------------------------------------------------

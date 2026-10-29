@@ -112,11 +112,34 @@ fn write_csv(path: &std::path::Path, devices: &[mylan_core::Device]) -> anyhow::
     {
         let mut wtr = csv::Writer::from_writer(&mut buf);
         for d in devices {
-            wtr.serialize(d)?;
+            // `serialize` no neutraliza fórmulas: un hostname/banner controlado
+            // por la LAN podría ejecutarse al abrir el CSV en una hoja de cálculo.
+            let safe = sanitize_device_for_csv(d);
+            wtr.serialize(&safe)?;
         }
         wtr.flush()?;
     }
     write_file(path, &buf)
+}
+
+/// Escapa una celda CSV que empiece por un carácter interpretable como fórmula.
+fn sanitize_csv_cell(value: &str) -> String {
+    match value.chars().next() {
+        Some('=' | '+' | '-' | '@' | '\t' | '\r') => format!("'{value}"),
+        _ => value.to_string(),
+    }
+}
+
+fn sanitize_device_for_csv(d: &mylan_core::Device) -> mylan_core::Device {
+    let mut safe = d.clone();
+    safe.hostname = safe.hostname.map(|v| sanitize_csv_cell(&v));
+    safe.display_name = safe.display_name.map(|v| sanitize_csv_cell(&v));
+    safe.vendor = safe.vendor.map(|v| sanitize_csv_cell(&v));
+    safe.manufacturer = safe.manufacturer.map(|v| sanitize_csv_cell(&v));
+    safe.model = safe.model.map(|v| sanitize_csv_cell(&v));
+    safe.os_family = safe.os_family.map(|v| sanitize_csv_cell(&v));
+    safe.notes = safe.notes.map(|v| sanitize_csv_cell(&v));
+    safe
 }
 
 /// Escribe `bytes` en `path`, mapeando errores de E/O (p.ej. permiso denegado).
@@ -192,13 +215,13 @@ fn write_services_csv(path: &std::path::Path, rows: &[ServiceExportRow]) -> anyh
             let record = vec![
                 r.device_id.clone(),
                 r.device_ip.map(|i| i.to_string()).unwrap_or_default(),
-                r.display_name.clone().unwrap_or_default(),
+                sanitize_csv_cell(r.display_name.as_deref().unwrap_or_default()),
                 format!("{:?}", r.protocol).to_lowercase(),
                 r.port.to_string(),
-                r.service_name.clone().unwrap_or_default(),
-                r.product.clone().unwrap_or_default(),
-                r.version.clone().unwrap_or_default(),
-                r.banner.clone().unwrap_or_default(),
+                sanitize_csv_cell(r.service_name.as_deref().unwrap_or_default()),
+                sanitize_csv_cell(r.product.as_deref().unwrap_or_default()),
+                sanitize_csv_cell(r.version.as_deref().unwrap_or_default()),
+                sanitize_csv_cell(r.banner.as_deref().unwrap_or_default()),
                 format!("{:?}", r.state).to_lowercase(),
                 r.first_seen_at.clone(),
                 r.last_seen_at.clone(),
@@ -297,5 +320,51 @@ mod tests {
         let conn = crate::commands::open_db(&ctx).unwrap();
         let result = export_services(&conn, ExportFormat::Json, None);
         assert!(result.is_ok(), "sin servicios debe ser Ok (mensaje)");
+    }
+
+    #[test]
+    fn sanitize_csv_cell_neutralizes_formula_prefixes() {
+        assert_eq!(sanitize_csv_cell("=1+1"), "'=1+1");
+        assert_eq!(sanitize_csv_cell("+cmd"), "'+cmd");
+        assert_eq!(sanitize_csv_cell("-2+3"), "'-2+3");
+        assert_eq!(sanitize_csv_cell("@SUM(A1)"), "'@SUM(A1)");
+        assert_eq!(sanitize_csv_cell("normal"), "normal");
+        assert_eq!(sanitize_csv_cell(""), "");
+    }
+
+    #[test]
+    fn write_csv_escapes_untrusted_device_fields() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let path = tmp.path().join("devices.csv");
+        let device = mylan_core::Device {
+            id: "dev-1".to_string(),
+            network_id: "192.168.1.0/24".to_string(),
+            primary_mac: None,
+            primary_ip: Some("192.168.1.10".parse().unwrap()),
+            hostname: Some("=HYPERLINK(\"http://evil\")".to_string()),
+            display_name: None,
+            vendor: None,
+            manufacturer: None,
+            model: None,
+            device_type: mylan_core::DeviceType::Unknown,
+            os_family: None,
+            confidence: mylan_core::Confidence::new(0),
+            first_seen_at: "2026-10-16T10:00:00Z".to_string(),
+            last_seen_at: "2026-10-16T10:00:00Z".to_string(),
+            is_trusted: false,
+            is_hidden: false,
+            is_online: true,
+            notes: None,
+        };
+        write_csv(&path, &[device]).unwrap();
+        let csv = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            csv.contains("'=HYPERLINK"),
+            "CSV debe neutralizar la fórmula: {csv}"
+        );
+        assert!(
+            !csv.contains(",=HYPERLINK"),
+            "no debe quedar la fórmula cruda: {csv}"
+        );
     }
 }

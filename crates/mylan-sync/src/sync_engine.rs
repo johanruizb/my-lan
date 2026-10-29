@@ -289,9 +289,13 @@ impl SyncEngine {
                         .map_err(|e| SyncEngineError::CryptoError(e.to_string()))?;
 
                     let remote_snapshot = WorkspaceSnapshot::from_json_bytes(&decrypted_json)?;
+                    remote_snapshot.validate_for_workspace(workspace_id)?;
 
-                    // Backup preventivo antes de sobrescribir la BD local
-                    let _ = create_preventive_backup(&local_snapshot, backups_dir);
+                    // Backup preventivo antes de sobrescribir la BD local. Si el
+                    // backup falla, abortamos: sin él la importación es irreversible.
+                    create_preventive_backup(&local_snapshot, backups_dir).map_err(|e| {
+                        SyncEngineError::IoError(std::io::Error::other(e.to_string()))
+                    })?;
 
                     let summary = import_workspace_snapshot(conn, &remote_snapshot)?;
 
@@ -384,6 +388,24 @@ impl SyncEngine {
                     .map_err(|e| SyncEngineError::CryptoError(e.to_string()))?;
 
                 let remote_snapshot = WorkspaceSnapshot::from_json_bytes(&decrypted_json)?;
+                remote_snapshot.validate_for_workspace(workspace_id)?;
+
+                // Backup preventivo del estado local antes de adoptar la nube.
+                // Si el workspace aún no existe localmente no hay nada que perder.
+                match export_workspace_snapshot(
+                    conn,
+                    workspace_id,
+                    &self.device_origin,
+                    &self.app_version,
+                ) {
+                    Ok(local_snapshot) => {
+                        create_preventive_backup(&local_snapshot, backups_dir.as_ref()).map_err(
+                            |e| SyncEngineError::IoError(std::io::Error::other(e.to_string())),
+                        )?;
+                    }
+                    Err(PackageError::WorkspaceNotFound(_)) => {}
+                    Err(e) => return Err(SyncEngineError::PackageError(e)),
+                }
 
                 let summary = import_workspace_snapshot(conn, &remote_snapshot)?;
 

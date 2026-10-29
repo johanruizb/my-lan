@@ -123,46 +123,27 @@ pub fn delete_workspace(conn: &Connection, id: &str) -> DbResult<()> {
         ));
     }
 
-    // Reasignación preventiva al workspace por defecto
-    conn.execute(
-        "UPDATE networks SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-    conn.execute(
-        "UPDATE scans SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-    conn.execute(
-        "UPDATE devices SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-    conn.execute(
-        "UPDATE events SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-    conn.execute(
-        "UPDATE security_findings SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-    conn.execute(
-        "UPDATE network_health_samples SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-    conn.execute(
-        "UPDATE speed_tests SET workspace_id = 'default' WHERE workspace_id = ?1",
-        [id],
-    )
-    .map_err(map_sqlite)?;
-
-    // Borrado definitivo
-    conn.execute("DELETE FROM workspaces WHERE id = ?1", [id])
+    // Reasignación preventiva + borrado en una sola transacción: si una tabla
+    // falla (BUSY, disco lleno), no queda propiedad repartida entre workspaces.
+    let tx = conn.unchecked_transaction().map_err(map_sqlite)?;
+    for table in [
+        "networks",
+        "scans",
+        "devices",
+        "events",
+        "security_findings",
+        "network_health_samples",
+        "speed_tests",
+    ] {
+        tx.execute(
+            &format!("UPDATE {table} SET workspace_id = 'default' WHERE workspace_id = ?1"),
+            [id],
+        )
         .map_err(map_sqlite)?;
+    }
+    tx.execute("DELETE FROM workspaces WHERE id = ?1", [id])
+        .map_err(map_sqlite)?;
+    tx.commit().map_err(map_sqlite)?;
     Ok(())
 }
 

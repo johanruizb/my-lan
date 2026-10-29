@@ -109,21 +109,21 @@ describe("useScan — devicesFound crece y scanning=false al cancel (AC-20)", ()
 });
 
 describe("deviceKey — identidad de merge (AC-20)", () => {
-    it("prioriza primary_ip", () => {
+    it("usa el id estable aunque cambie la IP", () => {
         expect(
             deviceKey(
-                makeDevice({ primary_ip: "192.168.1.10", primary_mac: "aa" }),
+                makeDevice({ id: "dev-1", primary_ip: "192.168.1.20", primary_mac: "aa" }),
             ),
-        ).toBe("192.168.1.10");
+        ).toBe("dev-1");
     });
 
-    it("fallback a primary_mac si primary_ip es null", () => {
-        expect(
-            deviceKey(makeDevice({ primary_ip: null, primary_mac: "aa:bb" })),
-        ).toBe("aa:bb");
+    it("no colapsa dos ids distintos con la misma IP", () => {
+        const a = makeDevice({ id: "dev-1", primary_ip: "192.168.1.10" });
+        const b = makeDevice({ id: "dev-2", primary_ip: "192.168.1.10" });
+        expect(deviceKey(a)).not.toBe(deviceKey(b));
     });
 
-    it("fallback a id si ambos son null", () => {
+    it("fallback a id si no hay IP ni MAC", () => {
         expect(
             deviceKey(
                 makeDevice({ id: "dev-x", primary_ip: null, primary_mac: null }),
@@ -138,24 +138,25 @@ describe("mergeDevice — dedup por identidad (AC-20, code-review MAJOR #2)", ()
         expect(mergeDevice([], d)).toEqual([d]);
     });
 
-    it("reemplaza el device existente por primary_ip (dedup)", () => {
+    it("reemplaza el device existente por id (dedup)", () => {
         const d1 = makeDevice({ id: "dev-1", primary_ip: "192.168.1.10", display_name: "viejo" });
-        const d2 = makeDevice({ id: "dev-1", primary_ip: "192.168.1.10", display_name: "nuevo" });
+        const d2 = makeDevice({ id: "dev-1", primary_ip: "192.168.1.20", display_name: "nuevo" });
         const result = mergeDevice([d1], d2);
         expect(result).toHaveLength(1);
         expect(result[0].display_name).toBe("nuevo");
+        expect(result[0].primary_ip).toBe("192.168.1.20");
     });
 
-    it("añade un device con ip distinta sin reemplazar", () => {
+    it("añade un device con id distinto aunque reutilice la IP", () => {
         const d1 = makeDevice({ id: "dev-1", primary_ip: "192.168.1.10" });
-        const d2 = makeDevice({ id: "dev-2", primary_ip: "192.168.1.11" });
+        const d2 = makeDevice({ id: "dev-2", primary_ip: "192.168.1.10" });
         const result = mergeDevice([d1], d2);
         expect(result).toHaveLength(2);
     });
 
-    it("dedup por primary_mac cuando primary_ip es null", () => {
-        const d1 = makeDevice({ id: "dev-1", primary_ip: null, primary_mac: "aa:bb" });
-        const d2 = makeDevice({ id: "dev-1", primary_ip: null, primary_mac: "aa:bb", display_name: "nuevo" });
+    it("dedup por id cuando no hay IP ni MAC", () => {
+        const d1 = makeDevice({ id: "dev-1", primary_ip: null, primary_mac: null });
+        const d2 = makeDevice({ id: "dev-1", primary_ip: null, primary_mac: null, display_name: "nuevo" });
         const result = mergeDevice([d1], d2);
         expect(result).toHaveLength(1);
         expect(result[0].display_name).toBe("nuevo");

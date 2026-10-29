@@ -257,15 +257,19 @@ async fn ping_tcp(target: IpAddr, count: u32, timeout: Duration) -> PingResult {
     for _ in 0..count {
         let start = tokio::time::Instant::now();
         let deadline = start + timeout;
+        // Reparto el presupuesto entre los puertos: si 80 se descarta en
+        // silencio, 443 debe conservar su propia ventana (antes se quedaba a 0).
+        let per_port = timeout / PROBE_PORTS.len().max(1) as u32;
         let mut ok = false;
         for port in PROBE_PORTS {
             let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-            if remaining.is_zero() {
+            let budget = remaining.min(per_port);
+            if budget.is_zero() {
                 break;
             }
             let addr = SocketAddr::new(target, *port);
             let connect = TcpStream::connect(addr);
-            if tokio::time::timeout(remaining, connect)
+            if tokio::time::timeout(budget, connect)
                 .await
                 .is_ok_and(|r| r.is_ok())
             {

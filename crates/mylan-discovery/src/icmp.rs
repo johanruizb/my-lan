@@ -55,7 +55,12 @@ pub async fn icmp_sweep(
         Ok(s) => s,
         Err(_) => return,
     };
-    let id = (std::process::id() as u16).wrapping_add(1);
+    // En un ping socket Linux el kernel reescribe el id ICMP con el puerto
+    // local del socket; usar el PID hacía que ninguna respuesta casara.
+    let id = match sock.local_addr() {
+        Ok(addr) => addr.port(),
+        Err(_) => return,
+    };
     let hosts = enumerate_hosts(iface.ip, iface.prefix_len);
     let mut seq = 1u16;
     for host in &hosts {

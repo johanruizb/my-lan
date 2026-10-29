@@ -33,7 +33,10 @@ pub(crate) fn enum_from_db<E: DeserializeOwned>(s: &str) -> DbResult<E> {
 
 /// Convierte una `MacAddr` opcional a su representación `TEXT` (puede ser `NULL`).
 pub(crate) fn mac_to_db(mac: Option<MacAddr>) -> Option<String> {
-    mac.map(|m| m.to_string())
+    // La MAC cero (00:00:00:00:00:00) significa "desconocida"; se persiste como
+    // NULL para no colisionar con `uq_devices_network_mac` y mantener la misma
+    // semántica que `DeviceIdentity`/`find_existing_id`.
+    mac.filter(|m| !m.is_zero()).map(|m| m.to_string())
 }
 
 /// Parsea una columna `TEXT` (MAC canónica) de vuelta a `MacAddr`.

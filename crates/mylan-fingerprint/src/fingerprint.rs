@@ -72,20 +72,14 @@ fn enrich_device(
     rules: &RuleSet,
     gateway_ip: Option<IpAddr>,
 ) {
-    // 1. Vendor por OUI (primera MAC no-cero del dispositivo).
+    // 1. Vendor por OUI (primera MAC no-cero del dispositivo o de las observaciones).
     if device.vendor.is_none() {
-        if let Some(mac) = device.primary_mac.filter(|m| !m.is_zero()) {
-            if let Some(vendor) = oui.vendor_for(&mac) {
-                let v = vendor.to_string();
-                device.vendor = Some(v.clone());
-                if device.manufacturer.is_none() {
-                    device.manufacturer = Some(v);
-                }
-            }
-        } else if let Some(mac) = observations
-            .iter()
-            .find_map(|o| o.mac.filter(|m| !m.is_zero()))
-        {
+        let mac = device.primary_mac.filter(|m| !m.is_zero()).or_else(|| {
+            observations
+                .iter()
+                .find_map(|o| o.mac.filter(|m| !m.is_zero()))
+        });
+        if let Some(mac) = mac {
             if let Some(vendor) = oui.vendor_for(&mac) {
                 let v = vendor.to_string();
                 device.vendor = Some(v.clone());

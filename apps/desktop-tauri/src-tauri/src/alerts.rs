@@ -190,10 +190,14 @@ pub fn evaluate_alerts(
                     continue;
                 }
                 if let Some(data_str) = &event.data_json {
-                    let is_critical = CRITICAL_PORTS.iter().any(|&p| {
-                        data_str.contains(&format!("\"port\":{p}"))
-                            || data_str.contains(&format!("\"port\": {p}"))
-                    });
+                    // Comparar el número de puerto, no subcadenas: "port":21
+                    // hacía match con 2121 y "port":445 con 4450.
+                    let is_critical = serde_json::from_str::<serde_json::Value>(data_str)
+                        .ok()
+                        .and_then(|data| data.get("port").and_then(|p| p.as_u64()))
+                        .is_some_and(|port| {
+                            u16::try_from(port).is_ok_and(|port| CRITICAL_PORTS.contains(&port))
+                        });
                     if is_critical {
                         alerts.push(AlertItem {
                             category: AlertCategory::PortCriticalOpened,

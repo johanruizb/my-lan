@@ -26,6 +26,21 @@ pub fn print_redaction_note() {
     print_redaction_note_to(&mut std::io::stderr());
 }
 
+/// Neutraliza secuencias de control en texto proveniente de la red antes de
+/// imprimirlo en una terminal. Evita inyección ANSI/OSC (clipboard, limpiar
+/// pantalla, falsificar salida) desde hostnames, banners, DNS o notas.
+#[must_use]
+pub fn sanitize_terminal(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| match ch {
+            '\n' | '\r' | '\t' => ' ',
+            c if c.is_control() => '\u{FFFD}',
+            c => c,
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -52,5 +67,15 @@ mod tests {
     #[test]
     fn test_print_redaction_note_does_not_panic() {
         print_redaction_note();
+    }
+
+    #[test]
+    fn sanitize_terminal_strips_escape_sequences() {
+        let raw = "host\u{1b}]52;c;Zm9v\u{7}name\u{1b}[2J";
+        let clean = sanitize_terminal(raw);
+        assert!(!clean.contains('\u{1b}'));
+        assert!(!clean.contains('\u{7}'));
+        assert!(clean.contains("host"));
+        assert!(clean.contains("name"));
     }
 }

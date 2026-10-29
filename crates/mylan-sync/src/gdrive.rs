@@ -65,6 +65,15 @@ struct RawDriveFile {
     app_properties: Option<HashMap<String, String>>,
 }
 
+/// Escapa un literal para la gramática de consultas de Google Drive.
+///
+/// Drive usa comillas simples para strings; una comilla o barra invertida sin
+/// escapar permite ampliar la consulta (`or name contains ...`) y seleccionar
+/// el fichero de otro workspace.
+fn escape_query_literal(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('\'', "\\'")
+}
+
 /// Cliente de Google Drive para almacenamiento de paquetes de sincronizacion.
 #[derive(Clone, Default)]
 pub struct DriveClient {
@@ -94,7 +103,10 @@ impl DriveClient {
         workspace_id: &str,
     ) -> Result<Option<DriveFile>, DriveError> {
         let filename = Self::workspace_filename(workspace_id);
-        let q = format!("name = '{filename}' and trashed = false");
+        let q = format!(
+            "name = '{}' and trashed = false",
+            escape_query_literal(&filename)
+        );
 
         let resp = self
             .client

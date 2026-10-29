@@ -30,7 +30,7 @@ use crate::util::{new_id, now_rfc3339, print_redaction_note};
 pub async fn run(
     ctx: &AppContext,
     ip_str: &str,
-    top: u16,
+    top: Option<u16>,
     profile: ScanProfile,
 ) -> anyhow::Result<()> {
     print_redaction_note();
@@ -44,19 +44,21 @@ pub async fn run(
     let device = mylan_db::device_repo::get_device_by_ip(&conn, &net_id, ip)?
         .ok_or_else(|| anyhow::anyhow!("No se encontró un dispositivo con IP {ip} en la red {net_id}. Ejecuta `mylan scan` primero."))?;
 
-    // AC-7: el catálogo efectivo es el del perfil. --top es informativo.
+    // AC-7: el catálogo efectivo es el del perfil. --top es un hint opcional.
     let profile_count = u16::try_from(ports_for_profile(profile).len()).unwrap_or(0);
     let fixed_catalog = matches!(profile, ScanProfile::Iot | ScanProfile::Router);
-    if fixed_catalog {
-        eprintln!(
-            "[mylan] Warning: --top {top} ignorado para el perfil {profile:?} \
-             (catálogo fijo de {profile_count} puertos)."
-        );
-    } else if top != profile_count {
-        eprintln!(
-            "[mylan] Warning: --top {top} difiere del conteo del perfil {profile:?} \
-             ({profile_count}); el perfil tiene prioridad."
-        );
+    if let Some(top) = top {
+        if fixed_catalog {
+            eprintln!(
+                "[mylan] Warning: --top {top} ignorado para el perfil {profile:?} \
+                 (catálogo fijo de {profile_count} puertos)."
+            );
+        } else if top != profile_count {
+            eprintln!(
+                "[mylan] Warning: --top {top} es sólo un hint; el perfil {profile:?} \
+                 usa {profile_count} puertos."
+            );
+        }
     }
 
     let options = profile_options(profile);
@@ -218,7 +220,7 @@ mod tests {
     async fn run_rejects_invalid_ip() {
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = ctx_in(tmp.path());
-        let result = run(&ctx, "not-an-ip", 100, ScanProfile::Quick).await;
+        let result = run(&ctx, "not-an-ip", Some(100), ScanProfile::Quick).await;
         assert!(result.is_err(), "IP inválida debe errar");
     }
 
@@ -226,7 +228,7 @@ mod tests {
     async fn run_errors_when_no_inventory() {
         let tmp = tempfile::tempdir().expect("tmp");
         let ctx = ctx_in(tmp.path());
-        let result = run(&ctx, "192.168.1.1", 100, ScanProfile::Quick).await;
+        let result = run(&ctx, "192.168.1.1", Some(100), ScanProfile::Quick).await;
         assert!(result.is_err());
         let msg = format!("{}", result.unwrap_err());
         assert!(

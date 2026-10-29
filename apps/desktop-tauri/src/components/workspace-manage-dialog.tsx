@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -85,6 +85,12 @@ export function WorkspaceManageDialog({
     const [mode, setMode] = useState<"create" | "manage" | "edit">(initialMode);
     const [editingWs, setEditingWs] = useState<Workspace | null>(null);
     const [deletingWs, setDeletingWs] = useState<Workspace | null>(null);
+
+    // El selector mantiene el diálogo montado y cambia `initialMode`; sincronizar
+    // al abrir evita que "Gestionar" muestre el formulario de creación.
+    useEffect(() => {
+        if (open) setMode(initialMode);
+    }, [open, initialMode]);
 
     // Form fields
     const [name, setName] = useState("");

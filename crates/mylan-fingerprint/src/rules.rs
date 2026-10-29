@@ -19,7 +19,6 @@
 //! - `service`: algún hint cuyo valor contiene la cadena (mDNS/SSDP/banner).
 //! - `mdns_contains`: algún hint `mdns.*` cuyo valor contiene la cadena.
 //! - `upnp_device_type_contains`: algún hint `ssdp.*` cuyo valor contiene la cadena.
-//! - `is_gateway`: alguna observación marca `network.role == "gateway"`.
 //!
 //! Un matcher casa si **todas** sus campos presentes casan (AND interno). La
 //! rama `any` casa si cualquier matcher casa; `all` exige todos. La precedencia
@@ -43,11 +42,8 @@ pub struct RuleSet {
 pub struct Rule {
     #[allow(dead_code)]
     pub id: String,
-    #[allow(dead_code)]
     pub matcher: Match,
-    #[allow(dead_code)]
     pub device_type: DeviceType,
-    #[allow(dead_code)]
     pub confidence: Confidence,
 }
 
@@ -65,29 +61,22 @@ pub struct Matcher {
     pub service: Option<String>,
     pub mdns_contains: Option<String>,
     pub upnp_device_type_contains: Option<String>,
-    pub is_gateway: Option<bool>,
 }
 
 impl Match {
     /// `true` si no tiene matchers definidos.
-    #[allow(dead_code)]
     pub(crate) fn is_empty(&self) -> bool {
         self.any.is_empty() && self.all.is_empty()
     }
 
     /// Evalúa el match contra las observaciones.
     pub fn matches(&self, observations: &[Observation]) -> bool {
+        if self.is_empty() {
+            return false;
+        }
         let any_ok = self.any.is_empty() || self.any.iter().any(|m| m.matches(observations));
         let all_ok = self.all.is_empty() || self.all.iter().all(|m| m.matches(observations));
-        if self.any.is_empty() && self.all.is_empty() {
-            false
-        } else if self.all.is_empty() {
-            any_ok
-        } else if self.any.is_empty() {
-            all_ok
-        } else {
-            any_ok && all_ok
-        }
+        any_ok && all_ok
     }
 }
 
@@ -127,11 +116,6 @@ impl Matcher {
                     .any(|(_, v)| v.to_lowercase().contains(&n))
             });
         }
-        if let Some(true) = self.is_gateway {
-            ok &= observations
-                .iter()
-                .any(|o| o.hints.get("network.role").is_some_and(|v| v == "gateway"));
-        }
         ok
     }
 }
@@ -161,6 +145,11 @@ impl RuleSet {
                         path: path.display().to_string(),
                         message: e.to_string(),
                     })?;
+                rule.validate()
+                    .map_err(|message| FingerprintError::RuleLoad {
+                        path: path.display().to_string(),
+                        message,
+                    })?;
                 rules.push(rule.into_rule());
             }
         }
@@ -187,11 +176,14 @@ impl RuleSet {
             .iter()
             .filter(|r| r.matches(observations))
             .map(|r| (r.device_type, r.confidence))
-            .max_by_key(|(_, c)| c.score())
+            // `max_by` devuelve el último en empate; forzar `Greater` en igualdad
+            // conserva la primera regla, como documenta la API.
+            .max_by(|(_, left), (_, right)| left.cmp(right).then(std::cmp::Ordering::Greater))
     }
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RuleYaml {
     id: String,
     #[serde(default)]
@@ -200,6 +192,28 @@ struct RuleYaml {
 }
 
 impl RuleYaml {
+    fn validate(&self) -> Result<(), String> {
+        if self.r#match.any.is_empty() && self.r#match.all.is_empty() {
+            return Err("la regla no tiene matchers en `match.any`/`match.all`".to_string());
+        }
+        for (index, matcher) in self
+            .r#match
+            .any
+            .iter()
+            .chain(self.r#match.all.iter())
+            .enumerate()
+        {
+            if matcher.port.is_none()
+                && matcher.service.is_none()
+                && matcher.mdns_contains.is_none()
+                && matcher.upnp_device_type_contains.is_none()
+            {
+                return Err(format!("el matcher #{index} no tiene ningún predicado"));
+            }
+        }
+        Ok(())
+    }
+
     fn into_rule(self) -> Rule {
         Rule {
             id: self.id,
@@ -214,6 +228,7 @@ impl RuleYaml {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MatchYaml {
     #[serde(default)]
     any: Vec<MatcherYaml>,
@@ -222,6 +237,7 @@ struct MatchYaml {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MatcherYaml {
     #[serde(default)]
     port: Option<u16>,
@@ -231,8 +247,6 @@ struct MatcherYaml {
     mdns_contains: Option<String>,
     #[serde(default)]
     upnp_device_type_contains: Option<String>,
-    #[serde(default)]
-    is_gateway: Option<bool>,
 }
 
 impl From<MatcherYaml> for Matcher {
@@ -242,12 +256,12 @@ impl From<MatcherYaml> for Matcher {
             service: y.service,
             mdns_contains: y.mdns_contains,
             upnp_device_type_contains: y.upnp_device_type_contains,
-            is_gateway: y.is_gateway,
         }
     }
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ScoreYaml {
     device_type: DeviceType,
     confidence: u8,
@@ -406,27 +420,73 @@ mod tests {
     }
 
     #[test]
-    fn is_gateway_matcher_fires_on_hint() {
-        let rule = Rule {
-            id: "router_gateway".to_string(),
+    fn unknown_matcher_keys_are_rejected() {
+        let dir = tempdir_with_rules(&[(
+            "typo.yaml",
+            "id: typo\nmatch:\n  any:\n    - mdns_contain: _rtsp\nscore:\n  device_type: camera\n  confidence: 75\n",
+        )]);
+        assert!(RuleSet::load_dir(&dir).is_err());
+    }
+
+    #[test]
+    fn empty_matcher_is_rejected() {
+        let dir = tempdir_with_rules(&[(
+            "empty.yaml",
+            "id: empty\nmatch:\n  any:\n    - {}\nscore:\n  device_type: camera\n  confidence: 75\n",
+        )]);
+        assert!(RuleSet::load_dir(&dir).is_err());
+    }
+
+    #[test]
+    fn ties_keep_the_first_rule_in_load_order() {
+        let first = Rule {
+            id: "first".to_string(),
             matcher: Match {
                 any: vec![Matcher {
-                    is_gateway: Some(true),
+                    port: Some(80),
                     ..Default::default()
                 }],
                 all: vec![],
             },
             device_type: DeviceType::Router,
-            confidence: Confidence::new(70),
+            confidence: Confidence::new(75),
         };
-        let rules = RuleSet { rules: vec![rule] };
-        let obs = [Observation::new(Source::ArpCache)
-            .with_ip(ip("192.168.1.1"))
-            .with_hint("network.role", "gateway")];
+        let second = Rule {
+            id: "second".to_string(),
+            matcher: Match {
+                any: vec![Matcher {
+                    port: Some(80),
+                    ..Default::default()
+                }],
+                all: vec![],
+            },
+            device_type: DeviceType::Camera,
+            confidence: Confidence::new(75),
+        };
+        let rules = RuleSet {
+            rules: vec![first, second],
+        };
         assert_eq!(
-            rules.evaluate(&obs).map(|(d, _)| d),
+            rules.evaluate(&[obs_tcp(80)]).map(|(d, _)| d),
             Some(DeviceType::Router)
         );
+    }
+
+    fn tempdir_with_rules(files: &[(&str, &str)]) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("mylan-rules-{}", uuid_like()));
+        std::fs::create_dir_all(&dir).expect("create temp rules dir");
+        for (name, contents) in files {
+            std::fs::write(dir.join(name), contents).expect("write rule");
+        }
+        dir
+    }
+
+    fn uuid_like() -> u128 {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
     }
 
     #[test]

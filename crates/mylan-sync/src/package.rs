@@ -23,7 +23,13 @@ pub enum PackageError {
 
     #[error("Workspace no encontrado localmente: {0}")]
     WorkspaceNotFound(String),
+
+    #[error("Snapshot invalido: {0}")]
+    InvalidSnapshot(String),
 }
+
+/// Version de esquema que este binario sabe importar.
+pub const SNAPSHOT_SCHEMA_VERSION: u32 = 8;
 
 /// Metadatos del snapshot para verificacion de version y procedencia.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -49,6 +55,27 @@ pub struct WorkspaceSnapshot {
 }
 
 impl WorkspaceSnapshot {
+    /// Valida que el snapshot pertenece al workspace esperado y que su esquema
+    /// es importable. Sin esto, un fichero renombrado o de otra version puede
+    /// importarse en el workspace equivocado o con campos reinterpretados.
+    pub fn validate_for_workspace(&self, expected_workspace_id: &str) -> Result<(), PackageError> {
+        if self.metadata.workspace_id != expected_workspace_id
+            || self.workspace.id != expected_workspace_id
+        {
+            return Err(PackageError::InvalidSnapshot(format!(
+                "workspace '{}'/'{}' no coincide con '{}'",
+                self.metadata.workspace_id, self.workspace.id, expected_workspace_id
+            )));
+        }
+        if self.metadata.schema_version != SNAPSHOT_SCHEMA_VERSION {
+            return Err(PackageError::InvalidSnapshot(format!(
+                "schema_version {} no soportada (esperada {})",
+                self.metadata.schema_version, SNAPSHOT_SCHEMA_VERSION
+            )));
+        }
+        Ok(())
+    }
+
     /// Serializa el snapshot a JSON UTF-8.
     pub fn to_json_bytes(&self) -> Result<Vec<u8>, PackageError> {
         serde_json::to_vec(self).map_err(PackageError::JsonError)
@@ -92,7 +119,7 @@ pub fn export_workspace_snapshot(
         workspace_name: ws.name.clone(),
         device_origin: device_origin.to_string(),
         app_version: app_version.to_string(),
-        schema_version: 8,
+        schema_version: SNAPSHOT_SCHEMA_VERSION,
         snapshot_epoch: now_epoch,
     };
 
@@ -146,12 +173,7 @@ pub fn export_workspace_snapshot(
         .query_map([workspace_id], |row| {
             let sev_str: String = row.get(4)?;
             let status_str: String = row.get(9)?;
-            let severity = match sev_str.as_str() {
-                "Critical" => RiskSeverity::Critical,
-                "High" => RiskSeverity::High,
-                "Medium" => RiskSeverity::Medium,
-                _ => RiskSeverity::Low,
-            };
+            let severity = RiskSeverity::parse_str(&sev_str).unwrap_or(RiskSeverity::Low);
             let status = match status_str.as_str() {
                 "acknowledged" => FindingStatus::Acknowledged,
                 "ignored" => FindingStatus::Ignored,

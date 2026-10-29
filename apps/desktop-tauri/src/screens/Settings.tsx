@@ -90,6 +90,8 @@ export function Settings() {
     const { theme, setTheme } = useTheme();
     const { censorshipEnabled, setCensorshipEnabled } = useCensorship();
     const [settings, setSettingsState] = useState<SettingsDto | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [reloadKey, setReloadKey] = useState(0);
     const [dbPathValue, setDbPathValue] = useState("");
     const [saving, setSaving] = useState(false);
     const [monitoringStatus, setMonitoringStatus] = useState<MonitoringStatusDto | null>(null);
@@ -126,13 +128,22 @@ export function Settings() {
     );
 
     useEffect(() => {
-        Promise.all([getSettings(), dbPath(), getGdriveSyncStatus().catch(() => null)])
+        setLoadError(null);
+        Promise.all([
+            getSettings(),
+            dbPath().catch(() => null),
+            getGdriveSyncStatus().catch(() => null),
+        ])
             .then(([s, p, g]) => {
                 setSettingsState(s);
-                setDbPathValue(p || s.db_path);
+                if (p) setDbPathValue(p);
+                else setDbPathValue(s.db_path);
                 if (g) setGdriveStatus(g);
             })
-            .catch((e) => toast(`Error: ${e}`, "error"));
+            .catch((e) => {
+                setLoadError(String(e));
+                toast(`Error: ${e}`, "error");
+            });
 
         getMonitoringStatus()
             .then(setMonitoringStatus)
@@ -148,7 +159,7 @@ export function Settings() {
         return () => {
             if (unlisten) unlisten();
         };
-    }, [toast]);
+    }, [toast, reloadKey]);
 
     async function persistPatch(patch: Partial<SettingsDto>) {
         if (!settings) return;
@@ -233,7 +244,26 @@ export function Settings() {
     }
 
     if (!settings)
-        return (
+        return loadError ? (
+            <div
+                role="alert"
+                className="flex flex-col items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm"
+            >
+                <div className="flex flex-col gap-1">
+                    <span className="font-medium text-destructive-strong">
+                        No se pudieron cargar los ajustes
+                    </span>
+                    <span className="text-muted-foreground">{loadError}</span>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setReloadKey((k) => k + 1)}
+                >
+                    Reintentar
+                </Button>
+            </div>
+        ) : (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 Cargando ajustes…

@@ -13,7 +13,14 @@ import type {
     SpeedTestResult,
     Workspace,
 } from "@/lib/tauri";
-import { maskCidr, maskHostname, maskIp, maskMac } from "@/lib/censor";
+import { maskCidr, maskEvidence, maskHostname, maskIp, maskMac } from "@/lib/censor";
+
+const SEVERITY_RANK: Record<SecurityFinding["severity"], number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+};
 
 const styles = StyleSheet.create({
     page: {
@@ -345,19 +352,25 @@ export function ExecutiveReportDocument({
                                 Mitigación Sugerida
                             </Text>
                         </View>
-                        {openFindings.slice(0, 5).map((f) => {
+                        {[...openFindings]
+                            .sort(
+                                (a, b) =>
+                                    SEVERITY_RANK[a.severity] -
+                                    SEVERITY_RANK[b.severity],
+                            )
+                            .map((f) => {
                             const sevStyle =
-                                f.severity === "Critical"
+                                f.severity === "critical"
                                     ? styles.severityCritical
-                                    : f.severity === "High"
+                                    : f.severity === "high"
                                       ? styles.severityHigh
-                                      : f.severity === "Medium"
+                                      : f.severity === "medium"
                                         ? styles.severityMedium
                                         : styles.severityLow;
                             return (
                                 <View key={f.id} style={styles.tableRow}>
                                     <Text style={[styles.tableCol, sevStyle, { width: "15%" }]}>
-                                        {f.severity}
+                                        {f.severity.toUpperCase()}
                                     </Text>
                                     <Text
                                         style={[
@@ -388,7 +401,7 @@ export function ExecutiveReportDocument({
                                                 ]}
                                             >
                                                 {censorshipEnabled
-                                                    ? maskIp(f.evidence)
+                                                    ? maskEvidence(f.evidence)
                                                     : f.evidence}
                                             </Text>
                                         )}

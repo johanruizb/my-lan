@@ -96,15 +96,15 @@ jobs:
       - name: Clippy (Tauri crate)
         run: cargo clippy --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml -- -D warnings
 
-      # Lint del frontend (eslint + tsc).
+      # Lint + typecheck del frontend (eslint + tsc).
       - name: Frontend lint
-        run: npx eslint .
+        run: npm run lint
         working-directory: apps/desktop-tauri
 
       # Tests del frontend (vitest run, AC-23). Node 20 ya configurado arriba
       # (actions/setup-node@v5) y deps instaladas con `npm ci`.
       - name: Frontend tests
-        run: npx vitest run
+        run: npm test
         working-directory: apps/desktop-tauri
 
       # Construye el bundle. `tauri build` filtra `bundle.targets` por

@@ -19,7 +19,7 @@ use mylan_db::service_repo::{list_services, ServiceExportRow, ServiceFilters};
 use crate::commands::export::{export_services, ExportFormat};
 use crate::commands::{latest_network_id, open_db};
 use crate::ctx::AppContext;
-use crate::util::print_redaction_note;
+use crate::util::{print_redaction_note, sanitize_terminal};
 
 /// Puertos marcados como sensibles (admin/clear-text/management).
 const SENSITIVE_PORTS: &[u16] = &[23, 21, 445, 22, 80, 8080, 8443, 554, 161];
@@ -144,9 +144,11 @@ fn render_services_table(rows: &[ServiceExportRow]) {
             Cell::new(opt_ip(r.device_ip)),
             Cell::new(protocol_label(r.protocol)),
             port_cell,
-            Cell::new(r.service_name.clone().unwrap_or_default()),
-            Cell::new(r.product.clone().unwrap_or_default()),
-            Cell::new(r.version.clone().unwrap_or_default()),
+            Cell::new(sanitize_terminal(
+                r.service_name.as_deref().unwrap_or_default(),
+            )),
+            Cell::new(sanitize_terminal(r.product.as_deref().unwrap_or_default())),
+            Cell::new(sanitize_terminal(r.version.as_deref().unwrap_or_default())),
             Cell::new(state_label(r.state)),
             sens_cell,
         ]);

@@ -42,10 +42,10 @@ pub enum Command {
     Ports {
         /// Dirección IP del dispositivo.
         ip: String,
-        /// Número de puertos "top" a sondear (override del conteo del perfil para
-        /// quick/normal/deep; ignorado —con warning— para iot/router).
-        #[arg(long, default_value_t = 100)]
-        top: u16,
+        /// Número de puertos "top" como hint informativo; el catálogo efectivo
+        /// lo fija `--profile` (se avisa si el valor difiere).
+        #[arg(long)]
+        top: Option<u16>,
         /// Perfil de escaneo (quick | normal | deep | iot | router).
         #[arg(long, default_value = "quick", value_parser = parse_profile)]
         profile: ScanProfile,
@@ -106,7 +106,7 @@ pub enum Command {
         #[arg(long)]
         rtype: Option<String>,
         /// Forzar IPv4.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "ipv6")]
         ipv4: bool,
         /// Forzar IPv6.
         #[arg(long)]
@@ -114,9 +114,9 @@ pub enum Command {
     },
     /// Servir la API local en foreground (debug alias de `mylan agent run`).
     Serve {
-        /// Puerto de escucha.
-        #[arg(long, default_value_t = 43117)]
-        port: u16,
+        /// Puerto de escucha (si se omite, usa `api_port` del config).
+        #[arg(long)]
+        port: Option<u16>,
     },
     /// Gestión del agent daemon (escaneo periódico + API embebida).
     Agent {

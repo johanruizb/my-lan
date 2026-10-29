@@ -85,18 +85,20 @@ pub fn upsert_finding(conn: &Connection, finding: &SecurityFinding) -> DbResult<
         .map_err(map_sqlite)?;
 
     let dev_id_param = finding.device_id.as_deref();
-    let existing = stmt
-        .query_row(
-            params![finding.network_id, dev_id_param, finding.rule_id],
-            |r| {
-                Ok((
-                    r.get::<_, String>(0)?,
-                    r.get::<_, String>(1)?,
-                    r.get::<_, String>(2)?,
-                ))
-            },
-        )
-        .ok();
+    let existing = match stmt.query_row(
+        params![finding.network_id, dev_id_param, finding.rule_id],
+        |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        },
+    ) {
+        Ok(row) => Some(row),
+        Err(rusqlite::Error::QueryReturnedNoRows) => None,
+        Err(e) => return Err(map_sqlite(e)),
+    };
 
     if let Some((existing_id, existing_status_str, _)) = existing {
         let existing_status =
@@ -219,7 +221,7 @@ pub fn list_findings_by_network(
         "SELECT {SELECT_FINDING_COLS} FROM security_findings \
          WHERE network_id = ?1 \
          ORDER BY \
-           CASE severity \
+           CASE lower(severity) \
              WHEN 'critical' THEN 1 \
              WHEN 'high' THEN 2 \
              WHEN 'medium' THEN 3 \
@@ -249,7 +251,7 @@ pub fn list_findings_by_device(
         "SELECT {SELECT_FINDING_COLS} FROM security_findings \
          WHERE device_id = ?1 \
          ORDER BY \
-           CASE severity \
+           CASE lower(severity) \
              WHEN 'critical' THEN 1 \
              WHEN 'high' THEN 2 \
              WHEN 'medium' THEN 3 \
@@ -309,6 +311,45 @@ pub fn auto_resolve_missing_device_findings(
     let mut stmt = conn.prepare(sql).map_err(map_sqlite)?;
     let rows = stmt
         .query_map(params![device_id], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })
+        .map_err(map_sqlite)?;
+
+    let mut to_resolve = Vec::new();
+    for row in rows {
+        let (id, rule_id) = row.map_err(map_sqlite)?;
+        if !active_rule_ids.contains(&rule_id.as_str()) {
+            to_resolve.push(id);
+        }
+    }
+
+    for id in &to_resolve {
+        conn.execute(
+            "UPDATE security_findings SET status = 'resolved', resolved_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )
+        .map_err(map_sqlite)?;
+    }
+
+    Ok(to_resolve.len())
+}
+
+/// Auto-resuelve hallazgos de red (`device_id IS NULL`) que ya no se detectan.
+///
+/// Los hallazgos de red (p. ej. SEC-008 DNS) no tienen dispositivo y el
+/// auto-resolvedor por dispositivo nunca los ve. Sin esto, un cambio de
+/// configuración deja el hallazgo abierto para siempre y penaliza el score.
+pub fn auto_resolve_missing_network_findings(
+    conn: &Connection,
+    network_id: &str,
+    active_rule_ids: &[&str],
+    now: &str,
+) -> DbResult<usize> {
+    let sql = "SELECT id, rule_id FROM security_findings \
+               WHERE network_id = ?1 AND device_id IS NULL AND status != 'resolved'";
+    let mut stmt = conn.prepare(sql).map_err(map_sqlite)?;
+    let rows = stmt
+        .query_map(params![network_id], |r| {
             Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
         })
         .map_err(map_sqlite)?;

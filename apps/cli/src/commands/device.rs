@@ -6,7 +6,7 @@ use comfy_table::{presets::UTF8_FULL, Cell, Color, ContentArrangement, Table};
 
 use crate::commands::{latest_network_id, open_db};
 use crate::ctx::AppContext;
-use crate::util::print_redaction_note;
+use crate::util::{print_redaction_note, sanitize_terminal};
 
 /// Muestra el detalle de un dispositivo identificado por su IP primaria.
 pub fn run(ctx: &AppContext, ip_str: &str) -> anyhow::Result<()> {
@@ -29,35 +29,35 @@ pub fn run(ctx: &AppContext, ip_str: &str) -> anyhow::Result<()> {
     println!("  IP primaria   : {}", opt_ip(device.primary_ip));
     println!(
         "  Hostname      : {}",
-        device.hostname.as_deref().unwrap_or("-")
+        sanitize_terminal(device.hostname.as_deref().unwrap_or("-"))
     );
     println!(
         "  Display name  : {}",
-        device.display_name.as_deref().unwrap_or("-")
+        sanitize_terminal(device.display_name.as_deref().unwrap_or("-"))
     );
     println!(
         "  Vendor        : {}",
-        device.vendor.as_deref().unwrap_or("-")
+        sanitize_terminal(device.vendor.as_deref().unwrap_or("-"))
     );
     println!(
         "  Manufacturer  : {}",
-        device.manufacturer.as_deref().unwrap_or("-")
+        sanitize_terminal(device.manufacturer.as_deref().unwrap_or("-"))
     );
     println!(
         "  Modelo        : {}",
-        device.model.as_deref().unwrap_or("-")
+        sanitize_terminal(device.model.as_deref().unwrap_or("-"))
     );
     println!("  Tipo          : {}", type_label(&device.device_type));
     println!(
         "  OS family     : {}",
-        device.os_family.as_deref().unwrap_or("-")
+        sanitize_terminal(device.os_family.as_deref().unwrap_or("-"))
     );
     println!("  Confianza     : {}/100", device.confidence.score());
     println!("  De confianza  : {}", device.is_trusted);
     println!("  Oculto        : {}", device.is_hidden);
     println!(
         "  Notas         : {}",
-        device.notes.as_deref().unwrap_or("-")
+        sanitize_terminal(device.notes.as_deref().unwrap_or("-"))
     );
     println!("  Primera vez   : {}", device.first_seen_at);
     println!("  Última vez    : {}", device.last_seen_at);
@@ -82,10 +82,12 @@ pub fn run(ctx: &AppContext, ip_str: &str) -> anyhow::Result<()> {
             table.add_row(vec![
                 Cell::new(format!("{:?}", s.protocol).to_lowercase()),
                 Cell::new(s.port),
-                Cell::new(s.service_name.clone().unwrap_or_default()),
-                Cell::new(s.product.clone().unwrap_or_default()),
+                Cell::new(sanitize_terminal(
+                    s.service_name.as_deref().unwrap_or_default(),
+                )),
+                Cell::new(sanitize_terminal(s.product.as_deref().unwrap_or_default())),
                 Cell::new(format!("{:?}", s.state).to_lowercase()),
-                Cell::new(s.banner.clone().unwrap_or_default()),
+                Cell::new(sanitize_terminal(s.banner.as_deref().unwrap_or_default())),
             ]);
         }
         println!("\nServicios:");

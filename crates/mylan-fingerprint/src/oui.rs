@@ -24,19 +24,22 @@ impl OuiDatabase {
         Self::default()
     }
 
-    /// Carga desde un lector CSV con cabecera `mac_prefix,vendor`.
+    /// Carga desde un lector CSV con filas `mac_prefix,vendor`.
     ///
-    /// El prefijo se normaliza a hex minúsculas sin separadores para casar con
-    /// [`MacAddr::oui_hex`]. Las filas malformadas se saltan (no abortan la
-    /// carga: un snapshot IEEE puede tener líneas residuales).
+    /// El snapshot IEEE y `signatures/oui/oui.csv` no llevan cabecera; si un
+    /// fixture la incluye, `normalize_prefix` la descarta por no ser un OUI
+    /// válido. El prefijo se normaliza a hex minúsculas sin separadores para
+    /// casar con [`MacAddr::oui_hex`]. Las filas con menos de dos columnas se
+    /// saltan; un error de lectura o de UTF-8 aborta la carga para no devolver
+    /// una base parcial como si estuviera completa.
     pub fn load_csv<R: Read>(reader: R) -> Result<Self, FingerprintError> {
         let mut rdr = csv::ReaderBuilder::new()
-            .has_headers(true)
+            .has_headers(false)
             .flexible(true)
             .from_reader(reader);
         let mut vendors = HashMap::new();
         for record in rdr.records() {
-            let Ok(row) = record else { continue };
+            let row = record.map_err(|e| FingerprintError::OuiLoad(e.to_string()))?;
             if row.len() < 2 {
                 continue;
             }
@@ -99,6 +102,12 @@ mod tests {
             db.vendor_for(&mac("de:ad:be:00:00:00")),
             Some("Deadbeef LLC")
         );
+    }
+
+    #[test]
+    fn invalid_utf8_aborts_instead_of_returning_partial_data() {
+        let result = OuiDatabase::load_csv(&[0xff, 0xfe][..]);
+        assert!(matches!(result, Err(FingerprintError::OuiLoad(_))));
     }
 
     #[test]

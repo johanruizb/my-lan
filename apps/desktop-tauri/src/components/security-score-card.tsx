@@ -28,28 +28,30 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
     const [score, setScore] = useState<number | null>(null);
     const [findings, setFindings] = useState<SecurityFinding[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [auditing, setAuditing] = useState(false);
 
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
-            const scorePromise =
-                typeof getSecurityScore === "function"
-                    ? getSecurityScore().catch(() => 100)
-                    : Promise.resolve(100);
-            const findingsPromise =
-                typeof getSecurityFindings === "function"
-                    ? getSecurityFindings().catch(() => [])
-                    : Promise.resolve([]);
-
+            setError(null);
+            if (
+                typeof getSecurityScore !== "function" ||
+                typeof getSecurityFindings !== "function"
+            ) {
+                throw new Error("API de seguridad no disponible");
+            }
             const [currentScore, currentFindings] = await Promise.all([
-                scorePromise,
-                findingsPromise,
+                getSecurityScore(),
+                getSecurityFindings(),
             ]);
             setScore(currentScore);
             setFindings(currentFindings);
-        } catch {
-            // Silencioso si no hay inventario aún
+        } catch (e) {
+            // No inventar un 100: sin datos el score es desconocido.
+            setScore(null);
+            setFindings([]);
+            setError(e instanceof Error ? e.message : String(e));
         } finally {
             setLoading(false);
         }
@@ -95,22 +97,27 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
     const mediumCount = openFindings.filter((f) => f.severity === "medium").length;
     const lowCount = openFindings.filter((f) => f.severity === "low").length;
 
-    const displayScore = score ?? 100;
-    const isWarning = displayScore >= 60 && displayScore < 85;
-    const isDanger = displayScore < 60;
+    const displayScore = score ?? 0;
+    const hasScore = score !== null;
+    const isWarning = hasScore && displayScore >= 60 && displayScore < 85;
+    const isDanger = hasScore && displayScore < 60;
 
-    const ScoreIcon = isDanger ? ShieldX : isWarning ? ShieldAlert : ShieldCheck;
-    const scoreColorClass = isDanger
-        ? "text-destructive-strong border-destructive/30 bg-destructive/10"
-        : isWarning
-          ? "text-warning-strong border-warning/30 bg-warning/10"
-          : "text-success-strong border-success/30 bg-success/10";
+    const ScoreIcon = !hasScore ? ShieldAlert : isDanger ? ShieldX : isWarning ? ShieldAlert : ShieldCheck;
+    const scoreColorClass = !hasScore
+        ? "text-muted-foreground border-border bg-muted/40"
+        : isDanger
+          ? "text-destructive-strong border-destructive/30 bg-destructive/10"
+          : isWarning
+            ? "text-warning-strong border-warning/30 bg-warning/10"
+            : "text-success-strong border-success/30 bg-success/10";
 
-    const scoreTitle = isDanger
-        ? "Riesgo crítico detectado"
-        : isWarning
-          ? "Riesgo moderado en la red"
-          : "Postura de seguridad sólida";
+    const scoreTitle = !hasScore
+        ? "Postura de seguridad no disponible"
+        : isDanger
+          ? "Riesgo crítico detectado"
+          : isWarning
+            ? "Riesgo moderado en la red"
+            : "Postura de seguridad sólida";
 
     return (
         <Card className={cn("overflow-hidden", className)}>
@@ -123,10 +130,14 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                                 "flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl border text-center transition-colors",
                                 scoreColorClass,
                             )}
-                            title={`Score de seguridad: ${displayScore}/100`}
+                            title={
+                                hasScore
+                                    ? `Score de seguridad: ${displayScore}/100`
+                                    : "Score de seguridad no disponible"
+                            }
                         >
                             <span className="text-xl font-bold font-mono leading-none tracking-tight">
-                                {displayScore}
+                                {hasScore ? displayScore : "—"}
                             </span>
                             <span className="text-[11px] font-medium opacity-80 uppercase tracking-wider">
                                 / 100
@@ -141,9 +152,11 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                                 </h3>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                {openFindings.length === 0
-                                    ? "No se han detectado servicios vulnerables ni configuraciones de riesgo en la red."
-                                    : `${openFindings.length} hallazgo(s) activo(s) requieren atención o mitigación.`}
+                                {!hasScore
+                                    ? error ?? "Cargando análisis de seguridad…"
+                                    : openFindings.length === 0
+                                      ? "No se han detectado servicios vulnerables ni configuraciones de riesgo en la red."
+                                      : `${openFindings.length} hallazgo(s) activo(s) requieren atención o mitigación.`}
                             </p>
                         </div>
                     </div>

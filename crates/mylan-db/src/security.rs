@@ -15,8 +15,8 @@ use mylan_core::{
 
 use crate::error::{map_sqlite, DbResult};
 use crate::findings_repo::{
-    auto_resolve_missing_device_findings, calculate_network_score, list_findings_by_network,
-    upsert_finding,
+    auto_resolve_missing_device_findings, auto_resolve_missing_network_findings,
+    calculate_network_score, list_findings_by_network, upsert_finding,
 };
 use crate::util::{new_id, now_rfc3339};
 use crate::{device_repo, network_repo, service_repo};
@@ -373,9 +373,11 @@ pub fn run_full_security_audit(
 
     // 1. Evaluar reglas de red
     let net_findings = evaluate_network_rules(&network, &now);
+    let net_rule_ids: Vec<&str> = net_findings.iter().map(|f| f.rule_id.as_str()).collect();
     for f in &net_findings {
         upsert_finding(conn, f)?;
     }
+    auto_resolve_missing_network_findings(conn, network_id, &net_rule_ids, &now)?;
 
     // 2. Evaluar cada dispositivo cargando sus servicios
     for dev in &devices {

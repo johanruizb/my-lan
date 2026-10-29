@@ -37,9 +37,13 @@ emit_added_lines() {
 	git diff --unified=0 --no-color "$range" 2>/dev/null | awk -F'\t' '
 		/^diff --git / { sub(/^diff --git a\//,""); sub(/ b\/.*/,""); path=$0; next }
 		/^@@ / {
-			match($0, /\+([0-9]+)(,[0-9]+)? @@@/);
-			s = substr($0, RSTART+1, RLENGTH-5); sub(/,.*/, "", s);
-			newln = s; next
+			# Header real: `@@ -a,b +c,d @@` (dos '@', no tres). Extraemos
+			# sólo el inicio del rango nuevo para no depender del sufijo.
+			if (match($0, /\+[0-9]+/)) {
+				s = substr($0, RSTART + 1, RLENGTH - 1);
+				newln = s;
+			}
+			next
 		}
 		/^\+[^+]/ { sub(/^\+/,""); print path "\t" newln "\t" $0; newln++ }
 		/^\+\+\+/ { next }
@@ -75,7 +79,7 @@ check_line() {
 			if printf '%s' "$path" | grep -qE '\.rs$'; then
 				if in_cfg_test_region "$path" "$line" "$blob"; then continue; fi
 			fi
-			violation_log+="MAC real ${mac} en ${path}:${line}: ${content}"$'\n'
+			violation_log+="MAC real en ${path}:${line} (valor redactado)"$'\n'
 			violations=$((violations+1))
 		done < <(printf '%s' "$content" | grep -oE "$MAC_RE")
 	fi

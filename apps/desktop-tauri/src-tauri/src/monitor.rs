@@ -7,17 +7,18 @@
 
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use mylan_core::{Enricher, Network, Observation, ScanProfile};
+use mylan_core::{Network, Observation, ScanProfile};
 use mylan_discovery::{detect_interface, discover, DiscoverOptions};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 
+use crate::commands::resolve_signatures_dir;
 use crate::dto::{MonitoringStatusDto, ScanFinished, Settings};
 use crate::tray::TrayHandles;
 
@@ -188,7 +189,7 @@ impl BackgroundMonitor {
                     let s = state.settings.read().await;
                     (
                         s.background_monitoring_enabled,
-                        s.monitoring_interval_secs.max(30),
+                        s.monitoring_interval_secs.clamp(30, 86_400),
                     )
                 };
 
@@ -201,7 +202,7 @@ impl BackgroundMonitor {
                 // Si el tiempo real transcurrido excede más de 2 veces el intervalo configurado,
                 // significa que el equipo estuvo suspendido o hibernando.
                 let elapsed = last_tick.elapsed();
-                if elapsed > Duration::from_secs(interval_secs * 2) {
+                if elapsed > Duration::from_secs(interval_secs.saturating_mul(2)) {
                     // Período de gracia de 20s para estabilización de DHCP tras suspensión
                     tokio::time::sleep(Duration::from_secs(20)).await;
                     cold_start = true;
@@ -339,7 +340,7 @@ impl BackgroundMonitor {
 
             // 5. Cargar enricher
             let signatures_dir = resolve_signatures_dir(&app_clone);
-            let enricher = build_enricher(&signatures_dir, iface.gateway_ip);
+            let enricher = mylan_fingerprint::build_enricher(&signatures_dir, iface.gateway_ip);
 
             // 6. Ejecutar pipeline con diff y persistencia atómica
             let (outcome, events) = mylan_db::pipeline::run_scan_pipeline_with_diff(
@@ -415,8 +416,12 @@ impl BackgroundMonitor {
         })
         .await;
 
-        if let Err(e) = outcome {
-            eprintln!("Error en monitor_loop join: {e}");
+        match outcome {
+            Ok(Ok(())) => {}
+            Ok(Err(msg)) => {
+                eprintln!("Error en el ciclo de monitorización: {msg}");
+            }
+            Err(e) => eprintln!("Error en monitor_loop join: {e}"),
         }
 
         // Liberar flag de escaneo
@@ -430,25 +435,6 @@ impl BackgroundMonitor {
         let settings = state.settings.read().await.clone();
         let status = self.get_status(&settings).await;
         let _ = app.emit("monitoring:status", &status);
-    }
-}
-
-/// Resuelve el directorio de firmas de huella digital (mismo helper que commands.rs).
-fn resolve_signatures_dir(app: &AppHandle) -> PathBuf {
-    if let Ok(res) = app.path().resource_dir() {
-        let candidate = res.join("signatures");
-        if candidate.is_dir() {
-            return candidate;
-        }
-    }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../signatures")
-}
-
-/// Construye el `Enricher` de fingerprint (mismo helper que commands.rs).
-fn build_enricher(signatures_dir: &Path, gateway_ip: Option<IpAddr>) -> Enricher {
-    match mylan_fingerprint::Fingerprint::load(signatures_dir, gateway_ip) {
-        Ok(fp) => fp.enricher(),
-        Err(_) => mylan_core::noop_enricher(),
     }
 }
 

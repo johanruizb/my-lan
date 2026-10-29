@@ -380,7 +380,8 @@ pub fn get_device_by_ip(
     let sql = "SELECT id, network_id, primary_mac, primary_ip, hostname, display_name, vendor, \
                manufacturer, model, device_type, os_family, confidence, first_seen_at, \
                last_seen_at, is_trusted, is_hidden, notes, is_online \
-               FROM devices WHERE network_id = ?1 AND primary_ip = ?2 LIMIT 1";
+               FROM devices WHERE network_id = ?1 AND primary_ip = ?2 \
+               ORDER BY is_online DESC, last_seen_at DESC, id DESC LIMIT 1";
     let result = conn.query_row(
         sql,
         rusqlite::params![network_id, ip_addr.to_string()],

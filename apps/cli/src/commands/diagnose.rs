@@ -91,7 +91,7 @@ pub async fn run_traceroute(
     let max_hops = max_hops.unwrap_or(30);
     let timeout = Duration::from_millis(timeout_ms.unwrap_or(1000));
 
-    let target = resolve_target(ip, false, false).await?;
+    let target = resolve_target(ip, true, false).await?;
 
     tracing::info!(target = %target, max_hops, ?timeout, "iniciando traceroute");
     let hops = traceroute_host(target, max_hops, timeout)
@@ -137,15 +137,21 @@ pub async fn run_dns(
     ctx: &AppContext,
     host: &str,
     rtype: Option<&str>,
-    _ipv4: bool,
-    _ipv6: bool,
+    ipv4: bool,
+    ipv6: bool,
 ) -> anyhow::Result<()> {
     let _ = ctx;
 
     tracing::info!(host, rtype = ?rtype, "iniciando dns lookup");
-    let records = dns::dns_lookup_host(host, rtype.unwrap_or("").to_string())
+    let mut records = dns::dns_lookup_host(host, rtype.unwrap_or("").to_string())
         .await
         .map_err(|e| anyhow::anyhow!("dns: {e}"))?;
+    // Aplicar los flags de familia que antes se ignoraban.
+    if ipv4 && !ipv6 {
+        records.retain(|r| r.record_type.eq_ignore_ascii_case("A"));
+    } else if ipv6 && !ipv4 {
+        records.retain(|r| r.record_type.eq_ignore_ascii_case("AAAA"));
+    }
 
     if records.is_empty() {
         println!("No se encontraron registros DNS para {host}.");

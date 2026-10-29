@@ -100,9 +100,9 @@ export function useScan(): ScanContextValue {
     return ctx;
 }
 
-/** Identidad de merge: primary_ip y, como fallback, primary_mac (AC-6). */
+/** Identidad de merge: el `id` estable de la DB (MAC > IP se resuelve en core). */
 export function deviceKey(d: Device): string {
-    return d.primary_ip ?? d.primary_mac ?? d.id;
+    return d.id;
 }
 
 // Merge en sitio por identidad: reemplaza la entrada existente o la añade, sin
@@ -555,8 +555,11 @@ function AppInner() {
         const unlistens: UnlistenFn[] = [];
         let active = true;
         Promise.all([
-            onScanStarted((s) => setScanId(s.scan_id)),
-            onDiscoveryProgress((p) =>
+            onScanStarted((s) => {
+                if (s.scan_id === scanIdRef.current) setScanId(s.scan_id);
+            }),
+            onDiscoveryProgress((p) => {
+                if (p.scan_id !== scanIdRef.current) return;
                 setProgress({
                     swept: Math.min(p.swept, p.total),
                     total: p.total,
@@ -567,13 +570,16 @@ function AppInner() {
                                   Math.round((p.swept / p.total) * 100),
                               )
                             : null,
-                }),
-            ),
-            onScanDevice((d) =>
-                setDevicesFound((prev) => mergeDevice(prev, d.device)),
-            ),
+                });
+            }),
+            onScanDevice((d) => {
+                if (d.scan_id !== scanIdRef.current) return;
+                setDevicesFound((prev) => mergeDevice(prev, d.device));
+            }),
             // Éxito o salida limpia: barra a estado final (100% si total conocido).
-            onScanFinished(() => {
+            // Filtrar por scan_id evita que un port-scan cancele la UI del descubrimiento.
+            onScanFinished((f) => {
+                if (f.scan_id !== scanIdRef.current) return;
                 setScanning(false);
                 setProgress((prev) =>
                     prev && prev.total > 0
@@ -582,7 +588,8 @@ function AppInner() {
                 );
             }),
             // Cancelación: conserva parciales, congela la barra y avisa (AC-8/AC-9).
-            onScanCancelled(() => {
+            onScanCancelled((c) => {
+                if (c.scan_id !== scanIdRef.current) return;
                 cancelledRef.current = true;
                 setScanning(false);
                 toast(

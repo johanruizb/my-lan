@@ -183,16 +183,24 @@ export function GdriveSyncDialog({
         }
     };
 
-    // Copiar mnemónico al portapapeles
-    const handleCopyMnemonic = () => {
+    // Copiar mnemónico al portapapeles (solo confirmar éxito si writeText resuelve)
+    const handleCopyMnemonic = async () => {
         if (!mnemonicDisplay) return;
-        navigator.clipboard.writeText(mnemonicDisplay);
-        setCopiedMnemonic(true);
-        setTimeout(() => setCopiedMnemonic(false), 2000);
-        toast({
-            title: "Copiado al portapapeles",
-            description: "Frase de 12 palabras copiada.",
-        });
+        try {
+            await navigator.clipboard.writeText(mnemonicDisplay);
+            setCopiedMnemonic(true);
+            setTimeout(() => setCopiedMnemonic(false), 2000);
+            toast({
+                title: "Copiado al portapapeles",
+                description: "Frase de 12 palabras copiada.",
+            });
+        } catch (e) {
+            toast({
+                title: "No se pudo copiar la frase",
+                description: String(e),
+                variant: "destructive",
+            });
+        }
     };
 
     // Ejecutar sincronización manual
@@ -264,7 +272,12 @@ export function GdriveSyncDialog({
         <Dialog
             open={open}
             onOpenChange={(isOpen) => {
-                if (!isOpen) setConfirmDisconnect(false);
+                if (!isOpen) {
+                    setConfirmDisconnect(false);
+                    // La frase deriva la clave maestra: no dejarla en memoria/UI.
+                    setMnemonicDisplay(null);
+                    setCopiedMnemonic(false);
+                }
                 onOpenChange(isOpen);
             }}
         >

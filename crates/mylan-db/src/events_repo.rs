@@ -104,6 +104,9 @@ pub fn list_events(
     limit: i64,
     offset: i64,
 ) -> DbResult<Vec<Event>> {
+    if limit <= 0 {
+        return Ok(Vec::new());
+    }
     let sql = if network_id.is_some() {
         format!(
             "SELECT {SELECT_COLS} FROM events WHERE network_id = ?1 \

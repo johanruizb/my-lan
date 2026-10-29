@@ -51,6 +51,15 @@ pub fn connect(path: impl AsRef<Path>) -> DbResult<Connection> {
         }
     }
     let conn = Connection::open(path).map_err(map_sqlite)?;
+    #[cfg(unix)]
+    {
+        // Inventario, notas y hallazgos son datos sensibles: 0600 evita que
+        // otros usuarios locales puedan leerlos con el umask habitual (022).
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(path).map_err(DbError::Io)?.permissions();
+        perms.set_mode(0o600);
+        std::fs::set_permissions(path, perms).map_err(DbError::Io)?;
+    }
     setup(&conn)?;
     Ok(conn)
 }

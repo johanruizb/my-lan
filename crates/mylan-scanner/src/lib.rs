@@ -250,8 +250,15 @@ pub async fn scan_target(
     let mut services: Vec<Service> = hits.into_iter().map(to_service_with_probe).collect();
 
     // AC-3: scan UDP limitado tras el barrido TCP (perfil deep / flag).
+    // `scan_udp` devuelve un resultado por puerto sondeado; sólo los `Open` son
+    // servicios reales (Closed/Filtered no deben contarse como puertos abiertos).
     if options.enable_udp && !cancel.is_cancelled() {
-        services.extend(udp::scan_udp(target, &options, &cancel).await);
+        services.extend(
+            udp::scan_udp(target, &options, &cancel)
+                .await
+                .into_iter()
+                .filter(|service| service.state == ServiceState::Open),
+        );
     }
 
     Ok(services)
