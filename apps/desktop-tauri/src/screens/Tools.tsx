@@ -315,6 +315,12 @@ export function Tools() {
 
     // Suscripción a eventos IPC de herramientas de streaming
     useEffect(() => {
+        // Patrón disposed: la Promise de listen() resuelve tras el round-trip
+        // IPC, DESPUÉS del primer cleanup de StrictMode. Sin este flag, el
+        // unlisten llega tarde y queda registrado (listener zombie que
+        // duplica cada paquete en el stream). Si la Promise resuelve tras el
+        // cleanup, desregistramos inmediatamente.
+        let disposed = false;
         let unlistens: (() => void)[] = [];
 
         Promise.all([
@@ -349,10 +355,15 @@ export function Tools() {
                 }
             }),
         ]).then((fns) => {
+            if (disposed) {
+                fns.forEach((u) => u());
+                return;
+            }
             unlistens = fns;
         });
 
         return () => {
+            disposed = true;
             unlistens.forEach((u) => u());
             if (pingSessionRef.current) {
                 try {

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Coherencia visual del sistema de diseño**: escala de radios unificada (8px en controles, 12px en contenedores), superficies de Herramientas migradas al primitivo `Card`, elevación inexistente (`shadow-xs`) eliminada, tamaño mínimo de texto fijado en 11px, badges semánticos tintados con contraste AA en ambos temas, cabeceras de tabla de 40px, alineación `tabular-nums` global en tablas e identificadores, puntos de estado de 8px y gutter móvil de 24px.
 
+### Fixed
+- **Stream de Ping duplicado en modo desarrollo**: eliminación de listeners IPC zombie tras el doble montaje de React StrictMode que duplicaba cada paquete mostrado (por ejemplo, 10 entradas para un límite de 5 pings).
+
 ## [1.0.0] - 2026-10-17 (19bbbfd)
 
 ### Added

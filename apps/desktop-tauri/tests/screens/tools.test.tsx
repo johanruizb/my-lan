@@ -14,6 +14,7 @@ const checkPortMock = vi.fn();
 
 let pingPacketCb: ((payload: { session_id: string; packet: PingPacket }) => void) | null = null;
 let pingSummaryCb: ((payload: { session_id: string; summary: PingStreamSummary }) => void) | null = null;
+const activePingPacketCbs: Array<(payload: { session_id: string; packet: PingPacket }) => void> = [];
 
 vi.mock("@/lib/tauri", () => ({
     startToolPing: (params: unknown) => startToolPingMock(params),
@@ -26,8 +27,11 @@ vi.mock("@/lib/tauri", () => ({
         checkPortMock(target, port, timeoutMs),
     onToolPingPacket: (cb: (payload: { session_id: string; packet: PingPacket }) => void) => {
         pingPacketCb = cb;
+        activePingPacketCbs.push(cb);
         return Promise.resolve(() => {
-            pingPacketCb = null;
+            const idx = activePingPacketCbs.indexOf(cb);
+            if (idx >= 0) activePingPacketCbs.splice(idx, 1);
+            if (pingPacketCb === cb) pingPacketCb = null;
         });
     },
     onToolPingSummary: (cb: (payload: { session_id: string; summary: PingStreamSummary }) => void) => {
@@ -61,6 +65,7 @@ describe("Tools Screen", () => {
         startToolTracerouteMock.mockResolvedValue(undefined);
         pingPacketCb = null;
         pingSummaryCb = null;
+        activePingPacketCbs.length = 0;
     });
 
     it("renders default Ping Interactivo tab and tool selector buttons", () => {
@@ -124,6 +129,57 @@ describe("Tools Screen", () => {
         await waitFor(() => {
             expect(screen.getByText(/Transmitidos/i)).toBeInTheDocument();
             expect(screen.getByText("14.5 ms")).toBeInTheDocument();
+        });
+    });
+
+    it("no duplica paquetes en StrictMode: un límite de 5 muestra 5/5", async () => {
+        let capturedSessionId = "";
+        startToolPingMock.mockImplementationOnce((params: { sessionId: string }) => {
+            capturedSessionId = params.sessionId;
+            return Promise.resolve();
+        });
+
+        renderWithProviders(<Tools />, ["/"], { strictMode: true });
+
+        // El listen() real resuelve tras el round-trip IPC; este flush deja
+        // que el primer setup de StrictMode ejecute su unlisten tardío.
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+        expect(activePingPacketCbs.length).toBe(1);
+
+        fireEvent.change(screen.getByPlaceholderText(/192\.168\.1\.1/), {
+            target: { value: "1.1.1.1" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "5" }));
+        fireEvent.click(screen.getByRole("button", { name: /Iniciar Ping/i }));
+
+        await waitFor(() => {
+            expect(startToolPingMock).toHaveBeenCalledWith(
+                expect.objectContaining({ target: "1.1.1.1", count: 5 }),
+            );
+        });
+
+        act(() => {
+            for (let seq = 1; seq <= 5; seq++) {
+                activePingPacketCbs.forEach((cb) =>
+                    cb({
+                        session_id: capturedSessionId,
+                        packet: {
+                            seq,
+                            target: "1.1.1.1",
+                            reachable: true,
+                            latency_ms: 18,
+                            jitter_ms: 0.1,
+                            method: "icmp",
+                        },
+                    }),
+                );
+            }
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText("Stream de paquetes (5/5)")).toBeInTheDocument();
         });
     });
 
