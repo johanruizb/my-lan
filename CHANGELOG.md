@@ -6,11 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Coherencia visual del sistema de diseño**: escala de radios unificada (8px en controles, 12px en contenedores), superficies de Herramientas migradas al primitivo `Card`, elevación inexistente (`shadow-xs`) eliminada, tamaño mínimo de texto fijado en 11px, badges semánticos tintados con contraste AA en ambos temas, cabeceras de tabla de 40px, alineación `tabular-nums` global en tablas e identificadores, puntos de estado de 8px y gutter móvil de 24px.
+## [1.0.1] - 2026-10-29 (15af5f3)
+
+### Security
+- **Sincronización con respaldo obligatorio**: antes de reemplazar datos locales (incluida la adopción de la nube) se exige un backup preventivo; los paquetes validan workspace y esquema, y las consultas a Drive escapan el identificador.
+- **Cadena de suministro y scripts**: actualización de rustls-webpki, webpki-roots, crossbeam-epoch y react-router-dom; el parser del gate pre-push vuelve a inspeccionar las líneas añadidas.
+- **Exportaciones y terminal**: saneamiento de fórmulas en CSV y de secuencias de control en la salida de CLI.
+- **Censura en informes e historial**: las evidencias de los informes PDF y el objetivo de los escaneos en el historial respetan el modo censura.
 
 ### Fixed
-- **Stream de Ping duplicado en modo desarrollo**: eliminación de listeners IPC zombie tras el doble montaje de React StrictMode que duplicaba cada paquete mostrado (por ejemplo, 10 entradas para un límite de 5 pings).
+- **Descubrimiento**: barrido ICMP sin privilegios, fallback TCP que no se queda en el puerto 80, solo servicios UDP abiertos y base OUI completa.
+- **Inventario y base de datos**: confianza acotada, MAC cero tratada como ausente, búsqueda determinista por IP, límites de eventos, auto-resolución de hallazgos de red, borrado de workspace transaccional y permisos 0600.
+- **Escritorio**: eventos de escaneo filtrados por `scan_id`, identidad de dispositivo estable, respuestas obsoletas descartadas y estados de error reales en lugar de 100/100 o “sin vulnerabilidades”.
+- **Sincronización**: DNS conservado con un único codec JSON, severidades sin degradar a `Low` y snapshots validados antes de importar.
+- **CLI**: `status` falla si la base de datos no está disponible, `serve` respeta `api_port`, los flags DNS se aplican y `--top` queda documentado como sugerencia.
+- **Informes**: el PDF ordena por severidad, incluye todos los hallazgos y muestra la severidad correcta; la exportación falla si faltan datos obligatorios en lugar de fabricar un 100/100.
+- **UI**: contraste de `success-strong` en tema claro, escala/tarjetas/badges unificados y stream de Ping sin listeners duplicados.
+
+### Changed
+- **Calidad**: `tsc` en lint/build/CI, scripts de test añadidos y dependencias actualizadas.
+
+**Full changelog:** https://github.com/johanruizb/my-lan/compare/v1.0.0...v1.0.1
 
 ## [1.0.0] - 2026-10-17 (19bbbfd)
 
