@@ -22,7 +22,7 @@
         --destructive-foreground: 210 40% 98%;
         /* Tinted-state foregrounds: readable text over the 10% semantic tints. */
         --primary-strong: 192 91% 25%;
-        --success-strong: 142 72% 28%;
+        --success-strong: 142 72% 26%;
         --warning-strong: 26 90% 32%;
         --destructive-strong: 0 72% 42%;
         /* #39: Tokens semánticos success/warning junto a --destructive. */
