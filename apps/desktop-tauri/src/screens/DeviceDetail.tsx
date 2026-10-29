@@ -123,8 +123,8 @@ function ServiceStateBadge({ state }: { state: string }) {
     if (s === "open") {
         return (
             <Badge
-                variant="outline"
-                className="gap-1 h-5 px-2 text-[10px] font-semibold border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                variant="success"
+                className="gap-1 h-5 px-2 font-semibold"
             >
                 <StateIcon className="h-2.5 w-2.5" aria-hidden />
                 {label}
@@ -134,8 +134,8 @@ function ServiceStateBadge({ state }: { state: string }) {
     if (s === "closed") {
         return (
             <Badge
-                variant="outline"
-                className="gap-1 h-5 px-2 text-[10px] font-semibold border-destructive/30 text-red-700 dark:text-red-400 bg-destructive/10"
+                variant="destructive"
+                className="gap-1 h-5 px-2 font-semibold"
             >
                 <StateIcon className="h-2.5 w-2.5" aria-hidden />
                 {label}
@@ -143,10 +143,7 @@ function ServiceStateBadge({ state }: { state: string }) {
         );
     }
     return (
-        <Badge
-            variant="outline"
-            className="gap-1 h-5 px-2 text-[10px] font-semibold border-amber-500/30 text-amber-800 dark:text-amber-400 bg-amber-500/10"
-        >
+        <Badge variant="warning" className="gap-1 h-5 px-2 font-semibold">
             <StateIcon className="h-2.5 w-2.5" aria-hidden />
             {label}
         </Badge>
@@ -157,35 +154,26 @@ function RiskSeverityBadge({ severity }: { severity: string }) {
     switch (severity.toLowerCase()) {
         case "critical":
             return (
-                <Badge variant="destructive" className="gap-1 h-5 px-2 text-[10px] font-bold">
+                <Badge variant="destructive" className="gap-1 h-5 px-2 font-bold">
                     <AlertTriangle className="h-2.5 w-2.5" />
                     Crítico (-25 pts)
                 </Badge>
             );
         case "high":
             return (
-                <Badge
-                    variant="outline"
-                    className="gap-1 h-5 px-2 text-[10px] font-semibold text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/10"
-                >
+                <Badge variant="warning" className="gap-1 h-5 px-2 font-semibold">
                     Alto (-15 pts)
                 </Badge>
             );
         case "medium":
             return (
-                <Badge
-                    variant="outline"
-                    className="gap-1 h-5 px-2 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400 border-yellow-500/40 bg-yellow-500/10"
-                >
+                <Badge variant="outline" className="gap-1 h-5 px-2 font-semibold">
                     Medio (-5 pts)
                 </Badge>
             );
         default:
             return (
-                <Badge
-                    variant="outline"
-                    className="gap-1 h-5 px-2 text-[10px] font-semibold text-blue-600 dark:text-blue-400 border-blue-500/40 bg-blue-500/10"
-                >
+                <Badge variant="secondary" className="gap-1 h-5 px-2 font-semibold">
                     Bajo (-1 pt)
                 </Badge>
             );
@@ -196,37 +184,25 @@ function FindingStatusBadge({ status }: { status: string }) {
     switch (status.toLowerCase()) {
         case "acknowledged":
             return (
-                <Badge
-                    variant="outline"
-                    className="h-5 px-2 text-[10px] font-medium border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10"
-                >
+                <Badge variant="info" className="h-5 px-2 font-medium">
                     Riesgo aceptado
                 </Badge>
             );
         case "ignored":
             return (
-                <Badge
-                    variant="outline"
-                    className="h-5 px-2 text-[10px] font-medium text-muted-foreground border-border bg-muted/40"
-                >
+                <Badge variant="secondary" className="h-5 px-2 font-medium">
                     Ignorado
                 </Badge>
             );
         case "resolved":
             return (
-                <Badge
-                    variant="outline"
-                    className="h-5 px-2 text-[10px] font-medium border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
-                >
+                <Badge variant="success" className="h-5 px-2 font-medium">
                     Resuelto
                 </Badge>
             );
         default:
             return (
-                <Badge
-                    variant="outline"
-                    className="h-5 px-2 text-[10px] font-semibold border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10"
-                >
+                <Badge variant="destructive" className="h-5 px-2 font-semibold">
                     Activo
                 </Badge>
             );
@@ -633,7 +609,7 @@ export function DeviceDetail() {
             </div>
 
             {/* #18: Dossier de identidad sin duplicar MAC/Vendor (que viven en la matriz técnica inferior). */}
-            <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+            <Card className="p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-start sm:items-center gap-4 min-w-0">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -748,7 +724,7 @@ export function DeviceDetail() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </Card>
 
             {/* Banco de trabajo principal: 5 columnas Ficha Técnica y Gestión | 7 columnas Auditoría de Puertos y Servicios */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -756,7 +732,7 @@ export function DeviceDetail() {
                 <div className="flex flex-col gap-6 lg:col-span-5">
                     <Card>
                         <CardHeader className="px-5 py-3.5 border-b border-border">
-                            <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-foreground">
                                 <Info
                                     className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
@@ -825,7 +801,7 @@ export function DeviceDetail() {
 
                     <Card>
                         <CardHeader className="px-5 py-3.5 border-b border-border flex flex-row items-center justify-between gap-2">
-                            <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-foreground">
                                 <Settings
                                     className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
@@ -936,7 +912,7 @@ export function DeviceDetail() {
 
                     <Card>
                         <CardHeader className="px-5 py-3.5 border-b border-border">
-                            <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <CardTitle as="h2" className="flex items-center gap-2 text-foreground">
                                 <Wrench
                                     className="h-4 w-4 text-primary shrink-0"
                                     aria-hidden
@@ -1025,14 +1001,14 @@ export function DeviceDetail() {
                                 {openFindingsCount > 0 ? (
                                     <Badge
                                         variant="destructive"
-                                        className="h-4 px-1.5 text-[10px] font-bold"
+                                        className="h-4 px-1.5 text-[11px] font-bold"
                                     >
                                         {openFindingsCount}
                                     </Badge>
                                 ) : findings.length > 0 ? (
                                     <Badge
                                         variant="outline"
-                                        className="h-4 px-1.5 text-[10px] font-medium text-emerald-600 border-emerald-500/30"
+                                        className="h-4 px-1.5 text-[11px] font-medium text-emerald-600 border-emerald-500/30"
                                     >
                                         {findings.length}
                                     </Badge>
@@ -1046,7 +1022,7 @@ export function DeviceDetail() {
                             <Card>
                         <CardHeader className="px-5 py-4 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-col gap-0.5">
-                                <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-foreground">
                                     <Server
                                         className="h-4 w-4 text-primary shrink-0"
                                         aria-hidden
@@ -1423,7 +1399,7 @@ export function DeviceDetail() {
                         <Card>
                             <CardHeader className="px-5 py-4 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex flex-col gap-0.5">
-                                    <CardTitle as="h2" className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                    <CardTitle as="h2" className="flex items-center gap-2 text-foreground">
                                         <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" aria-hidden />
                                         Auditoría de Seguridad del Dispositivo ({findings.length})
                                     </CardTitle>
@@ -1464,7 +1440,7 @@ export function DeviceDetail() {
                                         {findings.map((f) => (
                                             <div
                                                 key={f.id}
-                                                className="rounded-lg border border-border bg-card p-4 flex flex-col gap-3 shadow-2xs transition-colors hover:border-border"
+                                                className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3 shadow-sm transition-colors hover:border-border"
                                             >
                                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                                     <div className="flex flex-col gap-1 min-w-0">
@@ -1632,7 +1608,7 @@ function BannerCell({ banner }: { banner: string | null }) {
                             e.stopPropagation();
                             setExpanded(!expanded);
                         }}
-                        className="h-auto px-1 py-0.5 text-[10px] text-primary hover:bg-muted font-sans font-medium"
+                        className="h-auto px-1 py-0.5 text-[11px] text-primary hover:bg-muted font-sans font-medium"
                         title={expanded ? "Contraer banner" : "Expandir banner"}
                     >
                         {expanded ? "Menos" : "Más"}

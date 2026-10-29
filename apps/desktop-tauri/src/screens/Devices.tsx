@@ -7,8 +7,8 @@ import {
 } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { CardHeader } from "@/components/ui/card-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { EmptyState } from "@/components/empty-state";
@@ -907,7 +907,7 @@ export function Devices({
                                                                     )}
                                                                 </span>
                                                                 {d.primary_mac && (
-                                                                    <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground uppercase">
+                                                                    <div className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground uppercase">
                                                                         <MaskedValue
                                                                             field="primary_mac"
                                                                             value={

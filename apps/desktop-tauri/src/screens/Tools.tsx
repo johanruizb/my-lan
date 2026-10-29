@@ -145,7 +145,7 @@ function ToolTabHeartbeat({
                     color,
                 )}
             />
-            <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", color)} />
+            <span className={cn("relative inline-flex h-2 w-2 rounded-full", color)} />
         </span>
     );
 }
@@ -217,25 +217,25 @@ function LatencyOscilloscope({ packets }: { packets: PingPacket[] }) {
                                 )}
                             />
                             {/* Tooltip on hover */}
-                            <div className="absolute -top-7 hidden group-hover:flex items-center gap-1 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[10px] font-mono shadow-md border border-border z-20 whitespace-nowrap pointer-events-none">
+                            <div className="absolute -top-7 hidden group-hover:flex items-center gap-1 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[11px] font-mono shadow-md border border-border z-20 whitespace-nowrap pointer-events-none">
                                 #{pkt.seq}: {pkt.reachable ? `${lat}ms` : "Pérdida"}
                             </div>
                         </div>
                     );
                 })}
             </div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono px-0.5">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono px-0.5">
                 <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> &lt;25ms
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" /> &lt;25ms
                 </span>
                 <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" /> 25-75ms
+                    <span className="h-2 w-2 rounded-full bg-primary" /> 25-75ms
                 </span>
                 <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> 75-150ms
+                    <span className="h-2 w-2 rounded-full bg-amber-500" /> 75-150ms
                 </span>
                 <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> &gt;150ms / Pérdida
+                    <span className="h-2 w-2 rounded-full bg-rose-500" /> &gt;150ms / Pérdida
                 </span>
             </div>
         </div>
@@ -610,7 +610,7 @@ export function Tools() {
             {/* Selector de Herramientas / Workbench Tab Strip */}
             <nav
                 aria-label="Pestañas de herramientas"
-                className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/30 border border-border overflow-x-auto shadow-xs"
+                className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/30 border border-border overflow-x-auto"
             >
                 <Button
                     type="button"
@@ -623,7 +623,7 @@ export function Tools() {
                     className={cn(
                         "gap-1.5 text-xs h-8.5 px-3 rounded-lg transition-all",
                         activeTab === "ping"
-                            ? "bg-card text-foreground shadow-xs font-semibold border border-border"
+                            ? "bg-card text-foreground font-semibold border border-border"
                             : "text-muted-foreground hover:text-foreground",
                     )}
                 >
@@ -643,7 +643,7 @@ export function Tools() {
                     className={cn(
                         "gap-1.5 text-xs h-8.5 px-3 rounded-lg transition-all",
                         activeTab === "traceroute"
-                            ? "bg-card text-foreground shadow-xs font-semibold border border-border"
+                            ? "bg-card text-foreground font-semibold border border-border"
                             : "text-muted-foreground hover:text-foreground",
                     )}
                 >
@@ -663,7 +663,7 @@ export function Tools() {
                     className={cn(
                         "gap-1.5 text-xs h-8.5 px-3 rounded-lg transition-all",
                         activeTab === "dns"
-                            ? "bg-card text-foreground shadow-xs font-semibold border border-border"
+                            ? "bg-card text-foreground font-semibold border border-border"
                             : "text-muted-foreground hover:text-foreground",
                     )}
                 >
@@ -683,7 +683,7 @@ export function Tools() {
                     className={cn(
                         "gap-1.5 text-xs h-8.5 px-3 rounded-lg transition-all",
                         activeTab === "ports"
-                            ? "bg-card text-foreground shadow-xs font-semibold border border-border"
+                            ? "bg-card text-foreground font-semibold border border-border"
                             : "text-muted-foreground hover:text-foreground",
                     )}
                 >
@@ -703,7 +703,7 @@ export function Tools() {
                     className={cn(
                         "gap-1.5 text-xs h-8.5 px-3 rounded-lg transition-all",
                         activeTab === "wol"
-                            ? "bg-card text-foreground shadow-xs font-semibold border border-border"
+                            ? "bg-card text-foreground font-semibold border border-border"
                             : "text-muted-foreground hover:text-foreground",
                     )}
                 >
@@ -723,7 +723,7 @@ export function Tools() {
                     className={cn(
                         "gap-1.5 text-xs h-8.5 px-3 rounded-lg transition-all",
                         activeTab === "speed"
-                            ? "bg-card text-foreground shadow-xs font-semibold border border-border"
+                            ? "bg-card text-foreground font-semibold border border-border"
                             : "text-muted-foreground hover:text-foreground",
                     )}
                 >
@@ -742,7 +742,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2">
                                     <Activity className="h-4 w-4 text-primary" aria-hidden />
                                     Sondeo Ping en tiempo real
                                 </CardTitle>
@@ -915,7 +915,7 @@ export function Tools() {
                                                         setPingTarget(dev.ip);
                                                         if (pingError) setPingError(null);
                                                     }}
-                                                    className="h-6 text-[10px] font-mono px-2 text-muted-foreground hover:text-foreground"
+                                                    className="h-6 text-[11px] font-mono px-2 text-muted-foreground hover:text-foreground"
                                                 >
                                                     {dev.name ? `${dev.name} (${maskDisplay(dev.ip)})` : maskDisplay(dev.ip)}
                                                 </Button>
@@ -970,46 +970,46 @@ export function Tools() {
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-lg pt-2 text-left">
                                     <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
-                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                                        <span className="text-[11px] uppercase font-semibold text-muted-foreground block">
                                             LAN Local
                                         </span>
                                         <span className="text-xs font-mono font-bold text-emerald-500 block">
                                             &lt; 2 ms
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground block">
+                                        <span className="text-[11px] text-muted-foreground block">
                                             Cable / Wi-Fi 6
                                         </span>
                                     </div>
                                     <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
-                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                                        <span className="text-[11px] uppercase font-semibold text-muted-foreground block">
                                             Fibra FTTH
                                         </span>
                                         <span className="text-xs font-mono font-bold text-primary block">
                                             5 - 20 ms
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground block">
+                                        <span className="text-[11px] text-muted-foreground block">
                                             CDN & Nodos
                                         </span>
                                     </div>
                                     <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
-                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                                        <span className="text-[11px] uppercase font-semibold text-muted-foreground block">
                                             4G / DSL
                                         </span>
                                         <span className="text-xs font-mono font-bold text-amber-500 block">
                                             25 - 60 ms
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground block">
+                                        <span className="text-[11px] text-muted-foreground block">
                                             Móvil común
                                         </span>
                                     </div>
                                     <div className="rounded-lg border bg-background/50 p-2.5 overflow-hidden">
-                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                                        <span className="text-[11px] uppercase font-semibold text-muted-foreground block">
                                             Jitter RFC 3550
                                         </span>
                                         <span className="text-xs font-mono font-bold text-emerald-500 block">
                                             &lt; 5 ms
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground block">
+                                        <span className="text-[11px] text-muted-foreground block">
                                             Óptimo VoIP
                                         </span>
                                     </div>
@@ -1020,17 +1020,17 @@ export function Tools() {
                             <div key="ping-active-telemetry" className="flex flex-col gap-4">
                                 {/* Grid de Estadísticas / KPI HUD */}
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                                    <div className="rounded-xl border bg-card p-3 text-center shadow-xs">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                    <Card className="p-3 text-center">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
                                             Transmitidos
                                         </span>
                                         <div className="text-xl font-bold font-mono text-foreground mt-0.5">
                                             {pingSummary ? pingSummary.transmitted : pingPackets.length}
                                         </div>
-                                    </div>
+                                    </Card>
 
-                                    <div className="rounded-xl border bg-card p-3 text-center shadow-xs">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                    <Card className="p-3 text-center">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
                                             Recibidos
                                         </span>
                                         <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
@@ -1038,10 +1038,10 @@ export function Tools() {
                                                 ? pingSummary.received
                                                 : pingPackets.filter((p) => p.reachable).length}
                                         </div>
-                                    </div>
+                                    </Card>
 
-                                    <div className="rounded-xl border bg-card p-3 text-center shadow-xs">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                    <Card className="p-3 text-center">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
                                             Pérdida
                                         </span>
                                         <div
@@ -1060,10 +1060,10 @@ export function Tools() {
                                                       100
                                                   ).toFixed(0)}%`}
                                         </div>
-                                    </div>
+                                    </Card>
 
-                                    <div className="rounded-xl border bg-card p-3 text-center shadow-xs">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                    <Card className="p-3 text-center">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
                                             Último RTT
                                         </span>
                                         <div className="text-xl font-bold font-mono text-primary mt-0.5">
@@ -1071,10 +1071,10 @@ export function Tools() {
                                                 ? `${pingPackets[pingPackets.length - 1].latency_ms} ms`
                                                 : "-"}
                                         </div>
-                                    </div>
+                                    </Card>
 
-                                    <div className="rounded-xl border bg-card p-3 text-center shadow-xs">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                    <Card className="p-3 text-center">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
                                             Jitter RFC 3550
                                         </span>
                                         <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">
@@ -1082,14 +1082,14 @@ export function Tools() {
                                                 ? `${pingPackets[pingPackets.length - 1].jitter_ms.toFixed(1)} ms`
                                                 : "-"}
                                         </div>
-                                    </div>
+                                    </Card>
                                 </div>
 
                                 {/* Osciloscopio Gráfico SVG */}
                                 <LatencyOscilloscope packets={pingPackets} />
 
                                 {/* Stream de Paquetes tipo Consola Terminal */}
-                                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs flex flex-col">
+                                <Card className="overflow-hidden flex flex-col">
                                     <div className="flex items-center justify-between px-3.5 py-2 border-b border-border bg-muted/30">
                                         <div className="flex items-center gap-2">
                                             <Terminal className="h-3.5 w-3.5 text-primary" aria-hidden />
@@ -1097,10 +1097,10 @@ export function Tools() {
                                                 Stream de paquetes ({pingPackets.length}{pingCount ? `/${pingCount}` : ""})
                                             </span>
                                             {pinging && (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                <Badge variant="success" className="gap-1 font-mono font-medium">
+                                                    <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                                                     Capturando
-                                                </span>
+                                                </Badge>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-1.5">
@@ -1157,7 +1157,7 @@ export function Tools() {
                                                                 Tiempo de espera agotado
                                                             </span>
                                                         )}
-                                                        <span className="text-[10px] text-muted-foreground/80 shrink-0">
+                                                        <span className="text-[11px] text-muted-foreground/80 shrink-0">
                                                             ({pkt.method})
                                                         </span>
                                                     </div>
@@ -1174,7 +1174,7 @@ export function Tools() {
                                                 </div>
                                             ))}
                                     </div>
-                                </div>
+                                </Card>
                             </div>
                         )}
                     </div>
@@ -1190,7 +1190,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2">
                                     <Compass className="h-4 w-4 text-indigo-400" aria-hidden />
                                     Trazado de ruta (Traceroute)
                                 </CardTitle>
@@ -1345,7 +1345,7 @@ export function Tools() {
                         ) : (
                             <div key="trace-active-map" className="flex flex-col gap-3">
                                 {/* Carrusel/Cadena visual interactiva de nodos */}
-                                <div className="rounded-xl border bg-card p-3 shadow-xs overflow-x-auto">
+                                <Card className="p-3 overflow-x-auto">
                                     <div className="flex items-center gap-2 min-w-max pb-1">
                                         {traceHops.map((hop, idx) => {
                                             const lat = hop.latency_ms;
@@ -1353,15 +1353,15 @@ export function Tools() {
                                                 lat == null
                                                     ? "text-muted-foreground bg-muted/60 border-border"
                                                     : lat < 30
-                                                    ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                                                    ? "text-success-strong bg-success/10 border-success/30"
                                                     : lat < 100
-                                                    ? "text-amber-500 bg-amber-500/10 border-amber-500/20"
-                                                    : "text-rose-500 bg-rose-500/10 border-rose-500/20";
+                                                    ? "text-warning-strong bg-warning/10 border-warning/30"
+                                                    : "text-destructive-strong bg-destructive/10 border-destructive/30";
 
                                             return (
                                                 <div key={hop.hop_number} className="flex items-center gap-2">
-                                                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg border bg-background/80 min-w-[96px] text-center shadow-xs">
-                                                        <span className="text-[10px] font-bold text-muted-foreground">
+                                                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg border bg-background/80 min-w-[96px] text-center">
+                                                        <span className="text-[11px] font-bold text-muted-foreground">
                                                             Salto #{hop.hop_number}
                                                         </span>
                                                         <span className="text-xs font-mono font-semibold text-foreground truncate max-w-[110px]">
@@ -1369,7 +1369,7 @@ export function Tools() {
                                                         </span>
                                                         <span
                                                             className={cn(
-                                                                "text-[10px] font-mono px-1.5 py-0.5 rounded border font-semibold",
+                                                                "text-[11px] font-mono px-1.5 py-0.5 rounded border font-semibold",
                                                                 latColor,
                                                             )}
                                                         >
@@ -1383,10 +1383,10 @@ export function Tools() {
                                             );
                                         })}
                                     </div>
-                                </div>
+                                </Card>
 
                                 {/* Tabla completa de saltos */}
-                                <div className="rounded-xl border bg-card overflow-hidden shadow-xs">
+                                <Card className="overflow-hidden">
                                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
                                         <div className="flex items-center gap-2 text-xs font-semibold">
                                             <Compass className="h-3.5 w-3.5 text-indigo-400" />
@@ -1441,15 +1441,14 @@ export function Tools() {
                                                         </TableCell>
                                                         <TableCell className="p-2.5">
                                                             <Badge
-                                                                variant="outline"
-                                                                className={cn(
-                                                                    "px-1.5 py-0.5 text-[10px] font-medium",
+                                                                variant={
                                                                     hop.state === "reached"
-                                                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                                                        ? "success"
                                                                         : hop.state === "*"
-                                                                        ? "bg-muted text-muted-foreground"
-                                                                        : "bg-primary/10 text-primary border-primary/20",
-                                                                )}
+                                                                        ? "secondary"
+                                                                        : "info"
+                                                                }
+                                                                className="px-1.5 py-0.5 font-medium"
                                                             >
                                                                 {hop.state}
                                                             </Badge>
@@ -1462,7 +1461,7 @@ export function Tools() {
                                             })}
                                         </TableBody>
                                     </Table>
-                                </div>
+                                </Card>
                             </div>
                         )}
                     </div>
@@ -1478,7 +1477,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2">
                                     <Globe className="h-4 w-4 text-sky-400" aria-hidden />
                                     Consulta DNS Multidominio
                                 </CardTitle>
@@ -1590,7 +1589,7 @@ export function Tools() {
                                                 size="sm"
                                                 onClick={() => setDnsType(t)}
                                                 className={cn(
-                                                    "h-6 text-[10px] font-mono px-2",
+                                                    "h-6 text-[11px] font-mono px-2",
                                                     dnsType === t
                                                         ? "bg-primary/10 text-primary border-primary/30 font-bold"
                                                         : "text-muted-foreground",
@@ -1630,7 +1629,7 @@ export function Tools() {
                     <div className="lg:col-span-7 flex flex-col gap-4">
                         {dnsRecords.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-border bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[340px]">
-                                <div className="h-12 w-12 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                                <div className="h-12 w-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
                                     <Globe className="h-6 w-6" aria-hidden />
                                 </div>
                                 <div className="max-w-md flex flex-col gap-1">
@@ -1645,7 +1644,7 @@ export function Tools() {
                                     <div className="rounded-lg border bg-background/50 p-2.5">
                                         <Badge
                                             variant="outline"
-                                            className="mb-1 text-[10px] bg-sky-500/10 text-sky-400 border-sky-500/20"
+                                            className="mb-1"
                                         >
                                             A / AAAA
                                         </Badge>
@@ -1656,7 +1655,7 @@ export function Tools() {
                                     <div className="rounded-lg border bg-background/50 p-2.5">
                                         <Badge
                                             variant="outline"
-                                            className="mb-1 text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                            className="mb-1"
                                         >
                                             MX
                                         </Badge>
@@ -1667,7 +1666,7 @@ export function Tools() {
                                     <div className="rounded-lg border bg-background/50 p-2.5">
                                         <Badge
                                             variant="outline"
-                                            className="mb-1 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                            className="mb-1 text-[11px] bg-purple-500/10 text-purple-400 border-purple-500/20"
                                         >
                                             TXT
                                         </Badge>
@@ -1678,7 +1677,7 @@ export function Tools() {
                                     <div className="rounded-lg border bg-background/50 p-2.5">
                                         <Badge
                                             variant="outline"
-                                            className="mb-1 text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                            className="mb-1"
                                         >
                                             CNAME / PTR
                                         </Badge>
@@ -1689,7 +1688,7 @@ export function Tools() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="rounded-xl border bg-card overflow-hidden shadow-xs flex flex-col">
+                            <Card className="overflow-hidden flex flex-col">
                                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
                                     <div className="flex items-center gap-2">
                                         <Globe className="h-3.5 w-3.5 text-sky-400" />
@@ -1732,7 +1731,7 @@ export function Tools() {
                                                 <TableCell className="p-2.5">
                                                     <Badge
                                                         variant="outline"
-                                                        className="px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border-primary/20"
+                                                        className="px-1.5 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20"
                                                     >
                                                         {r.record_type}
                                                     </Badge>
@@ -1747,7 +1746,7 @@ export function Tools() {
                                         ))}
                                     </TableBody>
                                 </Table>
-                            </div>
+                            </Card>
                         )}
                     </div>
                 </div>
@@ -1762,7 +1761,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2">
                                     <Server className="h-4 w-4 text-emerald-400" aria-hidden />
                                     Comprobación rápida de puerto (Port Checker)
                                 </CardTitle>
@@ -1860,7 +1859,7 @@ export function Tools() {
                     <div className="lg:col-span-7 flex flex-col gap-4">
                         {!portResult ? (
                             <div className="rounded-xl border border-dashed border-border bg-muted/10 p-6 flex flex-col gap-4 text-center items-center justify-center min-h-[320px]">
-                                <div className="h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <div className="h-12 w-12 rounded-full bg-success/10 border border-success/30 flex items-center justify-center text-success">
                                     <Server className="h-6 w-6" aria-hidden />
                                 </div>
                                 <div className="max-w-md flex flex-col gap-1">
@@ -1899,7 +1898,7 @@ export function Tools() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="rounded-xl border bg-card p-5 shadow-xs flex flex-col gap-4">
+                            <Card className="p-5 flex flex-col gap-4">
                                 <div className="flex items-center justify-between pb-3 border-b border-border">
                                     <div className="flex flex-col">
                                         <span className="text-[11px] uppercase font-semibold text-muted-foreground">
@@ -1912,7 +1911,7 @@ export function Tools() {
 
                                     {portResult.latency_ms != null && (
                                         <div className="flex flex-col items-end">
-                                            <span className="text-[10px] uppercase font-semibold text-muted-foreground">
+                                            <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                                                 Tiempo de Conexión
                                             </span>
                                             <span className="font-mono text-sm text-primary font-bold">
@@ -1924,12 +1923,12 @@ export function Tools() {
 
                                 <div className="flex items-center gap-3">
                                     {portResult.state === "open" ? (
-                                        <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-2 text-sm font-bold">
+                                        <div className="flex items-center gap-2 rounded-lg bg-success/10 text-success-strong border border-success/30 px-3 py-2 text-sm font-bold">
                                             <CheckCircle2 className="h-4 w-4" />
                                             <span>Abierto</span>
                                         </div>
                                     ) : portResult.state === "closed" ? (
-                                        <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-3 py-2 text-sm font-semibold">
+                                        <div className="flex items-center gap-2 rounded-lg bg-warning/10 text-warning-strong border border-warning/30 px-3 py-2 text-sm font-semibold">
                                             <AlertCircle className="h-4 w-4" />
                                             <span>Cerrado</span>
                                         </div>
@@ -1951,13 +1950,13 @@ export function Tools() {
 
                                 {portResult.banner && (
                                     <div className="mt-2 text-xs bg-muted/40 rounded-lg border border-border p-3 font-mono break-all text-foreground">
-                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">
+                                        <span className="text-[11px] uppercase tracking-wider text-muted-foreground block mb-1">
                                             Banner de Servicio Detectado:
                                         </span>
                                         Banner: {portResult.banner}
                                     </div>
                                 )}
-                            </div>
+                            </Card>
                         )}
                     </div>
                 </div>
@@ -1972,7 +1971,7 @@ export function Tools() {
                     <div className="lg:col-span-5 flex flex-col gap-4">
                         <Card className="border-border">
                             <CardHeader className="p-4 sm:p-5 pb-3">
-                                <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                                <CardTitle as="h2" className="flex items-center gap-2">
                                     <Power className="h-4 w-4 text-amber-400" aria-hidden />
                                     Encendido remoto Wake-on-LAN (WoL)
                                 </CardTitle>
@@ -2053,7 +2052,7 @@ export function Tools() {
                                                         size="sm"
                                                         disabled={wolSending}
                                                         onClick={() => setWolMac(dev.mac || "")}
-                                                        className="h-6 text-[10px] font-mono px-2 text-muted-foreground hover:text-foreground"
+                                                        className="h-6 text-[11px] font-mono px-2 text-muted-foreground hover:text-foreground"
                                                     >
                                                         {dev.name ? `${dev.name}` : maskDisplay(dev.mac || "")}
                                                     </Button>
@@ -2084,7 +2083,7 @@ export function Tools() {
                         ) : null}
 
                         {/* Inspector de Trama Magic Packet */}
-                        <div className="rounded-xl border bg-card p-5 shadow-xs flex flex-col gap-3">
+                        <Card className="p-5 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
                                 <Power className="h-4 w-4 text-amber-400" />
                                 <h3 className="text-sm font-semibold text-foreground">
@@ -2110,7 +2109,7 @@ export function Tools() {
                                     <span className="text-foreground">102 bytes en carga útil</span>
                                 </div>
                             </div>
-                        </div>
+                        </Card>
                     </div>
                 </div>
             )}

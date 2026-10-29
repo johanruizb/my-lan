@@ -40,7 +40,7 @@ export type ToastVariant =
     | "destructive";
 
 const toastVariants = cva(
-    "toast-root group pointer-events-auto relative flex w-full items-start justify-between gap-3 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg",
+    "toast-root group pointer-events-auto relative flex w-full items-start justify-between gap-3 overflow-hidden rounded-xl border p-4 pr-8 shadow-lg",
     {
         variants: {
             variant: {

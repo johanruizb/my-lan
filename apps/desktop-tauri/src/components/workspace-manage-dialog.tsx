@@ -237,12 +237,12 @@ export function WorkspaceManageDialog({
                                                         {w.name}
                                                     </span>
                                                     {isDefault && (
-                                                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground font-mono">
+                                                        <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground font-mono">
                                                             por defecto
                                                         </span>
                                                     )}
                                                     {isActive && (
-                                                        <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                                        <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
                                                             activo
                                                         </span>
                                                     )}
@@ -361,7 +361,7 @@ export function WorkspaceManageDialog({
                                             )}
                                         >
                                             <IconComp className="h-5 w-5" />
-                                            <span className="capitalize text-[10px]">
+                                            <span className="capitalize text-[11px]">
                                                 {iconKey}
                                             </span>
                                         </Button>

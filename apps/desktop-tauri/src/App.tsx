@@ -362,7 +362,7 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-1.5">
                     <p
-                        className="text-[10px] text-muted-foreground"
+                        className="text-[11px] text-muted-foreground"
                         translate="no"
                     >
                         MyLAN v{version || "…"}
@@ -373,7 +373,7 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                             variant="ghost"
                             size="sm"
                             onClick={onOpenAbout}
-                            className="h-auto rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary hover:bg-primary/30"
+                            className="h-auto rounded-full bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/30"
                             title={`Nueva versión v${updateInfo?.version} disponible`}
                         >
                             Update
@@ -385,7 +385,7 @@ function SidebarFooter({ onOpenAbout }: { onOpenAbout: () => void }) {
                             variant="ghost"
                             size="sm"
                             onClick={onOpenAbout}
-                            className="h-auto rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30"
+                            className="h-auto rounded-full bg-success/20 px-1.5 py-0.5 text-[11px] font-semibold text-success-strong hover:bg-success/30"
                             title="Actualización lista para reiniciar"
                         >
                             Reiniciar
@@ -503,7 +503,7 @@ function AppShell() {
                 </a>
                 <main
                     id="main-content"
-                    className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-6"
+                    className="min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8 md:py-6"
                 >
                     <div className="mx-auto flex w-full max-w-7xl 2xl:max-w-screen-2xl flex-col gap-6">
                         <Outlet />

@@ -33,7 +33,7 @@ export function WorkspaceSelector({ className }: { className?: string }) {
                         >
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <span
-                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-white shadow-xs"
+                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-white"
                                     style={{
                                         backgroundColor: activeWorkspace.color,
                                     }}
@@ -47,7 +47,7 @@ export function WorkspaceSelector({ className }: { className?: string }) {
                                     <span className="truncate text-xs font-semibold leading-tight text-foreground">
                                         {activeWorkspace.name}
                                     </span>
-                                    <span className="text-[10px] text-muted-foreground leading-tight">
+                                    <span className="text-[11px] text-muted-foreground leading-tight">
                                         Workspace
                                     </span>
                                 </div>

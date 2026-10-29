@@ -101,10 +101,10 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
 
     const ScoreIcon = isDanger ? ShieldX : isWarning ? ShieldAlert : ShieldCheck;
     const scoreColorClass = isDanger
-        ? "text-destructive border-destructive/30 bg-destructive/10"
+        ? "text-destructive-strong border-destructive/30 bg-destructive/10"
         : isWarning
-          ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
-          : "text-emerald-500 border-emerald-500/30 bg-emerald-500/10";
+          ? "text-warning-strong border-warning/30 bg-warning/10"
+          : "text-success-strong border-success/30 bg-success/10";
 
     const scoreTitle = isDanger
         ? "Riesgo crítico detectado"
@@ -113,7 +113,7 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
           : "Postura de seguridad sólida";
 
     return (
-        <Card className={cn("overflow-hidden shadow-xs", className)}>
+        <Card className={cn("overflow-hidden", className)}>
             <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4 min-w-0">
@@ -128,7 +128,7 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                             <span className="text-xl font-bold font-mono leading-none tracking-tight">
                                 {displayScore}
                             </span>
-                            <span className="text-[10px] font-medium opacity-80 uppercase tracking-wider">
+                            <span className="text-[11px] font-medium opacity-80 uppercase tracking-wider">
                                 / 100
                             </span>
                         </div>
@@ -154,7 +154,7 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                             {criticalCount > 0 && (
                                 <Badge
                                     variant="destructive"
-                                    className="gap-1 h-6 px-2 text-xs font-semibold"
+                                    className="gap-1 h-6 px-2 font-semibold"
                                     title={`${criticalCount} hallazgos críticos (-25 pts c/u)`}
                                 >
                                     <AlertTriangle className="h-3 w-3" />
@@ -163,8 +163,8 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                             )}
                             {highCount > 0 && (
                                 <Badge
-                                    variant="outline"
-                                    className="gap-1 h-6 px-2 text-xs font-semibold text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/10"
+                                    variant="warning"
+                                    className="gap-1 h-6 px-2 font-semibold"
                                     title={`${highCount} hallazgos altos (-15 pts c/u)`}
                                 >
                                     {highCount} Alto
@@ -173,7 +173,7 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                             {mediumCount > 0 && (
                                 <Badge
                                     variant="outline"
-                                    className="gap-1 h-6 px-2 text-xs font-semibold text-yellow-600 dark:text-yellow-400 border-yellow-500/40 bg-yellow-500/10"
+                                    className="gap-1 h-6 px-2 font-semibold"
                                     title={`${mediumCount} hallazgos medios (-5 pts c/u)`}
                                 >
                                     {mediumCount} Medio
@@ -181,8 +181,8 @@ export function SecurityScoreCard({ className }: SecurityScoreCardProps) {
                             )}
                             {lowCount > 0 && (
                                 <Badge
-                                    variant="outline"
-                                    className="gap-1 h-6 px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-500/40 bg-blue-500/10"
+                                    variant="secondary"
+                                    className="gap-1 h-6 px-2 font-semibold"
                                     title={`${lowCount} hallazgos informativos (-1 pt c/u)`}
                                 >
                                     <Info className="h-3 w-3" />

@@ -14,6 +14,7 @@ import {
     Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
     Card,
     CardContent,
@@ -232,7 +233,7 @@ export function SpeedTestPanel() {
                 <CardHeader className="p-5 pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle className="flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-amber-500" aria-hidden />
                                 Test de Velocidad (speed.cloudflare.com)
                             </CardTitle>
@@ -312,7 +313,7 @@ export function SpeedTestPanel() {
                     {/* Panel de Métricas Principales */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {/* Descarga */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
+                        <Card className="flex flex-col p-4 relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <ArrowDown className="h-4 w-4 text-emerald-500" />
@@ -330,10 +331,10 @@ export function SpeedTestPanel() {
                             <div className="mt-1 text-[11px] text-muted-foreground">
                                 {speedProgress?.phase === "download" ? "Midiendo en vivo..." : "Velocidad de bajada"}
                             </div>
-                        </div>
+                        </Card>
 
                         {/* Subida */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
+                        <Card className="flex flex-col p-4 relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <ArrowUp className="h-4 w-4 text-cyan-500" />
@@ -351,10 +352,10 @@ export function SpeedTestPanel() {
                             <div className="mt-1 text-[11px] text-muted-foreground">
                                 {speedProgress?.phase === "upload" ? "Midiendo en vivo..." : "Velocidad de carga"}
                             </div>
-                        </div>
+                        </Card>
 
                         {/* Latencia RTT */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
+                        <Card className="flex flex-col p-4 relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <Activity className="h-4 w-4 text-amber-500" />
@@ -368,10 +369,10 @@ export function SpeedTestPanel() {
                             <div className="mt-1 text-[11px] text-muted-foreground">
                                 RTT Anycast hacia Cloudflare
                             </div>
-                        </div>
+                        </Card>
 
                         {/* Jitter RFC 3550 */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm relative overflow-hidden">
+                        <Card className="flex flex-col p-4 relative overflow-hidden">
                             <div className="flex items-center justify-between text-muted-foreground text-xs font-medium mb-1">
                                 <span className="flex items-center gap-1.5">
                                     <Radio className="h-4 w-4 text-purple-500" />
@@ -389,7 +390,7 @@ export function SpeedTestPanel() {
                             <div className="mt-1 text-[11px] text-muted-foreground">
                                 Variación RFC 3550 (VoIP/Gaming)
                             </div>
-                        </div>
+                        </Card>
                     </div>
 
                     {/* Historial de Tests de Velocidad */}
@@ -448,7 +449,7 @@ export function SpeedTestPanel() {
                 <CardHeader className="p-5 pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle className="flex items-center gap-2">
                                 <Activity className="h-4 w-4 text-emerald-500" aria-hidden />
                                 Salud y Calidad del Enlace Local (Gateway & DNS)
                             </CardTitle>
@@ -479,28 +480,29 @@ export function SpeedTestPanel() {
                     {/* Tarjetas de estado Gateway y DNS */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Gateway */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm">
+                        <Card className="flex flex-col p-4">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Wifi className="h-4 w-4 text-primary" />
                                     <span className="font-semibold text-sm">Router / Gateway Local</span>
                                 </div>
                                 {latestGateway && (
-                                    <span
-                                        className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                                    <Badge
+                                        variant={
                                             (latestGateway.rtt_ms ?? 999) < 10 && latestGateway.loss_pct === 0
-                                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                                ? "success"
                                                 : (latestGateway.rtt_ms ?? 999) < 30
-                                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                                  : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
-                                        }`}
+                                                  ? "warning"
+                                                  : "destructive"
+                                        }
+                                        className="font-medium"
                                     >
                                         {(latestGateway.rtt_ms ?? 999) < 10 && latestGateway.loss_pct === 0
                                             ? "Excelente"
                                             : (latestGateway.rtt_ms ?? 999) < 30
                                               ? "Aceptable"
                                               : "Degradado"}
-                                    </span>
+                                    </Badge>
                                 )}
                             </div>
 
@@ -532,26 +534,27 @@ export function SpeedTestPanel() {
                                     Aún no hay muestras registradas. Pulsa &quot;Sondear Ahora&quot; para medir.
                                 </p>
                             )}
-                        </div>
+                        </Card>
 
                         {/* DNS Principal */}
-                        <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm">
+                        <Card className="flex flex-col p-4">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <Globe className="h-4 w-4 text-cyan-500" />
+                                    <Globe className="h-4 w-4 text-primary" />
                                     <span className="font-semibold text-sm">Servidor DNS / Enlace Salida</span>
                                 </div>
                                 {latestDns && (
-                                    <span
-                                        className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                                    <Badge
+                                        variant={
                                             isLoopbackIp(latestDns.target_ip)
-                                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                                ? "warning"
                                                 : (latestDns.rtt_ms ?? 999) < 30 && latestDns.loss_pct === 0
-                                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                                  ? "success"
                                                   : (latestDns.rtt_ms ?? 999) < 60
-                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                                    : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
-                                        }`}
+                                                    ? "warning"
+                                                    : "destructive"
+                                        }
+                                        className="font-medium"
                                     >
                                         {isLoopbackIp(latestDns.target_ip)
                                             ? "Stub Local (No representativo)"
@@ -560,7 +563,7 @@ export function SpeedTestPanel() {
                                               : (latestDns.rtt_ms ?? 999) < 60
                                                 ? "Aceptable"
                                                 : "Degradado"}
-                                    </span>
+                                    </Badge>
                                 )}
                             </div>
 
@@ -589,7 +592,7 @@ export function SpeedTestPanel() {
                                         </div>
                                     </div>
                                     {isLoopbackIp(latestDns.target_ip) && (
-                                        <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded p-2">
+                                        <p className="mt-2 text-[11px] text-warning-strong bg-warning/10 border border-warning/30 rounded-lg p-2">
                                             Muestra previa registrada contra el stub DNS loopback local (127.0.0.X). Pulsa &quot;Sondear Ahora&quot; para medir contra el servidor upstream real.
                                         </p>
                                     )}
@@ -599,7 +602,7 @@ export function SpeedTestPanel() {
                                     Aún no hay muestras registradas. Pulsa &quot;Sondear Ahora&quot; para medir.
                                 </p>
                             )}
-                        </div>
+                        </Card>
                     </div>
 
                     {/* Tabla de Muestras de Salud */}
@@ -634,7 +637,7 @@ export function SpeedTestPanel() {
                                                     <div className="flex items-center gap-1.5">
                                                         <span>{displayIp(sample.target_ip)}</span>
                                                         {isLoopbackIp(sample.target_ip) && (
-                                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                                                            <span className="text-[11px] text-warning-strong font-sans px-1 py-0.5 rounded bg-warning/10 border border-warning/30">
                                                                 stub local
                                                             </span>
                                                         )}
@@ -666,7 +669,7 @@ export function SpeedTestPanel() {
                                                 >
                                                     {sample.loss_pct.toFixed(0)}%
                                                 </TableCell>
-                                                <TableCell className="py-2 px-3 text-right text-muted-foreground uppercase text-[10px]">
+                                                <TableCell className="py-2 px-3 text-right text-muted-foreground uppercase text-[11px]">
                                                     {sample.method}
                                                 </TableCell>
                                             </TableRow>

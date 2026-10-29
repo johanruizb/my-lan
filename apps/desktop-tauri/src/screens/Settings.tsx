@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useBlocker, useBeforeUnload } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
     Card,
     CardContent,
@@ -270,7 +271,7 @@ export function Settings() {
                 <div className="flex flex-col gap-4 lg:col-span-7">
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <Gauge
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -353,7 +354,7 @@ export function Settings() {
                     {/* Monitoreo continuo 24/7 y bandeja (Fase 5: Desktop Watch) */}
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <Activity
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -430,7 +431,7 @@ export function Settings() {
                                                 >
                                                     <span>{item.label}</span>
                                                     {"recommended" in item && (
-                                                        <span className="text-[9px] text-primary/80">Rec.</span>
+                                                        <span className="text-[11px] text-primary/80">Rec.</span>
                                                     )}
                                                 </Button>
                                             );
@@ -574,7 +575,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <Bell
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -689,7 +690,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <Database
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -776,7 +777,7 @@ export function Settings() {
                 <div className="flex flex-col gap-4 lg:col-span-5">
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <Palette
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -892,7 +893,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <Cloud className="h-4 w-4 text-primary" aria-hidden />
                                 Sincronización en la Nube (Google Drive)
                             </CardTitle>
@@ -1025,7 +1026,7 @@ export function Settings() {
 
                     <Card>
                         <CardHeader className="p-5 pb-3">
-                            <CardTitle as="h2" className="flex items-center gap-2 text-base">
+                            <CardTitle as="h2" className="flex items-center gap-2">
                                 <RefreshCw
                                     className="h-4 w-4 text-primary"
                                     aria-hidden
@@ -1090,9 +1091,9 @@ export function Settings() {
                                         </span>
                                     )}
                                     {status === "ready" && (
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                        <Badge variant="success" className="font-semibold">
                                             Lista para reiniciar
-                                        </span>
+                                        </Badge>
                                     )}
                                     {status === "up-to-date" && (
                                         <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">

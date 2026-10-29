@@ -38,22 +38,22 @@ export function SyncStatusIndicator({ className, showLabel }: SyncStatusIndicato
     let badgeClass = "text-muted-foreground border-border hover:bg-muted/50";
 
     if (isSyncing) {
-        indicatorIcon = <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />;
+        indicatorIcon = <RefreshCw className="h-3.5 w-3.5 animate-spin text-warning-strong" />;
         label = "Sincronizando...";
         tooltipText = "Sincronizando paquete cifrado con Google Drive...";
-        badgeClass = "text-amber-500 border-amber-500/40 bg-amber-500/10";
+        badgeClass = "text-warning-strong border-warning/30 bg-warning/10";
     } else if (status?.is_authenticated && status?.has_master_key) {
-        indicatorIcon = <Cloud className="h-3.5 w-3.5 text-emerald-500" />;
+        indicatorIcon = <Cloud className="h-3.5 w-3.5 text-success-strong" />;
         label = "Sincronizado";
         tooltipText = `Zero-Knowledge Sync activo (${status.email || "Conectado"}). Última sync: ${
             status.last_synced_at ? new Date(status.last_synced_at).toLocaleTimeString() : "Pendiente"
         }`;
-        badgeClass = "text-emerald-500 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20";
+        badgeClass = "text-success-strong border-success/30 bg-success/10 hover:bg-success/20";
     } else if (status?.is_authenticated && !status?.has_master_key) {
-        indicatorIcon = <CloudAlert className="h-3.5 w-3.5 text-amber-500" />;
+        indicatorIcon = <CloudAlert className="h-3.5 w-3.5 text-warning-strong" />;
         label = "Configurar Clave";
         tooltipText = "Google Drive conectado. Requiere configurar Contraseña Maestra.";
-        badgeClass = "text-amber-500 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20";
+        badgeClass = "text-warning-strong border-warning/30 bg-warning/10 hover:bg-warning/20";
     }
 
     return (

@@ -22,7 +22,7 @@ colors:
 typography:
   display:
     fontFamily: '"Geist Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
-    fontSize: "1.5rem"
+    fontSize: "1.25rem"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.02em"
@@ -52,8 +52,9 @@ typography:
     letterSpacing: "0.02em"
 rounded:
   sm: "4px"
-  md: "8px"
-  lg: "12px"
+  md: "6px"
+  lg: "8px"
+  xl: "12px"
   full: "9999px"
 spacing:
   xs: "4px"
@@ -75,7 +76,7 @@ components:
   card:
     backgroundColor: "{colors.card-light}"
     textColor: "{colors.text-light}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.xl}"
     padding: "20px"
 ---
 
@@ -113,14 +114,16 @@ La paleta cromática se inspira en las pantallas de radar y analizadores de espe
 - **Muted Foreground** (`#64748B` en claro / `#94A3B8` en oscuro): Metadatos secundarios, fechas relativas, etiquetas técnicas y banners inactivos.
 
 ### Semantic
-- **Online / Success** (`#22C55E`): Indicador de host online o escaneo completado con éxito.
-- **Warning / Unverified** (`#F59E0B`): Puertos filtrados, advertencias de configuración y hosts nuevos no categorizados.
-- **Offline / Destructive** (`#EF4444`): Puertos cerrados, fallos de conectividad, errores de actualización o acciones destructivas.
+- **Online / Success** (`#22C55E`): Indicador de host online o escaneo completado con éxito. Texto sobre tinte: `--success-strong`.
+- **Warning / Unverified** (`#F59E0B`): Puertos filtrados, advertencias de configuración y hosts nuevos no categorizados. Texto sobre tinte: `--warning-strong`.
+- **Offline / Destructive** (`#EF4444`): Puertos cerrados, fallos de conectividad, errores de actualización o acciones destructivas. Texto sobre tinte: `--destructive-strong`.
+- **Signal / Info** (`#0891B2`): Estados informativos y telemetría activa sobre tinte. Texto sobre tinte: `--primary-strong`.
+- Los tokens `*-strong` existen solo para texto sobre fondos tintados al 10%; nunca se usan como fondo.
 
 ### Named Rules
 **The Telemetry Rarity Rule.** El color primario cian y el color de acento se reservan para ≤10% de la superficie visual en pantalla. El resto de la interfaz permanece en tonalidades neutras estructuradas para que cualquier señal activa destaque al instante.
 
-**The Semantic State Rule.** Los badges de estado en tablas usan invariablemente variantes outline con fondos tintados al 10% (`bg-emerald-500/10 border-emerald-500/30`), reservando los fondos sólidos saturados únicamente para botones primarios o alertas críticas.
+**The Semantic State Rule.** Los badges de estado usan invariablemente las variantes semánticas de `Badge` — `success`, `warning`, `destructive`, `info` — con borde al 30%, fondo al 10% y texto en el token `*-strong` (contraste AA en ambos temas). `default` y `secondary` quedan reservados para identidad y metadatos neutros; los fondos sólidos saturados solo aparecen en botones primarios o alertas críticas. Queda prohibido redeclarar el patrón con clases `bg-*`/`text-*` locales.
 
 ## Typography
 
@@ -132,13 +135,15 @@ El sistema tipográfico combina la legibilidad contemporánea de una fuente geom
 **Character:** Tipografía austera, precisa y auto-hospedada sin dependencias externas en red, garantizando funcionamiento 100% offline. Los números en tablas y datos de red activan obligatoriamente `tabular-nums` para mantener columnas alineadas al píxel.
 
 ### Hierarchy
-- **Display** (Bold 700, `1.5rem` / 24px, line-height 1.25, tracking `-0.02em`): Encabezados principales de pantalla (Dashboard, Dispositivos, Historial, Ajustes).
+- **Display** (Bold 700, `1.25rem` / 20px, line-height 1.25, tracking `-0.02em`): Encabezados principales de pantalla (Dashboard, Dispositivos, Historial, Ajustes, Herramientas). 20px es el techo tipográfico: la jerarquía frente a Headline (18px) se resuelve con peso y tracking, y los números KPI pueden subir a 24–30px sin competir con el título.
 - **Headline** (SemiBold 600, `1.125rem` / 18px, line-height 1.35, tracking `-0.01em`): Títulos de tarjetas principales, detalle de host e información de red activa.
 - **Title** (SemiBold 600, `1rem` / 16px, line-height 1.4, tracking normal): Subsecciones, cabeceras de tablas y grupos de ajustes.
 - **Body** (Regular 400, `0.875rem` / 14px, line-height 1.5, tracking normal): Texto general de interfaz, descripciones, mensajes de estado y diálogos.
 - **Label / Data** (Medium 500, `0.75rem` / 12px, tracking `0.02em`, `font-mono`): Direcciones IP, MACs, puertos, banners de protocolo y marcas temporales.
+- **Micro** (Medium 500, `0.6875rem` / 11px): Único paso por debajo de Label. Chips de tabla, contadores KPI, metadatos de panel y etiquetas en mayúsculas con `tracking-wider`. No existen tamaños menores: 9px y 10px quedan prohibidos por legibilidad.
 
 ### Named Rules
+**The Micro Floor Rule.** El tamaño mínimo de texto es 11px (`text-[11px]`). Cualquier valor de 10px o inferior debe subir a Micro; la densidad se consigue con padding y line-height, no reduciendo la tipografía.
 **The Single-IP Hierarchy Rule.** En tarjetas y encabezados de detalle, cuando un dispositivo carece de nombre personalizado o hostname, la dirección IP se muestra una sola vez como título prominente; nunca debe repetirse en subtítulos o badges redundantes adyacentes.
 
 ## Layout
@@ -164,27 +169,29 @@ MyLAN es un sistema plano por defecto (*flat-by-default*). La profundidad se com
 
 ## Shapes
 
-- **Esquinas redondeadas:**
-  - Controles pequeños, badges y botones: radio suave de 4px a 8px (`rounded-md`, 8px).
-  - Tarjetas y contenedores: radio contenido de 8px a 12px (`rounded-xl`).
+- **Esquinas redondeadas:** La escala usa los pasos nativos de Tailwind; cada rol tiene un único valor.
+  - Controles (botones, inputs, selects, tabs, chips de salto): 8px (`rounded-lg`).
+  - Contenedores (tarjetas, paneles, tablas enmarcadas): 12px (`rounded-xl`). Un contenedor nunca usa `rounded-lg`.
+  - Superficies internas planas (bloques de código, subpaneles): 8px (`rounded-lg`), sin sombra.
   - Badges de presencia y píldoras de radar: forma completamente redondeada (`rounded-full`, 9999px).
 - **Indicadores de estado:** Puntos circulares de 8px de diámetro (`h-2 w-2 rounded-full`) con soporte para ondas de pulso (`animate-ping`) en operaciones en curso.
 
 ## Components
 
 ### Buttons
-- **Shape:** 8px de radio (`rounded-md`).
+- **Shape:** 8px de radio (`rounded-lg`). Todos los tamaños comparten el radio.
 - **Primary:** Fondo cian primario (`#0891b2` en claro / `#06b6d4` en oscuro), texto blanco/oscuro de alto contraste, padding `8px 16px`. Hover con opacidad 90%.
 - **Outline / Ghost:** Borde de 1px en `#b5bfce` / `#2d3e5a`, fondo transparente, hover con `bg-muted/40`.
 - **CopyButton:** Botón de acción rápida cuadrado (20x20px o 24x24px), transparente en reposo, visible al pasar el ratón o navegar por teclado (`focus-visible:opacity-100`).
 
 ### Cards / Containers
-- **Corner Style:** 8px a 12px (`rounded-xl`).
-- **Border:** Borde de 1px continuo.
+- **Corner Style:** 12px (`rounded-xl`), siempre mediante el primitivo `Card`.
+- **Border:** Borde de 1px continuo (`border-border`).
+- **Elevation:** `shadow-sm` (Subtle Surface) provisto por `Card`; las superficies internas no llevan sombra.
 - **Internal Padding:** 16px a 24px según la jerarquía del contenedor.
 
 ### Inputs / Search Fields
-- **Style:** Fondo de tarjeta, borde sutil de 1px, tipografía en 14px, radio de 8px.
+- **Style:** Fondo de tarjeta, borde sutil de 1px, tipografía en 14px, radio de 8px (`rounded-lg`).
 - **Focus:** Anillo exterior cian de 2px con desfase de 2px (`outline: 2px solid hsl(var(--ring)); outline-offset: 2px`).
 
 ### Tables (Matriz de Hosts y Servicios)

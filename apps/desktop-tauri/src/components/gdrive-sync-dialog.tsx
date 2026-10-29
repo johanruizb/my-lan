@@ -20,6 +20,8 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -269,7 +271,7 @@ export function GdriveSyncDialog({
             <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <div className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-500">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary-strong">
                             <Cloud className="h-5 w-5" />
                         </div>
                         <div>
@@ -279,7 +281,7 @@ export function GdriveSyncDialog({
                             <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                                 <span>Google Drive</span>
                                 <span>•</span>
-                                <span className="text-emerald-500 font-medium flex items-center gap-1">
+                                <span className="text-success font-medium flex items-center gap-1">
                                     <ShieldCheck className="h-3.5 w-3.5" /> Cifrado Zero-Knowledge
                                 </span>
                             </DialogDescription>
@@ -290,11 +292,11 @@ export function GdriveSyncDialog({
                 <div className="space-y-4 pt-2">
                     {/* Alerta de Conflicto Activo si existe */}
                     {pendingConflict && (
-                        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3.5 space-y-3">
+                        <div className="rounded-xl border border-warning/30 bg-warning/10 p-3.5 space-y-3">
                             <div className="flex items-start gap-2.5">
-                                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                                <AlertTriangle className="h-5 w-5 text-warning-strong shrink-0 mt-0.5" />
                                 <div className="space-y-1">
-                                    <h4 className="text-xs font-semibold text-amber-500">
+                                    <h4 className="text-xs font-semibold text-warning-strong">
                                         Conflicto de versiones detectado
                                     </h4>
                                     <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -326,16 +328,16 @@ export function GdriveSyncDialog({
                     )}
 
                     {/* Card 1: Cuenta de Google Drive */}
-                    <div className="rounded-lg border border-border bg-card p-3.5 space-y-2.5">
+                    <Card className="p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Cloud className="h-4 w-4 text-cyan-500" />
+                                <Cloud className="h-4 w-4 text-primary" />
                                 <span className="text-xs font-semibold">1. Cuenta de Google</span>
                             </div>
                             {status?.is_authenticated ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
+                                <Badge variant="success" className="gap-1 font-medium">
                                     <Check className="h-3 w-3" /> Conectado
-                                </span>
+                                </Badge>
                             ) : (
                                 <span className="text-[11px] text-muted-foreground">Desconectado</span>
                             )}
@@ -375,7 +377,7 @@ export function GdriveSyncDialog({
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setConfirmDisconnect(true)}
-                                        className="h-7 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                                        className="h-7 text-xs text-destructive-strong hover:bg-destructive/10"
                                     >
                                         <LogOut className="h-3 w-3 mr-1" /> Desconectar
                                     </Button>
@@ -384,7 +386,7 @@ export function GdriveSyncDialog({
                         ) : (
                             <div className="space-y-2 pt-1">
                                 <p className="text-[11px] text-muted-foreground">
-                                    MyLAN utiliza la carpeta privada <code className="text-[10px] bg-muted px-1 py-0.5 rounded">drive.appdata</code>.
+                                    MyLAN utiliza la carpeta privada <code className="text-[11px] bg-muted px-1 py-0.5 rounded">drive.appdata</code>.
                                     Tus archivos quedan aislados y son completamente invisibles en tu Google Drive personal.
                                 </p>
                                 <Button
@@ -402,21 +404,21 @@ export function GdriveSyncDialog({
                                 </Button>
                             </div>
                         )}
-                    </div>
+                    </Card>
 
                     {/* Card 2: Cifrado Zero-Knowledge (Contraseña Maestra) */}
-                    <div className="rounded-lg border border-border bg-card p-3.5 space-y-2.5">
+                    <Card className="p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Shield className="h-4 w-4 text-emerald-500" />
+                                <Shield className="h-4 w-4 text-success" />
                                 <span className="text-xs font-semibold">2. Cifrado Zero-Knowledge</span>
                             </div>
                             {status?.has_master_key ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
+                                <Badge variant="success" className="gap-1 font-medium">
                                     <Lock className="h-3 w-3" /> Protegido
-                                </span>
+                                </Badge>
                             ) : (
-                                <span className="text-[11px] text-amber-500 font-medium">Requerido</span>
+                                <Badge variant="warning" className="font-medium">Requerido</Badge>
                             )}
                         </div>
 
@@ -516,9 +518,9 @@ export function GdriveSyncDialog({
 
                         {/* Mnemonic Display Card */}
                         {mnemonicDisplay && (
-                            <div className="rounded-md border border-cyan-500/40 bg-cyan-500/5 p-3 space-y-2">
+                            <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-semibold text-cyan-500 flex items-center gap-1.5">
+                                    <span className="text-xs font-semibold text-primary-strong flex items-center gap-1.5">
                                         <Key className="h-3.5 w-3.5" /> Frase de Recuperación (12 palabras BIP-39)
                                     </span>
                                     <Button
@@ -527,7 +529,7 @@ export function GdriveSyncDialog({
                                         onClick={handleCopyMnemonic}
                                         className="h-7 text-xs gap-1"
                                     >
-                                        {copiedMnemonic ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                        {copiedMnemonic ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                                         {copiedMnemonic ? "Copiado" : "Copiar"}
                                     </Button>
                                 </div>
@@ -539,18 +541,18 @@ export function GdriveSyncDialog({
                                         </div>
                                     ))}
                                 </div>
-                                <p className="text-[10px] text-muted-foreground italic">
+                                <p className="text-[11px] text-muted-foreground italic">
                                     Guarda estas palabras en un lugar seguro. MyLAN nunca tiene acceso a tu clave sin descifrar.
                                 </p>
                             </div>
                         )}
-                    </div>
+                    </Card>
 
                     {/* Card 3: Estado y Sincronización del Workspace Activo */}
-                    <div className="rounded-lg border border-border bg-card p-3.5 space-y-3">
+                    <Card className="p-3.5 space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold flex items-center gap-2">
-                                <RefreshCw className={`h-4 w-4 text-cyan-500 ${isSyncing ? "animate-spin" : ""}`} />
+                                <RefreshCw className={`h-4 w-4 text-primary-strong ${isSyncing ? "animate-spin" : ""}`} />
                                 3. Sincronizar Workspace Activo
                             </span>
                             <span className="text-xs font-medium text-foreground">
@@ -580,7 +582,7 @@ export function GdriveSyncDialog({
                             )}
                             {isSyncing ? "Sincronizando..." : "Sincronizar Ahora"}
                         </Button>
-                    </div>
+                    </Card>
                 </div>
             </DialogContent>
         </Dialog>

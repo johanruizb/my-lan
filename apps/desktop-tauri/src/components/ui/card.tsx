@@ -5,7 +5,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
     return (
         <div
             className={cn(
-                "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
+                "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
                 className,
             )}
             {...props}
@@ -13,12 +13,26 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
     );
 }
 
+export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
+    variant?: "default" | "toolbar";
+}
+
 export function CardHeader({
     className,
+    variant = "default",
     ...props
-}: HTMLAttributes<HTMLDivElement>) {
+}: CardHeaderProps) {
     return (
-        <div className={cn("flex flex-col gap-1 p-3", className)} {...props} />
+        <div
+            className={cn(
+                "p-3",
+                variant === "toolbar"
+                    ? "flex flex-row items-center justify-between gap-4"
+                    : "flex flex-col gap-1",
+                className,
+            )}
+            {...props}
+        />
     );
 }
 
@@ -33,7 +47,7 @@ export function CardTitle({
 }: CardTitleProps) {
     return (
         <Comp
-            className={cn("text-lg font-semibold leading-none", className)}
+            className={cn("text-base font-semibold leading-none", className)}
             {...props}
         />
     );

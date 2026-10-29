@@ -27,7 +27,7 @@ export function OnlineBadge({ isOnline, className }: OnlineBadgeProps) {
             aria-label={label}
         >
             <span
-                className={cn("h-1.5 w-1.5 rounded-full", dotClass)}
+                className={cn("h-2 w-2 rounded-full", dotClass)}
                 aria-hidden
             />
             {label}

@@ -8,7 +8,7 @@ export function Table({
     return (
         <div className="relative w-full overflow-auto">
             <table
-                className={cn("w-full caption-bottom text-sm", className)}
+                className={cn("w-full caption-bottom text-sm tabular-nums", className)}
                 {...props}
             />
         </div>
@@ -56,7 +56,7 @@ export function TableHead({
     return (
         <th
             className={cn(
-                "h-8 px-3 text-left align-middle font-medium text-muted-foreground text-xs",
+                "h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs",
                 className,
             )}
             {...props}

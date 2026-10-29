@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // Chips/badges para tipo de dispositivo y flags (AC-9).
 const badgeVariants = cva(
-    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
+    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
     {
         variants: {
             variant: {
@@ -13,12 +13,13 @@ const badgeVariants = cva(
                 secondary:
                     "border-transparent bg-secondary text-secondary-foreground",
                 outline: "border-border text-foreground",
+                info: "border-primary/30 bg-primary/10 text-primary-strong",
                 success:
-                    "border-transparent bg-success text-success-foreground",
+                    "border-success/30 bg-success/10 text-success-strong",
                 warning:
-                    "border-transparent bg-warning text-warning-foreground",
+                    "border-warning/30 bg-warning/10 text-warning-strong",
                 destructive:
-                    "border-transparent bg-destructive text-destructive-foreground",
+                    "border-destructive/30 bg-destructive/10 text-destructive-strong",
             },
         },
         defaultVariants: { variant: "default" },

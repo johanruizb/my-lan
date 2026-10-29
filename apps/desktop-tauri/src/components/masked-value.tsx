@@ -30,7 +30,7 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
 
     if (!censorshipEnabled || value == null || !isSensitive(field)) {
         return (
-            <span className={cn(mono && "font-mono text-sm")}>
+            <span className={cn("tabular-nums", mono && "font-mono text-sm")}>
                 {value ?? "—"}
             </span>
         );
@@ -39,7 +39,7 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
     if (isMacField(field)) {
         return (
             <span
-                className={cn(mono && "font-mono text-sm")}
+                className={cn("tabular-nums", mono && "font-mono text-sm")}
                 aria-label="MAC oculta"
             >
                 {maskMac()}
@@ -51,7 +51,7 @@ export function MaskedValue({ field, value, mono }: MaskedValueProps) {
     return (
         <span
             className={cn(
-                "transition-[filter] select-none",
+                "transition-[filter] select-none tabular-nums",
                 mono && "font-mono text-sm",
                 !revealed && "blur-sm",
             )}

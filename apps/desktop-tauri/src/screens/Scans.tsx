@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { CardHeader } from "@/components/ui/card-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -39,29 +39,20 @@ function statusBadge(status: string) {
     const s = status.toLowerCase();
     if (s === "completed")
         return (
-            <Badge
-                variant="outline"
-                className="gap-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 font-medium"
-            >
+            <Badge variant="success" className="gap-1 font-medium">
                 <CircleCheck className="h-3 w-3" aria-hidden />
                 Completado
             </Badge>
         );
     if (s === "failed")
         return (
-            <Badge
-                variant="outline"
-                className="gap-1 border-destructive/30 text-destructive bg-destructive/10 font-medium"
-            >
+            <Badge variant="destructive" className="gap-1 font-medium">
                 <CircleX className="h-3 w-3" aria-hidden />
                 Fallido
             </Badge>
         );
     return (
-        <Badge
-            variant="outline"
-            className="gap-1 border-primary/30 text-primary bg-primary/10 font-medium"
-        >
+        <Badge variant="info" className="gap-1 font-medium">
             <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
             En curso
         </Badge>
