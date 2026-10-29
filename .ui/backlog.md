@@ -1,7 +1,7 @@
 # UI Backlog
 
 Design source: `DESIGN.md`
-Inventory: `2ff8c4a` · rebuilt in cycle 1 (`2026-10-29`) after `C-03`
+Inventory: `c28c73c` · `2026-10-29` (rebuilt in cycle 1 after `C-03`)
 
 ## Open
 

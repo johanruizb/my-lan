@@ -2,7 +2,7 @@
 
 Design source: `DESIGN.md` (tokens + named rules), `apps/desktop-tauri/tailwind.config.js`, `apps/desktop-tauri/src/index.css`, `apps/desktop-tauri/src/components/ui/*`
 Design source covers: colors, typography roles, spacing, radii, elevation, component rules, named rules
-Inventory built: `2ff8c4a` · rebuilt in cycle 1 · `2026-10-29` (after `C-03` merged `card-header` into `card`)
+Inventory built: `c28c73c` · `2026-10-29` (rebuilt in cycle 1 after `C-03` merged `card-header` into `card`)
 Inventory stale if: `apps/desktop-tauri/src/App.tsx`, `apps/desktop-tauri/src/screens/**`, `apps/desktop-tauri/src/components/**`, `apps/desktop-tauri/src/index.css`, `apps/desktop-tauri/tailwind.config.js`
 
 Mode: `cycle` (closed)
